@@ -3,7 +3,7 @@
 const sendMessage = (event, data, target, tid) => {
 	chrome.runtime.sendMessage({
 		event, data, target, tid,
-		inside: false
+		sender: "FrontEnd",
 	});
 };
 

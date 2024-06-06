@@ -1,0 +1,68 @@
+div.background, div.bgmask {
+	position: fixed;
+	top: 0px;
+	bottom: 0px;
+	left: 0px;
+	right: 0px;
+	margin-top: 0px;
+	margin-bottom: 0px;
+	pointer-events: none;
+}
+div.background {
+	background-image: url("../../images/icon1024.png");
+	background-size: cover;
+}
+div.bgmask {
+	background-color: rgb(from var(--front-color) r g b / 50%);
+	backdrop-filter: blur(5px);
+}
+
+body > section {
+	position: relative;
+	display: block;
+	width: 100%;
+	max-width: 800px;
+	margin-top: 0px;
+	margin-bottom: 0px;
+	margin-left: auto;
+	margin-right: auto;
+	padding: 20px;
+	border-radius: 20px;
+	background-color: rgb(from var(--back-color) r g b / 60%);
+	box-shadow: 0px 0px 15px var(--back-color), 0px 0px 5px var(--back-color);
+}
+body > section > h1:first-child {
+	margin-top: 50px;
+	margin-bottom: 30px;
+}
+body > aside {
+	display: block;
+	height: 50px;
+}
+
+input.myName {
+	width: 300px;
+}
+input.myVault {
+	width: 400px;
+}
+select.myLang {
+	width: 100px;
+}
+textarea.myInfo {
+	height: 250px;
+}
+.mention {
+	font-size: 0.9em;
+	font-style: italic;
+	color: rgb(from var(--front-color) calc(r + 80) calc(g + 80) calc(b + 80));
+}
+div.mention p {
+	margin-top: 5px;
+	margin-bottom: 5px;
+}
+div.confirm {
+	margin-top: 50px;
+	margin-bottom: 30px;
+	text-align: center;
+}

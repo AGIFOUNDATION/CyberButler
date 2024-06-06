@@ -1,27 +1,39 @@
+const sendMessage = (event, data, target="BackEnd", tid) => {
+	chrome.runtime.sendMessage({
+		event, data, target, tid,
+		sender: "PopupEnd"
+	});
+};
+
 const displayMessage = (message) => {
-	const messageContainer = document.getElementById('message-container');
+	const messageContainer = document.querySelector('div.message-container');
 	const newMessage = document.createElement('p');
 	newMessage.textContent = message;
 	messageContainer.appendChild(newMessage);
 };
 
-const port = chrome.runtime.connect({ name: 'popup' });
-port.onMessage.addListener(message => {
-	if (message.type === 'connected') {
-		// WebSocket 连接成功
-		console.log('Connected to WebSocket server!');
+const EventHandler = {};
+EventHandler.ClosePopup = () => {
+	displayMessage('Close Window');
+	window.close();
+};
+
+chrome.runtime.onMessage.addListener(msg => {
+	displayMessage(JSON.stringify(msg));
+	if (msg.target !== "PopupEnd") return;
+	if (!msg.event) return;
+
+	var handler = EventHandler[msg.event];
+	if (!!handler) {
+		handler(msg.data, msg.sender, msg.sid);
 	}
-	else if (message.type === 'message') {
-		// 收到来自 WebSocket 的信息
-		displayMessage(message.data);
-	}
-	else if (message.type === 'error') {
-		// WebSocket 连接错误
-		console.error('WebSocket connection error:', message.data);
-	}
-	else if (message.type === 'closed') {
-		// WebSocket 连接关闭
-		console.log('WebSocket connection closed!');
+	else {
+		displayMessage(JSON.stringify(msg));
 	}
 });
-port.postMessage({ type: 'connect' });
+
+sendMessage("OpenPopup");
+
+window.addEventListener('load', () => {
+	displayMessage('Document Loaded');
+});
