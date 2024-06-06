@@ -12,7 +12,6 @@ plugins:
 exclude:
   - extension/
   - backend/
-  - LICENSE
 
 assets:
   features:
