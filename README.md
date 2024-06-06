@@ -12,5 +12,5 @@ E = M \times c^2
 $$
 
 -	E: Enlightment
--	M: Manager
+-	M: Mind
 -	c: cyberbutler
