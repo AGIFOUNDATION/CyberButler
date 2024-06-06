@@ -91,6 +91,17 @@ body > article blockquote {
 	box-shadow: 1px 1px 5px rgba(65, 174, 60, 1.0);
 	color: rgba(208, 222, 170, 1.0);
 }
+body > article ul, body > article ol {
+	padding-left: 32px;
+}
+body > article ul li::marker {
+	content: "> ";
+	color: rgba(65, 174, 60, 1.0);
+}
+body > article ol li::marker {
+	color: rgba(65, 174, 60, 1.0);
+	font-size: 12px;
+}
 body > article table {
 	box-shadow: 2px 2px 5px rgba(97, 113, 114, 0.5);
 }
