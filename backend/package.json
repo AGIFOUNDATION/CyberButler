@@ -1,0 +1,26 @@
+{
+	"name": "CyberButlerServer",
+	"version": "0.0.1",
+	"author": {
+		"name": "LostAbaddon",
+		"email": "LostAbaddon@gmail.com"
+	},
+	"description": "Your personal knowledge vault butler, backend server.",
+	"license": "MIT",
+	"homepage": "https://github.com/AGIFOUNDATION/CyberButler",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/AGIFOUNDATION/CyberButler"
+	},
+	"main": "server.js",
+	"engines": {
+		"node": ">=20.0.0"
+	},
+	"contributors": [
+		"LostAbaddon <lostabaddon@gmail.com>"
+	],
+	"dependencies": {
+		"socks-proxy-agent": "^7.0.0",
+		"ws": "^8.17.0"
+	}
+}

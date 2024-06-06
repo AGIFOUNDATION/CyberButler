@@ -1,0 +1,51 @@
+{
+	"manifest_version": 3,
+	"minimum_chrome_version": "116",
+	"name": "CyberButler",
+	"version": "0.0.1",
+	"description": "Your personal cyber knowledge vault butler.",
+	"icons": {
+		"16": "images/icon16.png",
+		"32": "images/icon32.png",
+		"48": "images/icon48.png",
+		"64": "images/icon64.png",
+		"128": "images/icon128.png",
+		"256": "images/icon256.png",
+		"512": "images/icon512.png",
+		"1024": "images/icon1024.png"
+	},
+	"permissions": [
+		"activeTab",
+		"scripting",
+		"webRequest",
+		"storage",
+		"notifications"
+	],
+	"host_permissions": [
+		"http://*/*",
+		"https://*/*"
+	],
+	"background": {
+		"service_worker": "background.js",
+		"type": "module"
+	},
+	"content_scripts": [
+		{
+			"matches": ["<all_urls>"],
+			"js": ["script/common.js", "content.js"]
+		}
+	],
+	"action": {
+		"default_popup": "popup.html",
+		"default_icon": {
+			"16": "images/icon16.png",
+			"32": "images/icon32.png",
+			"48": "images/icon48.png",
+			"64": "images/icon64.png",
+			"128": "images/icon128.png",
+			"256": "images/icon256.png",
+			"512": "images/icon512.png",
+			"1024": "images/icon1024.png"
+		}
+	}
+}
