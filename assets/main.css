@@ -1,6 +1,14 @@
+html, body {
+	margin: 0px;
+	padding: 0px;
+}
+
 body {
-	background-color: rgba(226, 225, 228, 1.0);
-	color: rgba(19, 17, 36, 1.0);
+	background-color: rgba(29, 30, 27, 1.0);
+	color: rgba(234, 238, 219, 1.0);
+	font-family: Monaco, "Bitstream Vera Sans Mono", "Lucida Console", Terminal, monospace;
+	font-size: 16px;
+	line-height: 1.5;
 }
 
 a:hover {
@@ -17,17 +25,27 @@ body > article {
 	margin-bottom: 0px;
 	margin-left: auto;
 	margin-right: auto;
+	padding-left: 10px;
+	padding-right: 10px;
+	box-sizing: border-box;
 }
 body > article h1 {
 	margin-top: 80px;
 	margin-bottom: 50px;
+	color: rgba(65, 174, 60, 1.0);
+	font-size: 2.5rem;
+	font-weight: bolder;
 }
 body > article h2 {
 	margin-top: 50px;
 	margin-bottom: 30px;
+	color: rgba(65, 174, 60, 1.0);
+	font-size: 2.0rem;
+	font-weight: bold;
 }
 body > article h1, body > article h2 {
-	border-bottom: 1px solid rgba(19, 17, 36, 1.0);
+	padding: 5px;
+	border-bottom: 1px solid rgba(65, 174, 60, 1.0);
 }
 body > article table {
 	display: table;
@@ -97,29 +115,4 @@ body > article .backlink {
 		left: auto;
 		right: 10px;
 	}
-}
-
-body.theme_dark {
-	background-color: rgba(29, 30, 27, 1.0);
-	color: rgba(234, 238, 219, 1.0);
-}
-.theme_dark body > article h1, .theme_dark body > article h2 {
-	border-bottom: 1px solid rgba(236, 238, 219, 1.0);
-}
-.theme_dark a,
-.theme_dark body > article pre,
-.theme_dark body > article blockquote,
-.theme_dark body > article table {
-	filter: invert(1);
-}
-.theme_dark body > article pre,
-.theme_dark body > article table {
-	color: rgba(19, 17, 36, 1.0);
-}
-.theme_dark .bottomButton {
-	background-color: rgba(17, 8, 13, 1.0);
-	box-shadow: 2px 2px 5px rgba(158, 142, 141, 0.5);
-}
-.theme_dark .footnote {
-	border-top: 1px solid rgba(236, 238, 219, 1.0);
 }
