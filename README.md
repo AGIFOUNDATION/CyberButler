@@ -7,10 +7,6 @@ Your Personal cyber knowledge vault butler.
 
 ---
 
-Our Belief
-
----
-
 $$
 E = M \times c^2
 $$
