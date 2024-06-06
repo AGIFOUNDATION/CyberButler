@@ -5,7 +5,7 @@ import "./script/common.js";
 const i18nList = ['en', 'zh'];
 const DefaultLang = "zh";
 const configureCyberButler = async () => {
-	var lang = await chrome.storage.local.get('lang');
+	var lang = await chrome.storage.sync.get('lang');
 	if (!!lang) lang = lang.lang;
 	if (!lang) {
 		lang = DefaultLang;
@@ -14,7 +14,7 @@ const configureCyberButler = async () => {
 		lang = lang.toLowerCase();
 		if (!i18nList.includes(lang)) lang = DefaultLang;
 	}
-	chrome.storage.local.set({lang});
+	chrome.storage.sync.set({lang});
 
 	var url = chrome.runtime.getURL(`pages/${lang}/config.html`);
 	var tab = await chrome.tabs.query({url});
@@ -44,9 +44,17 @@ chrome.runtime.onMessage.addListener((msg, sender) => {
 	}
 	dispatchEvent(msg);
 });
+const callPopup = (event, data) => {
+	chrome.runtime.sendMessage({
+		event, data,
+		target: "PopupEnd",
+		sender: "BackEnd"
+	});
+};
 
 /* WebSocket */
 
+var webSocket;
 var sendMessage = (event, data, sender, sid) => {};
 
 const getWSConfig = async () => {
@@ -65,24 +73,39 @@ const initWS = async () => {
 		prepareWS(wsHost);
 	}
 };
-const prepareWS = (wsUrl) => {
-	const parseMsg = evt => {
-		var msg = evt.data;
-		if (!isString(msg)) return null;
-		try {
-			msg = JSON.parse(msg);
-		}
-		catch {
-			return null;
-		}
-		msg.target = msg.target || "BackEnd";
-		return msg;
-	};
+const parseMsg = evt => {
+	var msg = evt.data;
+	if (!isString(msg)) return null;
+	try {
+		msg = JSON.parse(msg);
+	}
+	catch {
+		return null;
+	}
+	msg.target = msg.target || "BackEnd";
+	return msg;
+};
+const prepareWS = (wsUrl) => new Promise((res, rej) => {
+	// Close last socket
+	if (!!webSocket) webSocket.close();
 
-	const socket = new WebSocket(wsUrl);
+	var socket = new WebSocket(wsUrl);
 
 	socket.onopen = () => {
 		console.log('[WS] Opened');
+		
+		webSocket = socket;
+		sendMessage = async (event, data, sender, sid) => {
+			if (!webSocket) {
+				await prepareWS(wsUrl);
+			}
+
+			data = {event, data, sender, sid};
+			data = JSON.stringify(data);
+			webSocket.send(data);
+		};
+	
+		res(true);
 	};
 	socket.onmessage = evt => {
 		var msg = parseMsg(evt);
@@ -99,14 +122,10 @@ const prepareWS = (wsUrl) => {
 	};
 	socket.onclose = () => {
 		console.log("[WS] Close");
+		if (socket === webSocket) webSocket = null;
+		res(false);
 	};
-
-	sendMessage = (event, data, sender, sid) => {
-		data = {event, data, sender, sid};
-		data = JSON.stringify(data);
-		socket.send(data);
-	};
-};
+});
 
 initWS();
 
@@ -114,13 +133,14 @@ initWS();
 
 const EventHandler = {};
 const dispatchEvent = async (msg) => {
-	console.log('[SW] Got Event', msg);
 	// 服务器端事件
 	if (msg.target === 'ServerEnd') {
+		console.log('[SW | Server] Got Event', msg);
 		sendMessage(msg.event, msg.data, msg.sender, msg.sid);
 	}
 	// 页面端事件
 	else if (msg.target === "PageEnd" || msg.target === "FrontEnd") {
+		console.log('[SW | Front] Got Event', msg);
 		// 发送给当前页面
 		if (!msg.tid) {
 			let tid = LastActiveTab;
@@ -139,7 +159,8 @@ const dispatchEvent = async (msg) => {
 	// Background事件
 	else {
 		let handler = EventHandler[msg.event];
-		if (!handler) return;
+		if (!handler) return console.log('[SW | Service] Got Event', msg);
+
 		handler(msg.data, msg.sender, msg.sid, msg.target, msg.tid);
 	}
 };
@@ -150,13 +171,31 @@ EventHandler.OpenPopup = async (data, source, sid, target, tid) => {
 	var wsHost = await getWSConfig();
 	if (!!wsHost) return;
 
-	chrome.runtime.sendMessage({
-		event: "ClosePopup",
-		target: "PopupEnd",
-		sender: "BackEnd"
-	});
+	callPopup("ClosePopup");
 	configureCyberButler();
 };
+EventHandler.setWSHost = async (data, source, sid, target, tid) => {
+	if (source !== 'ConfigPage') return;
+	console.log('[WS] Set Host: ' + data);
+
+	var done;
+	try {
+		done = await prepareWS(data);
+	}
+	catch (err) {
+		console.error(err);
+	}
+
+	chrome.tabs.sendMessage(sid, {
+		event: "connectWSHost",
+		data: done,
+		target: source,
+		sender: 'BackEnd',
+	});
+};
+
+/* ------------ */
+
 EventHandler.ContentScriptLoaded = (data, source, sid, target, tid) => {
 	if (source !== 'FrontEnd') return;
 	chrome.scripting.executeScript({
@@ -165,6 +204,7 @@ EventHandler.ContentScriptLoaded = (data, source, sid, target, tid) => {
 		injectImmediately: true,
 	});
 };
+
 EventHandler.notify = (data, source) => {
 	var sourceName = 'Server';
 	if (source === "BackEnd") sourceName = 'Background';
