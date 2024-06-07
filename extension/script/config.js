@@ -38,13 +38,13 @@ window.onload = async () => {
 
 	// Read config
 	var [localInfo, remoteInfo] = await Promise.all([
-		chrome.storage.local.get(['host']),
+		chrome.storage.local.get(['wsHost']),
 		chrome.storage.sync.get(['name', 'info', 'lang'])
 	]);
 	myName = remoteInfo.name || myName;
 	myInfo = remoteInfo.info || myInfo;
 	myLang = remoteInfo.lang || myLang;
-	wsHost = localInfo.host || '';
+	wsHost = localInfo.wsHost || '';
 
 	iptName.value = myName;
 	iptInfo.value = myInfo;
@@ -74,12 +74,11 @@ window.onload = async () => {
 
 const EventHandler = {};
 EventHandler.connectWSHost = async (data, source) => {
-	console.log(data);
 	if (!data || !data.ok) {
 		Notification.show(Notifications[myLang].title, Notifications[myLang].wsConnectFailed, 'rightBottom', 'fail', 5000);
 	}
 	else {
-		await chrome.storage.local.set({ host: data.wsHost });
+		await chrome.storage.local.set({ wsHost: data.wsHost });
 		if (!data.wsHost) {
 			console.log('[WS] Use Edged Knowledge Vault.');
 			Notification.show(Notifications[myLang].title, Notifications[myLang].useEdgedVault, 'rightBottom', 'warn', 5000);

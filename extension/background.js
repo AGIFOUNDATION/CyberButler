@@ -59,7 +59,7 @@ var webSocket;
 var sendMessage = DefaultSendMessage;
 
 const getWSConfig = async () => {
-	var wsHost = await chrome.storage.local.get(['wshost']);
+	var wsHost = await chrome.storage.local.get(['wsHost']);
 	if (!!wsHost) wsHost = wsHost.wsHost;
 	return wsHost;
 };
