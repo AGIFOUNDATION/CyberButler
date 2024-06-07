@@ -2,12 +2,20 @@ const Notifications = {
 	en: {
 		title: "Cyprite Memory",
 		saved: "Configuration has been saved.",
+		wsConnectFailed: "Knowledge Vault connection failed, please confirm the knowledge vault address!",
+		wsConnected: "Knowledge Vault connected",
 	},
 	zh: {
 		title: "机灵记忆",
 		saved: "配置已保存",
+		wsConnectFailed: "知识库连接失败，请确认知识库地址！",
+		wsConnected: "知识库连接成功",
 	},
 };
+var myName = '';
+var myInfo = '';
+var myLang = 'en';
+var wsHost = '';
 
 const sendMessage = (event, data, target="BackEnd", tid) => {
 	chrome.runtime.sendMessage({
@@ -17,6 +25,8 @@ const sendMessage = (event, data, target="BackEnd", tid) => {
 };
 
 window.onload = async () => {
+	Notification.init(false);
+
 	var submitter = document.querySelector('.confirm button');
 	var iptName = document.querySelector('input.myName');
 	var iptInfo = document.querySelector('textarea.myInfo');
@@ -28,10 +38,10 @@ window.onload = async () => {
 		chrome.storage.local.get(['host']),
 		chrome.storage.sync.get(['name', 'info', 'lang'])
 	]);
-	var myName = remoteInfo.name || '';
-	var myInfo = remoteInfo.info || '';
-	var myLang = remoteInfo.lang || 'en';
-	var wsHost = localInfo.host || '';
+	myName = remoteInfo.name || myName;
+	myInfo = remoteInfo.info || myInfo;
+	myLang = remoteInfo.lang || myLang;
+	wsHost = localInfo.host || wsHost;
 
 	iptName.value = myName;
 	iptInfo.value = myInfo;
@@ -52,12 +62,7 @@ window.onload = async () => {
 		});
 
 		// Notify
-		chrome.notifications.create({
-			title: Notifications[myLang].title,
-			message: Notifications[myLang].saved,
-			type: "basic",
-			iconUrl: "/images/icon1024.png"
-		});
+		Notification.show(Notifications[myLang].title, Notifications[myLang].saved, 'rightBottom', 'success', 3000);
 
 		// Call BackEnd to Test and Set wsHost
 		sendMessage('setWSHost', wsHost);
@@ -66,7 +71,12 @@ window.onload = async () => {
 
 const EventHandler = {};
 EventHandler.connectWSHost = (data, source) => {
-	console.log(`[WS] ` + data);
+	if (!data) {
+		Notification.show(Notifications[myLang].title, Notifications[myLang].wsConnectFailed, 'rightBottom', 'fail', 5000);
+	}
+	else {
+		Notification.show(Notifications[myLang].title, Notifications[myLang].wsConnected, 'rightBottom', 'success', 3000);
+	}
 };
 
 chrome.runtime.onMessage.addListener((msg, sender) => {

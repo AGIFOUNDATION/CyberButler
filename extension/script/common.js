@@ -1,3 +1,5 @@
+globalThis.wait = delay => new Promise(res => setTimeout(res, delay));
+
 globalThis.newID = (len=16) => {
 	var id = [];
 	for (let i = 0; i < len; i ++) {
