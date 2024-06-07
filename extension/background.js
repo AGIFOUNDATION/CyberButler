@@ -54,8 +54,9 @@ const callPopup = (event, data) => {
 
 /* WebSocket */
 
+const DefaultSendMessage = (event, data, sender, sid) => {};
 var webSocket;
-var sendMessage = (event, data, sender, sid) => {};
+var sendMessage = DefaultSendMessage;
 
 const getWSConfig = async () => {
 	var wsHost = await chrome.storage.local.get(['wshost']);
@@ -93,7 +94,7 @@ const prepareWS = (wsUrl) => new Promise((res, rej) => {
 
 	socket.onopen = () => {
 		console.log('[WS] Opened');
-		
+
 		webSocket = socket;
 		sendMessage = async (event, data, sender, sid) => {
 			if (!webSocket) {
@@ -104,7 +105,7 @@ const prepareWS = (wsUrl) => new Promise((res, rej) => {
 			data = JSON.stringify(data);
 			webSocket.send(data);
 		};
-	
+
 		res(true);
 	};
 	socket.onmessage = evt => {
@@ -178,6 +179,20 @@ EventHandler.setWSHost = async (data, source, sid, target, tid) => {
 	if (source !== 'ConfigPage') return;
 	console.log('[WS] Set Host: ' + data);
 
+	if (!data) {
+		sendMessage = DefaultSendMessage;
+		chrome.tabs.sendMessage(sid, {
+			event: "connectWSHost",
+			data: {
+				wsHost: data,
+				ok: true,
+			},
+			target: source,
+			sender: 'BackEnd',
+		});
+		return;
+	}
+
 	var done;
 	try {
 		done = await prepareWS(data);
@@ -188,7 +203,10 @@ EventHandler.setWSHost = async (data, source, sid, target, tid) => {
 
 	chrome.tabs.sendMessage(sid, {
 		event: "connectWSHost",
-		data: done,
+		data: {
+			wsHost: data,
+			ok: done
+		},
 		target: source,
 		sender: 'BackEnd',
 	});

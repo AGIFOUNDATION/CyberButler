@@ -6,6 +6,7 @@
 <title>CyberButler Configuration</title>
 <link rel="stylesheet" href="../css/main.css">
 <link rel="stylesheet" href="../css/config.css">
+<script src="../../script/common.js"></script>
 <script src="../../components/notification.js"></script>
 <script src="../script/config.js"></script>
 </head>
@@ -15,20 +16,20 @@
 <aside class="header"></aside>
 <section>
 	<h1>CyberButler Configuration</h1>
-	<div>主人您好！</div>
-	<div>我是你的私人知识库管家，我叫“机灵”。</div>
-	<div>“机”是“机器”的“机”，“灵”是“精灵”的“灵”。</div>
-	<div>请问我应该怎么称呼您呀： <input class="myName" type="text" placeholder="请输入你的称呼，默认为“主人”"></div>
-	<div>您习惯使用哪种语言啊？ <select class="myLang"><option value="zh">中文</option><option value="en">English</option></select></div>
-	<div>我想更了解您，您说说自己的情况吧~~~~<span class="mention">（以后我会根据我们的互动自己更新对您的认识的哟~~~）</span></div>
-	<div><textarea class="myInfo scrollable" placeholder="您的基本情况"></textarea></div>
+	<div>Hello, Master!</div>
+	<div>I am your personal Knowledge Vault butler, my name is "Cyprite".</div>
+	<div>In it, "Cy-" is short for "Cyber", "-prite" is short for "sprite".</div>
+	<div>How may I address you? <input class="myName" type="text" placeholder='Please enter your title, the default is \"Master.\"'></div>
+	<div>What language do you prefer to use? <select class="myLang"><option value="zh">中文</option><option value="en">English</option></select></div>
+	<div>I would like to know more about you, could you tell me about yourself? <span class="mention">(In the future, I will update my understanding of you based on our interactions~~)</span></div>
+	<div><textarea class="myInfo scrollable" placeholder="Your basic information."></textarea></div>
 	<hr>
-	<div>请问你希望连到哪个知识库？<span class="mention">（不填表示不连接）</span></div>
+	<div>Which Knowledge Vault would you like to connect to?<span class="mention">(Leaving it blank means no connection will be made.)</span></div>
 	<div class="mention">
-		<p>如果不连接知识库，那我只在浏览器内执行，能力会有所限制。</p>
-		<p>如果连接知识库，请确认您相信该知识库，否则您的个人信息可能会泄露哦！</p>
+		<p>If not connected to a Knowledge Vault, my capabilities will be limited to execution within the browser.</p>
+		<p>If you choose to connect to a Knowledge Vault, please ensure that you trust the source, otherwise there is a risk of your personal information being leaked!</p>
 	</div>
-	<div>请输入知识库的IP地址： <input class="myVault" type="text" placeholder="比如：ws://localhost:6666"></div>
+	<div>IP address of the Knowledge Vault: <input class="myVault" type="text" placeholder="e.g.: ws://localhost:6666"></div>
 	<div class="confirm">
 		<button>确认</button>
 	</div>

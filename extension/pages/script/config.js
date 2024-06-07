@@ -4,14 +4,17 @@ const Notifications = {
 		saved: "Configuration has been saved.",
 		wsConnectFailed: "Knowledge Vault connection failed, please confirm the knowledge vault address!",
 		wsConnected: "Knowledge Vault connected",
+		useEdgedVault: "Use Edged Knowledge Vault.",
 	},
 	zh: {
 		title: "机灵记忆",
 		saved: "配置已保存",
 		wsConnectFailed: "知识库连接失败，请确认知识库地址！",
 		wsConnected: "知识库连接成功",
+		useEdgedVault: "使用边端知识库",
 	},
 };
+
 var myName = '';
 var myInfo = '';
 var myLang = 'en';
@@ -41,7 +44,7 @@ window.onload = async () => {
 	myName = remoteInfo.name || myName;
 	myInfo = remoteInfo.info || myInfo;
 	myLang = remoteInfo.lang || myLang;
-	wsHost = localInfo.host || wsHost;
+	wsHost = localInfo.host || '';
 
 	iptName.value = myName;
 	iptInfo.value = myInfo;
@@ -52,7 +55,7 @@ window.onload = async () => {
 		myName = iptName.value || myName;
 		myInfo = iptInfo.value || myInfo;
 		myLang = iptLang.value || myLang;
-		wsHost = iptVault.value || wsHost;
+		wsHost = iptVault.value || '';
 
 		// Save config
 		chrome.storage.sync.set({
@@ -70,12 +73,21 @@ window.onload = async () => {
 };
 
 const EventHandler = {};
-EventHandler.connectWSHost = (data, source) => {
-	if (!data) {
+EventHandler.connectWSHost = async (data, source) => {
+	console.log(data);
+	if (!data || !data.ok) {
 		Notification.show(Notifications[myLang].title, Notifications[myLang].wsConnectFailed, 'rightBottom', 'fail', 5000);
 	}
 	else {
-		Notification.show(Notifications[myLang].title, Notifications[myLang].wsConnected, 'rightBottom', 'success', 3000);
+		await chrome.storage.local.set({ host: data.wsHost });
+		if (!data.wsHost) {
+			console.log('[WS] Use Edged Knowledge Vault.');
+			Notification.show(Notifications[myLang].title, Notifications[myLang].useEdgedVault, 'rightBottom', 'warn', 5000);
+		}
+		else {
+			console.log('[WS] Connect Knowledge Vault: ' + data.wsHost);
+			Notification.show(Notifications[myLang].title, Notifications[myLang].wsConnected, 'rightBottom', 'success', 3000);
+		}
 	}
 };
 
