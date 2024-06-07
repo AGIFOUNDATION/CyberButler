@@ -46,6 +46,10 @@ input.myName {
 input.myVault {
 	width: 400px;
 }
+input.myKey {
+	width: 238px;
+	font-size: 0.7em;
+}
 select.myLang {
 	width: 100px;
 }

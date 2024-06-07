@@ -19,6 +19,7 @@ var myName = '';
 var myInfo = '';
 var myLang = 'en';
 var wsHost = '';
+var apiKey = '';
 
 const sendMessage = (event, data, target="BackEnd", tid) => {
 	chrome.runtime.sendMessage({
@@ -35,27 +36,31 @@ window.onload = async () => {
 	var iptInfo = document.querySelector('textarea.myInfo');
 	var iptLang = document.querySelector('select.myLang');
 	var iptVault = document.querySelector('input.myVault');
+	var iptKey = document.querySelector('input.myKey');
 
 	// Read config
 	var [localInfo, remoteInfo] = await Promise.all([
-		chrome.storage.local.get(['wsHost']),
+		chrome.storage.local.get(['wsHost', 'apiKey']),
 		chrome.storage.sync.get(['name', 'info', 'lang'])
 	]);
 	myName = remoteInfo.name || myName;
 	myInfo = remoteInfo.info || myInfo;
 	myLang = remoteInfo.lang || myLang;
 	wsHost = localInfo.wsHost || '';
+	apiKey = localInfo.apiKey || '';
 
 	iptName.value = myName;
 	iptInfo.value = myInfo;
 	iptLang.value = myLang;
 	iptVault.value = wsHost;
+	iptKey.value = apiKey;
 
 	submitter.addEventListener('click', async () => {
 		myName = iptName.value || myName;
 		myInfo = iptInfo.value || myInfo;
 		myLang = iptLang.value || myLang;
 		wsHost = iptVault.value || '';
+		apiKey = iptKey.value || '';
 
 		// Save config
 		chrome.storage.sync.set({
@@ -67,18 +72,18 @@ window.onload = async () => {
 		// Notify
 		Notification.show(Notifications[myLang].title, Notifications[myLang].saved, 'rightBottom', 'success', 3000);
 
-		// Call BackEnd to Test and Set wsHost
-		sendMessage('setWSHost', wsHost);
+		// Send to BackEnd
+		sendMessage('setConfig', { myName, myInfo, myLang, wsHost, apiKey });
 	});
 };
 
 const EventHandler = {};
-EventHandler.connectWSHost = async (data, source) => {
+EventHandler.connectWSHost = async (data) => {
 	if (!data || !data.ok) {
 		Notification.show(Notifications[myLang].title, Notifications[myLang].wsConnectFailed, 'rightBottom', 'fail', 5000);
 	}
 	else {
-		await chrome.storage.local.set({ wsHost: data.wsHost });
+		await chrome.storage.local.set({ wsHost: data.wsHost, apiKey });
 		if (!data.wsHost) {
 			console.log('[WS] Use Edged Knowledge Vault.');
 			Notification.show(Notifications[myLang].title, Notifications[myLang].useEdgedVault, 'rightBottom', 'warn', 5000);

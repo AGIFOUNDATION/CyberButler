@@ -1,22 +1,37 @@
 import "./script/common.js";
-
-/* Management */
+import "./script/ai.js";
+import "./script/prompts.js";
 
 const i18nList = ['en', 'zh'];
 const DefaultLang = "zh";
-const configureCyberButler = async () => {
-	var lang = await chrome.storage.sync.get('lang');
-	if (!!lang) lang = lang.lang;
-	if (!lang) {
-		lang = DefaultLang;
-	}
-	else {
-		lang = lang.toLowerCase();
-		if (!i18nList.includes(lang)) lang = DefaultLang;
-	}
-	chrome.storage.sync.set({lang});
 
-	var url = chrome.runtime.getURL(`pages/${lang}/config.html`);
+globalThis.LangName = {
+	'zh': "Chinese",
+	'en': "English",
+};
+globalThis.Hints = {
+	zh: {
+		talkHint: "机灵说：",
+		noAPIKey: "抱歉，您还没有设置 Gemini APIKey 哦！",
+	},
+	en: {
+		talkHint: "Cyprite say:",
+		noAPIKey: "Sorry, you haven't set the Gemini API key yet!",
+	},
+};
+
+globalThis.myInfo = {
+	useLocalKV: true,
+	apiKey: '',
+	lang: DefaultLang,
+	name: '主人',
+	info: '(Not set yet)',
+};
+
+/* Management */
+
+const configureCyberButler = async () => {
+	var url = chrome.runtime.getURL(`pages/${myInfo.lang}/config.html`);
 	var tab = await chrome.tabs.query({url});
 	if (!!tab && tab.length > 0) {
 		tab = tab[0];
@@ -28,6 +43,21 @@ const configureCyberButler = async () => {
 	else {
 		chrome.tabs.create({url});
 	}
+};
+chrome.runtime.onInstalled.addListener(async () => {
+	chrome.storage.local.set({installed: true});
+	var wsHost = await getWSConfig();
+	if (!!wsHost) return;
+	configureCyberButler();
+});
+const showSystemNotification = (message) => {
+	console.log(message);
+	chrome.notifications.create({
+		title: Hints[myInfo.lang].talkHint,
+		message,
+		type: "basic",
+		iconUrl: "/images/icon1024.png",
+	});
 };
 
 /* Tabs */
@@ -59,15 +89,38 @@ var webSocket;
 var sendMessage = DefaultSendMessage;
 
 const getWSConfig = async () => {
-	var wsHost = await chrome.storage.local.get(['wsHost']);
-	if (!!wsHost) wsHost = wsHost.wsHost;
-	return wsHost;
+	var [localInfo, remoteInfo] = await Promise.all([
+		chrome.storage.local.get(['wsHost', 'apiKey']),
+		chrome.storage.sync.get(['name', 'info', 'lang']),
+	]);
+
+	myInfo.name = remoteInfo.name || myInfo.name;
+	myInfo.info = remoteInfo.info || myInfo.info;
+	myInfo.lang = remoteInfo.lang;
+	if (!myInfo.lang) {
+		myInfo.lang = DefaultLang;
+	}
+	else {
+		myInfo.lang = myInfo.lang.toLowerCase();
+		if (!i18nList.includes(myInfo.lang)) myInfo.lang = DefaultLang;
+	}
+	if (myInfo.lang !== remoteInfo) {
+		chrome.storage.sync.set({lang: myInfo.lang});
+	}
+
+	myInfo.apiKey = localInfo.apiKey || '';
+	return localInfo.wsHost;
 };
 const initWS = async () => {
 	var wsHost = await getWSConfig();
 	if (!wsHost) {
-		console.log('[WS] Server address is not configured yet.');
-		configureCyberButler();
+		console.log('[WS] Use Edged Knowledge Vault');
+
+		let installed = await chrome.storage.local.get('installed');
+		installed = installed.installed || false;
+		if (!installed) return;
+		myInfo.useLocalKV = !wsHost;
+		sayHello();
 	}
 	else {
 		console.log('[WS] Host: ' + wsHost);
@@ -92,7 +145,7 @@ const prepareWS = (wsUrl) => new Promise((res, rej) => {
 
 	var socket = new WebSocket(wsUrl);
 
-	socket.onopen = () => {
+	socket.onopen = async () => {
 		console.log('[WS] Opened');
 
 		webSocket = socket;
@@ -107,6 +160,12 @@ const prepareWS = (wsUrl) => new Promise((res, rej) => {
 		};
 
 		res(true);
+
+		var installed = await chrome.storage.local.get('installed');
+		installed = installed.installed || false;
+		if (!installed) return;
+		myInfo.useLocalKV = false;
+		sayHello();
 	};
 	socket.onmessage = evt => {
 		var msg = parseMsg(evt);
@@ -166,45 +225,54 @@ const dispatchEvent = async (msg) => {
 	}
 };
 
-EventHandler.OpenPopup = async (data, source, sid, target, tid) => {
+EventHandler.OpenPopup = async (data, source) => {
 	if (source !== 'PopupEnd') return;
 
 	var wsHost = await getWSConfig();
+	configureCyberButler();
 	if (!!wsHost) return;
 
 	callPopup("ClosePopup");
 	configureCyberButler();
 };
-EventHandler.setWSHost = async (data, source, sid, target, tid) => {
+EventHandler.setConfig = async (data, source, sid) => {
 	if (source !== 'ConfigPage') return;
-	console.log('[WS] Set Host: ' + data);
+	console.log('[WS] Set Host: ' + data.wsHost);
 
-	if (!data) {
+	myInfo.name = data.myName || myInfo.name;
+	myInfo.info = data.myInfo || myInfo.info;
+	myInfo.lang = data.myLang || myInfo.lang;
+	myInfo.apiKey = data.apiKey || myInfo.apiKey;
+
+	if (!data.wsHost) {
 		sendMessage = DefaultSendMessage;
 		chrome.tabs.sendMessage(sid, {
 			event: "connectWSHost",
 			data: {
-				wsHost: data,
+				wsHost: data.wsHost,
 				ok: true,
 			},
 			target: source,
 			sender: 'BackEnd',
 		});
+		myInfo.useLocalKV = true;
+		sayHello();
 		return;
 	}
 
 	var done;
 	try {
-		done = await prepareWS(data);
+		done = await prepareWS(data.wsHost);
 	}
 	catch (err) {
 		console.error(err);
+		done = false;
 	}
 
 	chrome.tabs.sendMessage(sid, {
 		event: "connectWSHost",
 		data: {
-			wsHost: data,
+			wsHost: data.wsHost,
 			ok: done
 		},
 		target: source,
@@ -230,4 +298,17 @@ EventHandler.notify = (data, source) => {
 	else if (source === "PageEnd") sourceName = 'Injection';
 	if (!isString(data) && !isNumber(data) && !isBoolean(data)) data = JSON.stringify(data);
 	console.log(`[Notify | ${sourceName}] ` + data);
+};
+
+/* AI */
+
+const sayHello = async () => {
+	var reply;
+	try {
+		reply = await callAI('sayHello');
+		showSystemNotification(reply);
+	}
+	catch (err) {
+		showSystemNotification(err);
+	}
 };
