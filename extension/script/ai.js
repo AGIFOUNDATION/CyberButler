@@ -2,9 +2,7 @@ import "./gemini.js";
 
 const ResMap = new Map();
 
-globalThis.callAI = (action, data) => new Promise((res, rej) => {
-	myInfo.useLocalKV = true;
-
+globalThis.callAIandWait = (action, data) => new Promise((res, rej) => {
 	var taskId = newID();
 
 	// 前端处理
@@ -34,6 +32,37 @@ globalThis.callAI = (action, data) => new Promise((res, rej) => {
 		ResMap.set(taskId, [res, rej]);
 	}
 });
+globalThis.callAI = (action, data) => {
+	// 前端处理
+	if (myInfo.useLocalKV) {
+		if (!myInfo.apiKey) {
+			chrome.notifications.create({
+				title: "CyberButler: Cyprite",
+				message: Hints[myInfo.lang].noAPIKey,
+				type: "basic",
+				iconUrl: "/images/icon1024.png",
+			});
+			return;
+		}
+		let handler = EdgedAI[action];
+		if (!handler) {
+			let errMsg = 'NO such action: ' + action;
+			console.log('[AI] ' + errMsg);
+			return;
+		}
+		handler(taskId, data);
+	}
+	// 从后端获取数据
+	else {
+	}
+};
+const replyRequest = (tid, reply, error) => {
+	var res = ResMap.get(tid);
+	if (!res) return;
+	ResMap.delete(tid);
+	if (!!error) res[1](error);
+	else res[0](reply);
+};
 
 const EdgedAI = {};
 EdgedAI.sayHello = async (tid) => {
@@ -41,7 +70,7 @@ EdgedAI.sayHello = async (tid) => {
 		lang: LangName[myInfo.lang],
 		name: myInfo.name,
 		info: myInfo.info,
-		time: timestmp2str(Date.now(), "hh:mm"),
+		time: timestmp2str(Date.now(), "YY年MM月DD日 :WDE: hh:mm"),
 	});
 	var reply, errMsg;
 	try {
@@ -52,9 +81,5 @@ EdgedAI.sayHello = async (tid) => {
 		errMsg = err.message || err.msg || err.data || (!!err.toString ? err.toString() : err || 'Gemini Error');
 	}
 
-	var res = ResMap.get(tid);
-	if (!res) return;
-	ResMap.delete(tid);
-	if (!!errMsg) res[1](errMsg);
-	else res[0](reply);
+	replyRequest(tid, reply, errMsg);
 };

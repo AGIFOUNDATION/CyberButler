@@ -13,7 +13,7 @@ PromptLib.assemble = (prompt, ...infos) => {
 	return prompt;
 };
 
-PromptLib.sayHello = `You are the user's personal assistant, your name is "Cyprite", and you have just been initialized. Please greet the user.
+PromptLib.sayHello = `You are the user's personal assistant, your name is "Cyprite". Please greet the user.
 
 # User Information
 

@@ -56,7 +56,7 @@ const showSystemNotification = (message) => {
 		title: Hints[myInfo.lang].talkHint,
 		message,
 		type: "basic",
-		iconUrl: "/images/icon1024.png",
+		iconUrl: "/images/cyprite.png",
 	});
 };
 
@@ -120,10 +120,12 @@ const initWS = async () => {
 		installed = installed.installed || false;
 		if (!installed) return;
 		myInfo.useLocalKV = !wsHost;
+		console.log('>>>>>>>>>>> Case 1');
 		sayHello();
 	}
 	else {
 		console.log('[WS] Host: ' + wsHost);
+		console.log('xxxxxxxxxxxxxxxxx    1');
 		prepareWS(wsHost);
 	}
 };
@@ -151,6 +153,7 @@ const prepareWS = (wsUrl) => new Promise((res, rej) => {
 		webSocket = socket;
 		sendMessage = async (event, data, sender, sid) => {
 			if (!webSocket) {
+				console.log('xxxxxxxxxxxxxxxxx    2');
 				await prepareWS(wsUrl);
 			}
 
@@ -165,6 +168,7 @@ const prepareWS = (wsUrl) => new Promise((res, rej) => {
 		installed = installed.installed || false;
 		if (!installed) return;
 		myInfo.useLocalKV = false;
+		console.log('>>>>>>>>>>> Case 2');
 		sayHello();
 	};
 	socket.onmessage = evt => {
@@ -256,12 +260,14 @@ EventHandler.setConfig = async (data, source, sid) => {
 			sender: 'BackEnd',
 		});
 		myInfo.useLocalKV = true;
+		console.log('>>>>>>>>>>> Case 3');
 		sayHello();
 		return;
 	}
 
 	var done;
 	try {
+		console.log('xxxxxxxxxxxxxxxxx    3');
 		done = await prepareWS(data.wsHost);
 	}
 	catch (err) {
@@ -303,9 +309,11 @@ EventHandler.notify = (data, source) => {
 /* AI */
 
 const sayHello = async () => {
+	myInfo.useLocalKV = true;
+
 	var reply;
 	try {
-		reply = await callAI('sayHello');
+		reply = await callAIandWait('sayHello');
 		showSystemNotification(reply);
 	}
 	catch (err) {
