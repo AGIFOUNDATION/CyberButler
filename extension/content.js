@@ -1,6 +1,6 @@
 /* Communiation */
 
-const sendMessage = (event, data, target, tid) => {
+var sendMessage = (event, data, target, tid) => {
 	chrome.runtime.sendMessage({
 		event, data, target, tid,
 		sender: "FrontEnd",
@@ -12,6 +12,9 @@ chrome.runtime.onMessage.addListener((msg, sender) => {
 	let handler = EventHandler[msg.event];
 	if (!handler) return;
 	handler(msg.data, 'ServerEnd');
+});
+chrome.runtime.connect().onDisconnect.addListener(() => {
+	sendMessage = () => {};
 });
 
 /* EventHandler */
