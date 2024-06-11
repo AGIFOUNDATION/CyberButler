@@ -58,9 +58,15 @@ const getInfoStrings = (info, type) => {
 
 	return [short, long];
 };
-globalThis.timestmp2str = (time, format='YYYY/MM/DD hh:mm:ss') => {
+globalThis.timestmp2str = (time, format) => {
+	if (isString(time) && !isString(format)) {
+		format = time;
+		time = null;
+	}
+	if (!isString(format)) format = "YYYY/MM/DD hh:mm:ss";
+
 	time = time || new Date();
-	if ((typeof time) === 'number') time = new Date(time);
+	if (isNumber(time)) time = new Date(time);
 
 	var [shortYear       , longYear       ] = getInfoStrings(time.getYear() + 1900, 'Y');
 	var [shortMonth      , longMonth      ] = getInfoStrings(time.getMonth() + 1, 'M');

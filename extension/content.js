@@ -27,6 +27,32 @@ EventHandler.notify = (data, source) => {
 	console.log(`[Notify | ${sourceName}] ` + data);
 };
 
+/* Tab */
+
+document.addEventListener('visibilitychange', function() {
+	if (document.hidden) {
+		sendMessage("VisibilityChanged", 'hide', "BackEnd");
+	}
+	else {
+		sendMessage("VisibilityChanged", 'show', "BackEnd");
+	}
+});
+window.addEventListener('focus', function() {
+	sendMessage("VisibilityChanged", 'show', "BackEnd");
+});
+window.addEventListener('blur', function() {
+	sendMessage("VisibilityChanged", 'hide', "BackEnd");
+});
+window.addEventListener('beforeunload', function() {
+	sendMessage("VisibilityChanged", 'close', "BackEnd");
+});
+window.addEventListener('unload', function() {
+	sendMessage("VisibilityChanged", 'close', "BackEnd");
+});
+window.addEventListener('idle', function() {
+	sendMessage("VisibilityChanged", 'idle', "BackEnd");
+});
+
 /* Init */
 
 sendMessage("ContentScriptLoaded", null, "BackEnd");

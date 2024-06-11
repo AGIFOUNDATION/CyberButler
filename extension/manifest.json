@@ -2,6 +2,9 @@
 	"manifest_version": 3,
 	"minimum_chrome_version": "116",
 	"name": "CyberButler",
+	"author": {
+		"email": "lostabaddon@gmail.com"
+	},
 	"version": "0.0.1",
 	"description": "Your personal cyber knowledge vault butler.",
 	"icons": {
@@ -17,6 +20,7 @@
 	"permissions": [
 		"activeTab",
 		"scripting",
+		"idle",
 		"webRequest",
 		"storage",
 		"notifications"
