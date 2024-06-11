@@ -73,7 +73,7 @@ window.onload = async () => {
 		Notification.show(Notifications[myLang].title, Notifications[myLang].saved, 'rightBottom', 'success', 3000);
 
 		// Send to BackEnd
-		sendMessage('setConfig', { myName, myInfo, myLang, wsHost, apiKey });
+		sendMessage('SetConfig', { myName, myInfo, myLang, wsHost, apiKey });
 	});
 };
 

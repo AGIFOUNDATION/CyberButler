@@ -137,9 +137,36 @@ const inactivePage = (info, now, needCall=false) => {
 	onPageDurationUpdated(needCall, info.url, info.duration, info.title);
 };
 const onPageDurationUpdated = (closed, url, duration, title) => {
-	// return;
-	console.log('>>>>>>>>>>>>>>>>', url, duration, closed);
-	console.log(JSON.stringify(TabInfo, true, '\t'));
+	// save info locally
+	savePageActivities(url, duration, title, closed);
+
+	// save into to server
+	sendMessage("SavePageActivity", {url, duration, title, closed}, "BackEnd");
+};
+const savePageActivities = async (url, duration, title, closed) => {
+	var totalList = await chrome.storage.local.get('activity_total');
+	totalList = (totalList || {}).activity_total || [];
+
+	var info;
+	if (!totalList.includes(url)) {
+		totalList.push(url);
+		await chrome.storage.local.set({activity_total: totalList});
+		info = {url, totalDuration: 0};
+	}
+	else {
+		info = await chrome.storage.local.get('page_activity:' + url);
+		info = info['page_activity:' + url] || {url, totalDuration: 0};
+	}
+	info.reading = !closed;
+	info.title = title;
+	info.totalDuration += duration;
+	info.currentDuration = duration;
+	info.timestamp = timestmp2str("YYYY/MM/DD hh:mm:ss :WDE:");
+
+	var item = {};
+	item['page_activity:' + url] = info;
+	console.log(info, item);
+	await chrome.storage.local.set(item);
 };
 const TabInfo = {};
 
@@ -337,7 +364,7 @@ EventHandler.OpenPopup = async (data, source) => {
 	callPopup("ClosePopup");
 	configureCyberButler();
 };
-EventHandler.setConfig = async (data, source, sid) => {
+EventHandler.SetConfig = async (data, source, sid) => {
 	if (source !== 'ConfigPage') return;
 	console.log('[WS] Set Host: ' + data.wsHost);
 
@@ -419,7 +446,7 @@ const sayHello = async () => {
 	if (!!lastHello && lastHello === currentDate) return;
 	chrome.storage.session.set({lastHello: currentDate});
 
-	myInfo.useLocalKV = true;
+	myInfo.useLocalKV = true; // test
 
 	var reply;
 	try {
