@@ -364,8 +364,6 @@ const getPageInfo = () => {
 	var content = getPageShotContent(container);
 	info.description = getPageDescription(isBody, content);
 	info.isArticle = !isBody && content.length > 5;
-	// console.log(container);
-	// console.log(content);
 
 	pageInfo = info;
 };
@@ -385,11 +383,12 @@ EventHandler.notify = (data, source) => {
 EventHandler.getPageInfo = (data, source) => {
 	if (source !== 'BackEnd') return;
 
-	console.log('[Page] Analyze Page Type: ' + document.readyState);
+	console.log('[Page] Analyze Page Info: ' + document.readyState);
 	if (!pageInfo) {
 		getPageInfo();
 	}
-	console.log(pageInfo);
+
+	sendMessage('GotPageInfo', pageInfo, 'BackEnd');
 };
 
 /* Tab */

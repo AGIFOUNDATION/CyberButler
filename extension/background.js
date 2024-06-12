@@ -108,8 +108,9 @@ const onPageActivityChanged = async (tid, state) => {
 				inactivePage(info, now, true);
 			}
 
-			let pageType = checkPageType(tid);
-			if (!pageType) {
+			let pageInfo = await getPageInfo(tid);
+			console.log('[Ext] Got Page Info', pageInfo);
+			if (!pageInfo || !pageInfo.isArticle) {
 				delete TabInfo[tid];
 			}
 			else {
@@ -171,7 +172,7 @@ const savePageActivities = async (url, duration, title, closed) => {
 	console.log(info, item);
 	await chrome.storage.local.set(item);
 };
-const checkPageType = (tid) => new Promise(res => {
+const getPageInfo = (tid) => new Promise(res => {
 	var penddings = TabRequests[tid];
 	if (!penddings) {
 		penddings = [];
@@ -483,6 +484,13 @@ EventHandler.ContentScriptLoaded = (data, source, sid, target, tid) => {
 EventHandler.VisibilityChanged = (data, source, sid) => {
 	if (source !== 'FrontEnd') return;
 	onPageActivityChanged(sid, data);
+};
+EventHandler.GotPageInfo = (data, source, sid) => {
+	if (source !== 'FrontEnd') return;
+	var tasks = TabRequests[sid];
+	delete TabRequests[sid];
+	if (!tasks || !tasks.length) return;
+	tasks.forEach(res => res(data));
 };
 
 /* ------------ */
