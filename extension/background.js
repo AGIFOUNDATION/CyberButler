@@ -69,12 +69,20 @@ const isPageForbidden = (url) => {
 };
 const onPageActivityChanged = async (tid, state) => {
 	if (!tid) return;
+	console.log('>>>>>>>>>>>>>>>>>>>>', tid, state);
 
 	var info = TabInfo[tid] || {
 		active: false,
 		duration: 0,
 		open: -1,
 	};
+	if (info.active) {
+		if (state === 'show') return;
+	}
+	else {
+		if (state === 'hide') return;
+	}
+	console.log('                   >', tid, state);
 	TabInfo[tid] = info;
 
 	var tab;
@@ -96,7 +104,7 @@ const onPageActivityChanged = async (tid, state) => {
 	var { title, url, active } = tab;
 
 	var now = Date.now();
-	if (state === 'show' || state === 'update' || state === 'active') {
+	if (['open', 'show', 'active', 'update', 'loaded'].includes(state)) {
 		if (!active) {
 			inactivePage(info, now);
 		}
@@ -108,20 +116,13 @@ const onPageActivityChanged = async (tid, state) => {
 				inactivePage(info, now, true);
 			}
 
-			let pageInfo = await getPageInfo(tid);
-			console.log('[Ext] Got Page Info', pageInfo);
-			if (!pageInfo || !pageInfo.isArticle) {
-				delete TabInfo[tid];
-			}
-			else {
-				info.active = true;
-				if (!info.active) info.open = now;
-				info.url = url;
-				info.title = title;
-			}
+			info.active = true;
+			if (!info.active) info.open = now;
+			info.url = url;
+			info.title = title;
 		}
 	}
-	else if (state === 'hide' || state === 'idle') {
+	else if (['hide', 'idle'].includes(state)) {
 		inactivePage(info, now);
 	}
 	else if (state === 'close') {
@@ -172,21 +173,6 @@ const savePageActivities = async (url, duration, title, closed) => {
 	console.log(info, item);
 	await chrome.storage.local.set(item);
 };
-const getPageInfo = (tid) => new Promise(res => {
-	var penddings = TabRequests[tid];
-	if (!penddings) {
-		penddings = [];
-		TabRequests[tid] = penddings;
-	}
-	penddings.push(res);
-	dispatchEvent({
-		event: "getPageInfo",
-		target: "FrontEnd",
-		tid,
-		source: "BackEnd",
-	});
-});
-const TabRequests = {};
 const TabInfo = {};
 
 /* Tabs */
@@ -470,31 +456,33 @@ EventHandler.SetConfig = async (data, source, sid) => {
 		sender: 'BackEnd',
 	});
 };
+EventHandler.PageStateChanged = (data, source, sid) => {
+	if (source !== 'FrontEnd') return;
+
+	var info = TabInfo[sid] || {
+		active: false,
+		duration: 0,
+		open: -1,
+	};
+	console.log('[Page] State Changed', data, info);
+
+	onPageActivityChanged(sid, data.state);
+};
+EventHandler.VisibilityChanged = (data, source, sid) => {
+	if (source !== 'FrontEnd') return;
+	onPageActivityChanged(sid, data);
+};
+
+/* ------------ */
+
 EventHandler.ContentScriptLoaded = (data, source, sid, target, tid) => {
 	if (source !== 'FrontEnd') return;
-	onPageActivityChanged(sid, "show");
-	return;
-
 	chrome.scripting.executeScript({
 		target: { tabId: sid },
 		files: [ "insider.js" ],
 		injectImmediately: true,
 	});
 };
-EventHandler.VisibilityChanged = (data, source, sid) => {
-	if (source !== 'FrontEnd') return;
-	onPageActivityChanged(sid, data);
-};
-EventHandler.GotPageInfo = (data, source, sid) => {
-	if (source !== 'FrontEnd') return;
-	var tasks = TabRequests[sid];
-	delete TabRequests[sid];
-	if (!tasks || !tasks.length) return;
-	tasks.forEach(res => res(data));
-};
-
-/* ------------ */
-
 EventHandler.notify = (data, source, sid) => {
 	var sourceName = 'Server';
 	if (source === "BackEnd") sourceName = 'Background';

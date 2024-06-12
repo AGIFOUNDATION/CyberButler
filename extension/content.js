@@ -31,13 +31,8 @@ const findContainer = () => {
 	var container = null, size = 0;
 
 	var ele = document.body.querySelector('article');
-	if (!!ele) {
-		let s = ele.innerHTML.length;
-		if (s > size) {
-			container = ele;
-			size = s;
-		}
-	}
+	if (!!ele) return ele;
+
 	ele = document.body.querySelector('[id*="article"]');
 	if (!!ele) {
 		let s = ele.innerHTML.length;
@@ -54,6 +49,8 @@ const findContainer = () => {
 			size = s;
 		}
 	}
+	if (!!container) return container;
+
 	ele = document.body.querySelector('[id*="container"]');
 	if (!!ele) {
 		let s = ele.innerHTML.length;
@@ -248,7 +245,6 @@ const getCleanContainer = container => {
 	removeChildren(frame, 'video');
 	removeChildren(frame, 'object');
 	removeChildren(frame, 'aside');
-	removeChildren(frame, 'header');
 	removeChildren(frame, 'footer');
 
 	return shadow;
@@ -271,13 +267,14 @@ const getPageTitle = (isBody, container) => {
 			title = ele.textContent.trim();
 			if (!!title) return title;
 		}
-		ele = container.querySelector('[class*="title"]');
+	}
+	else {
+		ele = container.querySelector('header[class*="title"]');
+		console.log('sssssssssssssssssssssssssss', container, ele);
 		if (!!ele) {
 			title = ele.textContent.trim();
 			if (!!title) return title;
 		}
-	}
-	else {
 		ele = container.querySelector('h1');
 		if (!!ele) {
 			title = ele.textContent.trim();
@@ -294,11 +291,6 @@ const getPageTitle = (isBody, container) => {
 			if (!!title) return title;
 		}
 		ele = container.querySelector('[name*="title"]');
-		if (!!ele) {
-			title = ele.textContent.trim();
-			if (!!title) return title;
-		}
-		ele = container.querySelector('[class*="title"]');
 		if (!!ele) {
 			title = ele.textContent.trim();
 			if (!!title) return title;
@@ -336,11 +328,19 @@ const getPageDescription = (isBody, content) => {
 	return desc;
 };
 const getPageShotContent = container => {
-	var desc = container.innerText;
-	desc = desc.replace(/(\r*\n\r*)/g, '\n').trim();
-	desc = desc.replace(/\n\n+/g, '\n').trim();
-	desc = desc.replace(/  +/g, ' ').trim();
+	var temp = document.createElement('div');
+	temp.style.display = 'none';
+	temp.innerHTML = container.innerHTML;
+	console.log('ssssssssssssssssssssssssssssssssssssssss');
+	console.log(temp);
+
+	var desc = temp.innerText;
+	// desc = desc.replace(/(\r*\n\r*)/g, '\n');
+	// desc = desc.replace(/\n\n+/g, '\n');
+	desc = desc.replace(/  +/g, ' ');
+	console.log(desc);
 	desc = desc.split(/\n+/);
+	console.log(desc);
 	desc = desc.map(line => {
 		line = line.replace(/\s+/g, ' ');
 		line = line.trim();
@@ -351,17 +351,22 @@ const getPageShotContent = container => {
 		return line;
 	});
 	desc = desc.filter(line => !!line);
+	console.log(desc);
 
 	return desc;
 };
 const getPageInfo = () => {
+	console.log('xxxxxxxxxxxxxxxxxxxxxxxxxxxxx');
 	var info = {};
 	var container = findContainer();
+	console.log(container);
 	var isBody = container === document.body;
 	container = getCleanContainer(container);
-
+	console.log(container);
+	
 	info.title = getPageTitle(isBody, container);
 	var content = getPageShotContent(container);
+	console.log(content);
 	info.description = getPageDescription(isBody, content);
 	info.isArticle = !isBody && content.length > 5;
 
@@ -396,6 +401,13 @@ EventHandler.getPageInfo = (data, source) => {
 document.onreadystatechange = () => {
 	pageInfo = null;
 	getPageInfo();
+	if (document.readyState === 'complete') {
+		sendMessage("PageStateChanged", {
+			state: 'loaded',
+			url: location.href,
+			pageInfo
+		}, "BackEnd");
+	}
 };
 document.addEventListener('visibilitychange', function() {
 	if (document.hidden) {
@@ -421,6 +433,29 @@ window.addEventListener('idle', function() {
 	sendMessage("VisibilityChanged", 'idle', "BackEnd");
 });
 
+var timerMutationObserver;
+const observer = new MutationObserver(() => {
+	if (!!timerMutationObserver) {
+		clearTimeout(timerMutationObserver);
+	}
+	timerMutationObserver = setTimeout(() => {
+		pageInfo = null;
+		getPageInfo();
+		sendMessage("PageStateChanged", {
+			state: 'update',
+			url: location.href,
+			pageInfo
+		}, "BackEnd");
+	}, 1000);
+});
+observer.observe(document.body, {
+	childList: true,
+	subtree: true
+});
+
 /* Init */
 
-sendMessage("ContentScriptLoaded", null, "BackEnd");
+sendMessage("PageStateChanged", {
+	state: 'open',
+	url: location.href
+}, "BackEnd");
