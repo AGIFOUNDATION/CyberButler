@@ -75,12 +75,6 @@ const onPageActivityChanged = async (tid, state) => {
 		duration: 0,
 		open: -1,
 	};
-	if (info.active) {
-		if (state === 'show') return;
-	}
-	else {
-		if (state !== 'show') return;
-	}
 	TabInfo[tid] = info;
 
 	var tab;
@@ -114,10 +108,16 @@ const onPageActivityChanged = async (tid, state) => {
 				inactivePage(info, now, true);
 			}
 
-			info.active = true;
-			info.open = now;
-			info.url = url;
-			info.title = title;
+			let pageType = checkPageType(tid);
+			if (!pageType) {
+				delete TabInfo[tid];
+			}
+			else {
+				info.active = true;
+				if (!info.active) info.open = now;
+				info.url = url;
+				info.title = title;
+			}
 		}
 	}
 	else if (state === 'hide' || state === 'idle') {
@@ -137,6 +137,9 @@ const inactivePage = (info, now, needCall=false) => {
 	onPageDurationUpdated(needCall, info.url, info.duration, info.title);
 };
 const onPageDurationUpdated = (closed, url, duration, title) => {
+	console.log('[PageActivity] Save Data: ' + url);
+	return;
+
 	// save info locally
 	savePageActivities(url, duration, title, closed);
 
@@ -168,11 +171,27 @@ const savePageActivities = async (url, duration, title, closed) => {
 	console.log(info, item);
 	await chrome.storage.local.set(item);
 };
+const checkPageType = (tid) => new Promise(res => {
+	var penddings = TabRequests[tid];
+	if (!penddings) {
+		penddings = [];
+		TabRequests[tid] = penddings;
+	}
+	penddings.push(res);
+	dispatchEvent({
+		event: "getPageInfo",
+		target: "FrontEnd",
+		tid,
+		source: "BackEnd",
+	});
+});
+const TabRequests = {};
 const TabInfo = {};
 
 /* Tabs */
 
 var LastActiveTab = null;
+const TabPorts = new Map();
 chrome.tabs.onActivated.addListener(tab => {
 	if (!!LastActiveTab) onPageActivityChanged(LastActiveTab, "hide");
 	LastActiveTab = tab.tabId;
@@ -187,6 +206,7 @@ chrome.tabs.onRemoved.addListener(async tabId => {
 	delete TabInfo[tabId];
 });
 chrome.idle.onStateChanged.addListener((state) => {
+	console.log('[Ext] Idle State Changed: ' + state);
 	if (!LastActiveTab) return;
 	if (state === 'idle') {
 		onPageActivityChanged(LastActiveTab, "idle");
@@ -202,6 +222,24 @@ chrome.runtime.onMessage.addListener((msg, sender) => {
 		if (msg.tid === 'me') msg.tid = tid;
 	}
 	dispatchEvent(msg);
+});
+chrome.runtime.onConnect.addListener(port => {
+	if (port.name !== "cyberbutler_contentscript") return;
+	var tid = port.sender?.tab?.id;
+	if (!tid) return;
+	console.log('[PORT] Connect: ' + tid);
+	TabPorts.set(tid, port);
+	port.onMessage.addListener(msg => {
+		if (msg.sender !== "PopupEnd") {
+			msg.sid = tid;
+			if (msg.tid === 'me') msg.tid = tid;
+		}
+		dispatchEvent(msg);
+	});
+	port.onDisconnect.addListener(() => {
+		console.log('[PORT] Disconnect: ' + tid);
+		TabPorts.delete(tid);
+	});
 });
 const callPopup = (event, data) => {
 	chrome.runtime.sendMessage({
@@ -324,15 +362,21 @@ const EventHandler = {};
 const dispatchEvent = async (msg) => {
 	// 服务器端事件
 	if (msg.target === 'ServerEnd') {
-		console.log('[SW | Server] Got Event', msg);
 		sendMessage(msg.event, msg.data, msg.sender, msg.sid);
 	}
 	// 页面端事件
-	else if (msg.target === "PageEnd" || msg.target === "FrontEnd") {
-		console.log('[SW | Front] Got Event', msg);
+	else if (msg.target === "PageEnd") {
 		// 发送给指定页面
 		if (!!msg.tid) {
-			chrome.tabs.sendMessage(msg.tid, msg);
+			let tab = await chrome.tabs.get(msg.tid);
+			if (!!tab) {
+				try {
+					await chrome.tabs.sendMessage(msg.tid, msg);
+				} catch {}
+			}
+			else {
+				console.log(`[Sys] Tab ${msg.tid} does not exist.`);
+			}
 		}
 		// 发送给当前页面
 		else if (!!LastActiveTab) {
@@ -342,8 +386,25 @@ const dispatchEvent = async (msg) => {
 				tid = tab.id;
 			}
 			if (!tid) return;
-			chrome.tabs.sendMessage(tid, msg);
+			try {
+				await chrome.tabs.sendMessage(tid, msg);
+			} catch {}
 		}
+	}
+	// Content端事件
+	else if (msg.target === "FrontEnd") {
+		let tid = msg.tid;
+		if (!tid) {
+			let [tab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
+			if (!!tab) tid = tab.id;
+		}
+		if (!tid) tid = LastActiveTab;
+		if (!tid) return;
+		let port = TabPorts.get(tid);
+		if (!port) return;
+		try {
+			await port.postMessage(msg);
+		} catch {}
 	}
 	// Background事件
 	else {
@@ -426,7 +487,7 @@ EventHandler.VisibilityChanged = (data, source, sid) => {
 
 /* ------------ */
 
-EventHandler.notify = (data, source) => {
+EventHandler.notify = (data, source, sid) => {
 	var sourceName = 'Server';
 	if (source === "BackEnd") sourceName = 'Background';
 	else if (source === "FrontEnd") sourceName = 'Content';
@@ -439,7 +500,7 @@ EventHandler.notify = (data, source) => {
 
 const sayHello = async () => {
 	var currentDate = timestmp2str('YYYY/MM/DD');
-	console.log('Requred to say hello: ' + currentDate);
+	console.log('Required to say hello: ' + currentDate);
 
 	var lastHello = await chrome.storage.session.get('lastHello');
 	lastHello = lastHello.lastHello;

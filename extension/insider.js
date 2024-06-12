@@ -27,4 +27,4 @@ InsideEventHandler.notify = (data, source) => {
 	console.log(`[notify | ${sourceName}] ` + data);
 };
 
-postMessage('Notify', "Aloha Kosmos!", "ServerEnd");
+postMessage('notify', "Aloha Kosmos!", "BackEnd");
