@@ -1,23 +1,28 @@
 /* Communiation */
 
-var port = chrome.runtime.connect({name: "cyberbutler_contentscript"});
+var port;
 var sendMessage = (event, data, target, tid) => {
+	if (!port) {
+		port = chrome.runtime.connect({name: "cyberbutler_contentscript"});
+		port.onDisconnect.addListener(onPortDisconnect);
+		port.onMessage.addListener(onPortMessage);
+	}
+
 	port.postMessage({
 		event, data, target, tid,
 		sender: "FrontEnd",
 	});
 };
-port.onDisconnect.addListener(() => {
+const onPortDisconnect = () => {
+	port = null;
 	console.log('[PORT] Disconnected and Reconnecting');
-	port = chrome.runtime.connect({name: "cyberbutler_contentscript"});
-});
-port.onMessage.addListener((msg) => {
-	console.log('[PORT] Got Message:', msg);
+};
+const onPortMessage = msg => {
 	if (msg.target !== 'FrontEnd') return;
 	let handler = EventHandler[msg.event];
 	if (!handler) return;
 	handler(msg.data, msg.source || 'ServerEnd');
-});
+};
 
 /* Utils */
 
@@ -215,59 +220,152 @@ const findContainer = () => {
 	if (!container) container = document.body;
 	return container;
 };
-const getPageTitle = (container) => {
-	var pageTitle = document.title;
-	var metaTitle1 = document.head.querySelector('[property$="title"]');
-	var metaTitle2 = document.head.querySelector('[property^="title"]');
-	var headerTitle1 = container.querySelector('h1');
-	var headerTitle2 = container.querySelector('h2');
-	var bodyTitle1 = container.querySelector('[property$="title"]');
-	var bodyTitle2 = container.querySelector('[property^="title"]');
-	var titleList = [];
-
-	if (!!headerTitle1) titleList.push(headerTitle1.textContent.trim());
-	else if (!!headerTitle2) titleList.push(headerTitle2.textContent.trim());
-	if (!!bodyTitle2) titleList.push(bodyTitle2.textContent.trim());
-	if (!!bodyTitle1) titleList.push(bodyTitle1.textContent.trim());
-	if (!!metaTitle2) titleList.push(metaTitle2.content.trim());
-	if (!!metaTitle1) titleList.push(metaTitle1.content.trim());
-	if (!!pageTitle) titleList.push(pageTitle.trim());
-	titleList = titleList.filter(t => !!t);
-	return titleList[0] || '';
-};
-const getPageDesc = (container) => {
-	var ele, desc;
-
-	ele = document.head.querySelector('[name*="description"]');
-	if (!!ele) {
-		desc = ele.content.trim();
+const removeChildren = (container, tag) => {
+	var list = container.querySelectorAll(tag);
+	for (let ele of list) {
+		let upper = ele.parentNode;
+		upper.removeChild(ele);
 	}
-	if (!desc) {
+};
+const getCleanContainer = container => {
+	var frame = document.createDocumentFragment(), shadow = document.createElement('container');
+	shadow.innerHTML = container.innerHTML;
+	frame.appendChild(shadow);
+	removeChildren(frame, 'noscript');
+	removeChildren(frame, 'script');
+	removeChildren(frame, 'style');
+	removeChildren(frame, 'form');
+	removeChildren(frame, 'select');
+	removeChildren(frame, 'input');
+	removeChildren(frame, 'textarea');
+	removeChildren(frame, 'ol');
+	removeChildren(frame, 'ul');
+	removeChildren(frame, 'button');
+	removeChildren(frame, 'img');
+	removeChildren(frame, 'image');
+	removeChildren(frame, 'picture');
+	removeChildren(frame, 'audio');
+	removeChildren(frame, 'video');
+	removeChildren(frame, 'object');
+	removeChildren(frame, 'aside');
+	removeChildren(frame, 'header');
+	removeChildren(frame, 'footer');
+
+	return shadow;
+};
+const getPageTitle = (isBody, container) => {
+	var ele, title;
+	if (isBody) {
+		ele = document.head.querySelector('[property*="title"]');
+		if (!!ele) {
+			title = ele.content.trim();
+			if (!!title) return title;
+		}
+		ele = container.querySelector('[id*="title"]');
+		if (!!ele) {
+			title = ele.textContent.trim();
+			if (!!title) return title;
+		}
+		ele = container.querySelector('[name*="title"]');
+		if (!!ele) {
+			title = ele.textContent.trim();
+			if (!!title) return title;
+		}
+		ele = container.querySelector('[class*="title"]');
+		if (!!ele) {
+			title = ele.textContent.trim();
+			if (!!title) return title;
+		}
+	}
+	else {
+		ele = container.querySelector('h1');
+		if (!!ele) {
+			title = ele.textContent.trim();
+			if (!!title) return title;
+		}
+		ele = container.querySelector('h2');
+		if (!!ele) {
+			title = ele.textContent.trim();
+			if (!!title) return title;
+		}
+		ele = container.querySelector('[id*="title"]');
+		if (!!ele) {
+			title = ele.textContent.trim();
+			if (!!title) return title;
+		}
+		ele = container.querySelector('[name*="title"]');
+		if (!!ele) {
+			title = ele.textContent.trim();
+			if (!!title) return title;
+		}
+		ele = container.querySelector('[class*="title"]');
+		if (!!ele) {
+			title = ele.textContent.trim();
+			if (!!title) return title;
+		}
+		ele = document.head.querySelector('[property*="title"]');
+		if (!!ele) {
+			title = ele.content.trim();
+			if (!!title) return title;
+		}
+	}
+	return document.title.trim();
+};
+const getPageDescription = (isBody, content) => {
+	var desc;
+
+	if (isBody) {
+		let ele = document.head.querySelector('[name*="description"]');
+		if (!!ele) {
+			desc = ele.content.trim();
+			if (!!desc) return desc;
+		}
 		ele = document.head.querySelector('[property*="description"]');
 		if (!!ele) {
 			desc = ele.content.trim();
+			if (!!desc) return desc;
 		}
 	}
-	if (!!desc) return desc;
 
-	desc = container.innerText;
-	desc = desc.split(/\r*\n\r*/);
+	desc = content.map(line => {
+		if (line.length < 50) return line;
+		var bra = line.substr(0, 25), ket = line.substr(line.length - 25);
+		return bra + '...' + ket;
+	}).join('\n');
+
+	return desc;
+};
+const getPageShotContent = container => {
+	var desc = container.innerText;
+	desc = desc.replace(/(\r*\n\r*)/g, '\n').trim();
+	desc = desc.replace(/\n\n+/g, '\n').trim();
+	desc = desc.replace(/  +/g, ' ').trim();
+	desc = desc.split(/\n+/);
 	desc = desc.map(line => {
+		line = line.replace(/\s+/g, ' ');
 		line = line.trim();
 		if (line.match(/^[\w\.]+$/)) return '';
+		var match = line.match(/[\u4e00-\u9fa5]|[\w-]+/g);
+		if (!match) return '';
+		if (match.length < 10) return '';
 		return line;
 	});
 	desc = desc.filter(line => !!line);
-	desc = desc.join('\n');
 
 	return desc;
 };
 const getPageInfo = () => {
 	var info = {};
 	var container = findContainer();
+	var isBody = container === document.body;
+	container = getCleanContainer(container);
 
-	info.title = getPageTitle(container);
-	info.description = getPageDesc(container);
+	info.title = getPageTitle(isBody, container);
+	var content = getPageShotContent(container);
+	info.description = getPageDescription(isBody, content);
+	info.isArticle = !isBody && content.length > 5;
+	// console.log(container);
+	// console.log(content);
 
 	pageInfo = info;
 };
