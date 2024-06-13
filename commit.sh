@@ -8,5 +8,3 @@ else
 fi
 
 rm diff.diff
-
-read -n 1 -s -r -p "按键继续"

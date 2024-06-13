@@ -270,7 +270,6 @@ const getPageTitle = (isBody, container) => {
 	}
 	else {
 		ele = container.querySelector('header[class*="title"]');
-		console.log('sssssssssssssssssssssssssss', container, ele);
 		if (!!ele) {
 			title = ele.textContent.trim();
 			if (!!title) return title;
@@ -319,56 +318,52 @@ const getPageDescription = (isBody, content) => {
 		}
 	}
 
-	desc = content.map(line => {
-		if (line.length < 50) return line;
-		var bra = line.substr(0, 25), ket = line.substr(line.length - 25);
-		return bra + '...' + ket;
-	}).join('\n');
+	if (content.length === 1) {
+		desc = content[0];
+		if (desc.length >= 302) {
+			let bra = desc.substr(0, 150), ket = desc.substr(desc.length - 150);
+			desc = bra + '...' + ket;
+		}
+	}
+	else {
+		desc = content.map(line => {
+			if (line.length < 52) return line;
+			var bra = line.substr(0, 25), ket = line.substr(line.length - 25);
+			return bra + '...' + ket;
+		}).join('\n');
+	}
 
 	return desc;
 };
 const getPageShotContent = container => {
-	var temp = document.createElement('div');
-	temp.style.display = 'none';
-	temp.innerHTML = container.innerHTML;
-	console.log('ssssssssssssssssssssssssssssssssssssssss');
-	console.log(temp);
-
-	var desc = temp.innerText;
-	// desc = desc.replace(/(\r*\n\r*)/g, '\n');
-	// desc = desc.replace(/\n\n+/g, '\n');
+	var desc = container.innerText, list = [], count = 0;
+	desc = desc.replace(/(\r*\n\r*)/g, '\n');
+	desc = desc.replace(/\n\n+/g, '\n');
 	desc = desc.replace(/  +/g, ' ');
-	console.log(desc);
 	desc = desc.split(/\n+/);
-	console.log(desc);
-	desc = desc.map(line => {
+	desc.forEach(line => {
 		line = line.replace(/\s+/g, ' ');
 		line = line.trim();
-		if (line.match(/^[\w\.]+$/)) return '';
+		if (line.match(/^[\w\.]+$/)) return;
 		var match = line.match(/[\u4e00-\u9fa5]|[\w-]+/g);
-		if (!match) return '';
-		if (match.length < 10) return '';
-		return line;
+		if (!match) return;
+		if (match.length < 10) return;
+		count += match.length;
+		list.push(line);
 	});
-	desc = desc.filter(line => !!line);
-	console.log(desc);
 
-	return desc;
+	return [list, count];
 };
 const getPageInfo = () => {
-	console.log('xxxxxxxxxxxxxxxxxxxxxxxxxxxxx');
 	var info = {};
 	var container = findContainer();
-	console.log(container);
 	var isBody = container === document.body;
 	container = getCleanContainer(container);
-	console.log(container);
-	
+
 	info.title = getPageTitle(isBody, container);
-	var content = getPageShotContent(container);
-	console.log(content);
+	var [content, size] = getPageShotContent(container);
 	info.description = getPageDescription(isBody, content);
-	info.isArticle = !isBody && content.length > 5;
+	info.isArticle = !isBody && size > 50;
 
 	pageInfo = info;
 };
