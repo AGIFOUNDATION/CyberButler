@@ -37,7 +37,7 @@
 	"content_scripts": [
 		{
 			"matches": ["<all_urls>"],
-			"js": ["script/common.js", "content.js"]
+			"js": ["script/i18n.js", "script/common.js", "content.js"]
 		}
 	],
 	"action": {

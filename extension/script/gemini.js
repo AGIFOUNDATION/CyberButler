@@ -86,12 +86,14 @@ globalThis.callGemini = async (conversation, model='gemini-1.5-flash') => {
 	}
 	response = await response.json();
 
-	var reply = response.candidates[0];
+	var reply = response.candidates;
+	if (!!reply) reply = reply[0];
 	if (!reply) {
 		reply = "";
 	}
 	else {
-		reply = reply.content.parts[0];
+		reply = reply.content?.parts;
+		if (!!reply) reply = reply[0];
 		if (!reply) {
 			reply = "";
 		}

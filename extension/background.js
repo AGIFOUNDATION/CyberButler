@@ -22,7 +22,6 @@ globalThis.Hints = {
 		noAPIKey: "Sorry, you haven't set the Gemini API key yet!",
 	},
 };
-
 globalThis.myInfo = {
 	useLocalKV: true,
 	apiKey: '',
@@ -30,6 +29,16 @@ globalThis.myInfo = {
 	name: '主人',
 	info: '(Not set yet)',
 };
+
+const waitUntil = fun => new Promise(res => {
+	var untiler = setInterval(() => {
+		console.log('[Ext] Reactive and waiting...');
+	}, 10 * 1000);
+	fun().finally(() => {
+		clearInterval(untiler);
+		res();
+	});
+});
 
 /* DB */
 
@@ -120,98 +129,138 @@ const onPageActivityChanged = async (tid, state) => {
 	var now = Date.now();
 	if (['open', 'show', 'active', 'update', 'loaded'].includes(state)) {
 		if (!active) {
-			inactivePage(info, now);
+			await inactivePage(info, now);
 		}
 		else if (isPageForbidden(url)) {
-			inactivePage(info, now, true);
+			await inactivePage(info, now, true);
+			info.duration = 0;
 		}
 		else {
 			if (url !== info.url) {
-				inactivePage(info, now, true);
+				await inactivePage(info, now, true);
+				info.duration = 0;
 			}
 
-			info.active = true;
-			if (!info.active) info.open = now;
-			info.url = url;
+			if (!info.active || state === 'open') info.open = now;
 			if (!info.title) info.title = title;
+			info.active = true;
+			info.url = url;
 			await setTabInfo(tid, info);
+		}
+
+		if (info.isArticle) {
+			dispatchEvent({
+				event: "requestCypriteNotify",
+				target: "FrontEnd",
+				tid
+			});
 		}
 	}
 	else if (['hide', 'idle'].includes(state)) {
-		inactivePage(info, now);
+		await inactivePage(info, now);
 	}
 	else if (state === 'close') {
-		inactivePage(info, now, true);
+		await inactivePage(info, now, true);
+		info.duration = 0;
+		await delTabInfo(tid);
 	}
 };
-const inactivePage = (info, now, needCall=false) => {
+const inactivePage = async (info, now, needCall=false) => {
 	var shouldCall = !!info.url;
 	if (info.open > 0) info.duration += now - info.open;
 	else shouldCall = false;
 	info.open = -1;
 	info.active = false;
 	if (!shouldCall) return;
-	onPageDurationUpdated(needCall, info.url, info.duration, info.title);
+	await onPageDurationUpdated(needCall, info.url, info.duration, info.title);
 };
-const onPageDurationUpdated = (closed, url, duration, title) => {
+const onPageDurationUpdated = async (closed, url, duration, title) => {
 	console.log('[PageActivity] Save Data: ' + url);
-	return;
 
 	// save info locally
-	savePageActivities(url, duration, title, closed);
+	await savePageActivities(url, duration, title, closed);
 
 	// save into to server
 	sendMessage("SavePageActivity", {url, duration, title, closed}, "BackEnd");
 };
 const savePageActivities = async (url, duration, title, closed) => {
-	var info = await DBs.pageInfos.get('pageInfo', url);
-	if (!info) {
-		info = {
-			url,
-			totalDuration: 0
-		};
-	}
+	var info = await getPageInfo(url);
 
 	info.reading = !closed;
 	info.title = title;
+	info.viewed ++;
 	info.totalDuration += duration;
 	info.currentDuration = duration;
 	info.timestamp = timestmp2str("YYYY/MM/DD hh:mm:ss :WDE:");
 
-	await DBs.pageInfos.set('pageInfo', url, info);
-	console.log('[DB] Page Info Saved: ' + url);
+	await setPageInfo(url, info);
+};
+
+/* Infos */
+
+const getPageInfo = async url => {
+	var info = TabInfo[url];
+	if (!info) {
+		info = await DBs.pageInfos.get('pageInfo', url);
+		console.log('[DB] Get Page Info: ' + url);
+		if (!info) {
+			info = {
+				totalDuration: 0,
+				viewed: 0,
+			};
+		}
+	}
+	return info;
+};
+const setPageInfo = async (url, info) => {
+	if (!!DBs.tmrPageInfos) {
+		clearTimeout(DBs.tmrPageInfos);
+	}
+	DBs.tmrPageInfos = setTimeout(async () => {
+		await DBs.pageInfos.set('pageInfo', url, info);
+		console.log('[DB] Set Page Info: ' + url);
+	}, 200);
+};
+const delPageInfo = async (url) => {
+	if (!!DBs.tmrPageInfos) {
+		clearTimeout(DBs.tmrPageInfos);
+	}
+	DBs.tmrPageInfos = setTimeout(async () => {
+		await DBs.pageInfos.del('pageInfo', url);
+		console.log('[DB] Del Page Info: ' + url);
+	}, 200);
 };
 const getTabInfo = async tid => {
 	var info = TabInfo[tid];
 	if (!info) {
 		info = await DBs.pageInfos.get('tabInfo', tid);
 		console.log('[DB] Get TabInfo: ' + tid);
-	}
-	if (!info) {
-		info = {
-			active: false,
-			duration: 0,
-			open: -1,
-		};
+		if (!info) {
+			info = {
+				active: false,
+				duration: 0,
+				open: -1,
+			};
+		}
 	}
 	return info;
 };
 const setTabInfo = async (tid, info) => {
 	TabInfo[tid] = info;
-	if (!!DBs.tmrPageInfos) {
-		clearTimeout(DBs.tmrPageInfos);
+	if (!!DBs.tmrTabInfos) {
+		clearTimeout(DBs.tmrTabInfos);
 	}
-	DBs.tmrPageInfos = setTimeout(async () => {
+	DBs.tmrTabInfos = setTimeout(async () => {
 		await DBs.pageInfos.set('tabInfo', tid, info);
 		console.log('[DB] Set TabInfo: ' + tid);
 	}, 200);
 };
 const delTabInfo = async (tid) => {
 	delete TabInfo[tid];
-	if (!!DBs.tmrPageInfos) {
-		clearTimeout(DBs.tmrPageInfos);
+	if (!!DBs.tmrTabInfos) {
+		clearTimeout(DBs.tmrTabInfos);
 	}
-	DBs.tmrPageInfos = setTimeout(async () => {
+	DBs.tmrTabInfos = setTimeout(async () => {
 		await DBs.pageInfos.del('tabInfo', tid);
 		console.log('[DB] Del TabInfo: ' + tid);
 	}, 200);
@@ -227,7 +276,6 @@ chrome.tabs.onActivated.addListener(tab => {
 });
 chrome.tabs.onRemoved.addListener(async tabId => {
 	if (LastActiveTab === tabId) LastActiveTab = null;
-	await delTabInfo(tabId);
 });
 chrome.idle.onStateChanged.addListener((state) => {
 	console.log('[Ext] Idle State Changed: ' + state);
@@ -493,6 +541,7 @@ EventHandler.SetConfig = async (data, source, sid) => {
 };
 EventHandler.PageStateChanged = async (data, source, sid) => {
 	if (source !== 'FrontEnd') return;
+	console.log('[Page] State Changed: ' + data.state);
 
 	var info = await getTabInfo(sid);
 	if (!!data && !!data.pageInfo) {
@@ -501,15 +550,45 @@ EventHandler.PageStateChanged = async (data, source, sid) => {
 		info.isArticle = isBoolean(data.pageInfo.isArticle) ? data.pageInfo.isArticle : info.isArticle;
 		await setTabInfo(sid, info);
 	}
-	console.log('[Page] State Changed: ' + data.state);
 	console.log(info);
-	console.log(data);
+	// console.log(data);
 
 	onPageActivityChanged(sid, data.state);
 };
 EventHandler.VisibilityChanged = (data, source, sid) => {
 	if (source !== 'FrontEnd') return;
 	onPageActivityChanged(sid, data);
+};
+EventHandler.MountNotification = async (data, source, sid) => {
+	if (source !== 'FrontEnd') return;
+
+	var tasks = [];
+	tasks.push(chrome.scripting.insertCSS({
+		target: { tabId: sid },
+		files: ["/components/notification.css", "/components/mention.css"]
+	}));
+	tasks.push(chrome.scripting.executeScript({
+		target: { tabId: sid },
+		files: ["/components/notification.js"],
+		injectImmediately: true,
+	}));
+	await Promise.all(tasks);
+	console.log('[Page] Notification has mounted!');
+	dispatchEvent({
+		event: "notificationMounted",
+		target: 'FrontEnd',
+		tid: sid
+	});
+};
+EventHandler.SummarizePage = async (data, source, sid) => {
+	var summary = await summarizeArticle(data);
+	console.log('[AI] Summary Finished: ' + !!summary);
+	dispatchEvent({
+		event: "pageSummarized",
+		data: summary,
+		target: source,
+		tid: sid
+	});
 };
 
 /* ------------ */
@@ -554,6 +633,20 @@ const sayHello = async () => {
 	catch (err) {
 		showSystemNotification(err);
 	}
+};
+const summarizeArticle = async (article) => {
+	myInfo.useLocalKV = true; // test
+
+	var reply;
+	try {
+		// reply = "Hello";
+		reply = await callAIandWait('summarizeArticle', article);
+	}
+	catch (err) {
+		reply = null;
+		showSystemNotification(err);
+	}
+	return reply;
 };
 
 /* Init */

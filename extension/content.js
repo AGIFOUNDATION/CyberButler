@@ -1,3 +1,6 @@
+var myLang = "en";
+const CypriteNotify = {};
+
 /* Communiation */
 
 var port;
@@ -26,7 +29,7 @@ const onPortMessage = msg => {
 
 /* Utils */
 
-var pageInfo = null;
+var pageInfo = null, needCypriteAsked = false, notificationMounted = false, notificationMountingRes = [];
 const findContainer = () => {
 	var container = null, size = 0;
 
@@ -354,6 +357,84 @@ const getPageShotContent = container => {
 
 	return [list, count];
 };
+const getPageContent = async container => {
+	var content = container.innerHTML, time1 = Date.now(), time2;
+
+	var temp;
+	while (content !== temp) {
+		temp = content;
+		content = content.replace(/(\w+)>[\s\n\r]+<(\/?\w+)/gi, (m, a, b) => a + '><' + b);
+		content = content.trim();
+		await wait();
+	}
+	time2 = Date.now();
+	console.log('[Page] Parse Page Content Stage 1: ' + (time2 - time1) + 'ms');
+	time1 = time2;
+
+	content = content.replace(/<form[\w\W]*?>[\w\W]*?<\/form>/gi, '');
+	content = content.replace(/<select[\w\W]*?>[\w\W]*?<\/select>/gi, '');
+	content = content.replace(/<object[\w\W]*?>[\w\W]*?<\/object>/gi, '');
+	content = content.replace(/<script[\w\W]*?>[\w\W]*?<\/script>/gi, '');
+	content = content.replace(/<style[\w\W]*?>[\w\W]*?<\/style>/gi, '');
+	content = content.replace(/<nostyle[\w\W]*?>[\w\W]*?<\/nostyle>/gi, '');
+	content = content.replace(/<textarea[\w\W]*?>[\w\W]*?<\/textarea>/gi, '');
+	content = content.replace(/<button[\w\W]*?>[\w\W]*?<\/button>/gi, '');
+	content = content.replace(/<input[\w\W]*?>/gi, '');
+	content = content.replace(/<link[\w\W]*?>/gi, '');
+
+	content = content.replace(/<\/?(article|header|section|aside|footer|div|p|ul|ol|tr)[\w\W]*?>/gi, '<br><br>');
+	content = content.replace(/<\/?(option|span|font)[\w\W]*?>/gi, '');
+	content = content.replace(/<\/(td|th)><\1[\w\W]*?>/gi, ' | ');
+	content = content.replace(/<(td|th)[\w\W]*?>/gi, '| ');
+	content = content.replace(/<\/(td|th)>/gi, ' |');
+	content = content.replace(/<hr[\w\W]*?>/gi, '<br>----<br>');
+	content = content.replace(/<li[\w\W]*?>/gi, '-\t');
+	content = content.replace(/<\/li>/gi, '\n');
+	content = content.replace(/<(h\d)[\w\W]*?>([\w\W]*?)<\/\1>/gi, (m, tag, inner) => {
+		var lev = tag.match(/h(\d)/i);
+		lev = lev[1] * 1;
+		if (lev === 1) return '\n\n#\t' + inner + '\n\n';
+		if (lev === 2) return '\n\n##\t' + inner + '\n\n';
+		if (lev === 3) return '\n\n###\t' + inner + '\n\n';
+		if (lev === 4) return '\n\n####\t' + inner + '\n\n';
+		if (lev === 5) return '\n\n#####\t' + inner + '\n\n';
+		return inner;
+	});
+	time2 = Date.now();
+	console.log('[Page] Parse Page Content Stage 2: ' + (time2 - time1) + 'ms');
+	time1 = time2;
+
+	temp = '';
+	while (content !== temp) {
+		temp = content;
+		content = content.replace(/<(b|strong)[\w\W]*?>([\w\W]*?)<\/\1>/gi, (m, tag, inner) => {
+			return '**' + inner + '**';
+		});
+		content = content.replace(/<(i|em)[\w\W]*?>([\w\W]*?)<\/\1>/gi, (m, tag, inner) => {
+			return '*' + inner + '*';
+		});
+		content = content.replace(/<a\s+([\w\W]*?)>([\w\W]*?)<\/a>/gi, (m, prop, inner) => {
+			var match = prop.match(/href=('|")([\w\W]*?)\1/);
+			if (!match) return inner;
+			match = match[2];
+			return '[' + inner + '](' + match + ')';
+		});
+		await wait();
+	}
+	time2 = Date.now();
+	console.log('[Page] Parse Page Content Stage 3: ' + (time2 - time1) + 'ms');
+	time1 = time2;
+
+	content = content.replace(/\s*<br>\s*/gi, '\n');
+	content = content.replace(/<\/?([\w\-\_]+)[\w\W]*?>/gi, '');
+	content = content.replace(/\r/g, '');
+	content = content.replace(/\n\n+/g, '\n\n');
+	content = content.trim();
+	time2 = Date.now();
+	console.log('[Page] Parse Page Content Stage 4: ' + (time2 - time1) + 'ms');
+
+	return content;
+};
 const getPageInfo = () => {
 	var info = {};
 	var container = findContainer();
@@ -366,6 +447,21 @@ const getPageInfo = () => {
 	info.isArticle = !isBody && size > 50;
 
 	pageInfo = info;
+};
+const waitForMountNotification = () => new Promise(res => {
+	if (notificationMounted) return res();
+	notificationMountingRes.push(res);
+	sendMessage("MountNotification", null, 'BackEnd');
+});
+const summarizePage = async () => {
+	var article = await getPageContent(findContainer());
+	var messages = I18NMessages[myLang] || I18NMessages.len;
+	CypriteNotify.summary = Notification.show(messages.cypriteName, messages.summarizingPage, 'rightTop', 'message', 24 * 3600 * 1000);
+	sendMessage("SummarizePage", article, "BackEnd");
+};
+const translatePage = async () => {
+	var article = await getPageContent(findContainer());
+	console.log(article);
 };
 
 /* EventHandler */
@@ -389,6 +485,58 @@ EventHandler.getPageInfo = (data, source) => {
 	}
 
 	sendMessage('GotPageInfo', pageInfo, 'BackEnd');
+};
+EventHandler.notificationMounted = () => {
+	if (!notificationMountingRes) return;
+	notificationMounted = true;
+	var list = notificationMountingRes;
+	notificationMountingRes = null;
+	list.forEach(res => res());
+};
+EventHandler.requestCypriteNotify = async (data, source, sid) => {
+	if (needCypriteAsked) return;
+	needCypriteAsked = true;
+
+	var [lang] = await Promise.all([
+		chrome.storage.sync.get('lang'),
+		waitForMountNotification()
+	]);
+	lang = lang.lang || myLang;
+	myLang = lang;
+
+	var messages = I18NMessages[lang] || I18NMessages.len;
+	var notify = Notification.show(messages.cypriteName, messages.newArticleMentionMessage, 'rightTop', 'message', 15 * 3600 * 1000);
+	notify.addEventListener('click', async evt => {
+		if (evt.target.tagName !== 'BUTTON') return;
+		var name = evt.target.name;
+		if (name === 'summarize') {
+			await summarizePage();
+		}
+		else if (name === 'translate') {
+			await translatePage();
+		}
+		notify._hide();
+	});
+};
+EventHandler.pageSummarized = async (data) => {
+	if (!!CypriteNotify.summary) CypriteNotify.summary._hide();
+	CypriteNotify.summary = null;
+
+	var messages = I18NMessages[myLang] || I18NMessages.len;
+	if (!!data) {
+		let notify = Notification.show(messages.cypriteName, messages.summarizeSuccess, 'rightTop', 'success', 10 * 1000);
+		notify.addEventListener('click', evt => {
+			if (evt.target.tagName !== 'BUTTON') return;
+			var name = evt.target.name;
+			if (name === 'viewnow') {
+				console.log(data);
+			}
+			notify._hide();
+		});
+	}
+	else {
+		Notification.show(messages.cypriteName, messages.summarizeFailed, 'rightTop', 'fail', 5 * 1000);
+	}
 };
 
 /* Tab */

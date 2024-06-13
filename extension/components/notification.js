@@ -9,7 +9,7 @@ const AvailableTypes = ['message', 'success', 'fail', 'warn', 'error', 'fetal'];
 const AvailablePositions = ['leftBottom', 'leftCenter', 'leftTop', 'middleBottom', 'middleCenter', 'middleTop', 'rightBottom', 'rightCenter', 'rightTop'];
 
 const newNotification = (title, message, duration=3000, type, position) => {
-	if (!title || !message) return;
+	if (!title && !message) return;
 
 	if (!AvailableTypes.includes(type)) type = AvailableTypes[0];
 	if (!AvailablePositions.includes(position)) position = AvailablePositions[0];
@@ -98,7 +98,12 @@ const newNotification = (title, message, duration=3000, type, position) => {
 	}
 	if (!!message) {
 		let messageBar = newEle('div', 'notification_message');
-		messageBar.innerText = message;
+		if (message.match(/<\/[\w\-]+>/)) {
+			messageBar.innerHTML = message;
+		}
+		else {
+			messageBar.innerText = message;
+		}
 		inner.appendChild(messageBar);
 	}
 

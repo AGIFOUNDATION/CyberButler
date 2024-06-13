@@ -8,6 +8,7 @@
 
 .notification {
 	position: fixed;
+	z-index: 99999;
 	color: rgba(28, 28, 28, 1.0);
 	font-size: 16px;
 	line-height: 1.2;
@@ -57,6 +58,8 @@
 .notification.leftCenter .notification_inner,
 .notification.leftTop .notification_inner {
 	transform: translateX(-100%);
+	border-top-left-radius: 0px;
+	border-bottom-left-radius: 0px;
 }
 .notification.leftBottom.show .notification_inner,
 .notification.leftCenter.show .notification_inner,
@@ -67,6 +70,8 @@
 .notification.rightCenter .notification_inner,
 .notification.rightTop .notification_inner {
 	transform: translateX(100%);
+	border-top-right-radius: 0px;
+	border-bottom-right-radius: 0px;
 }
 .notification.rightBottom.show .notification_inner,
 .notification.rightCenter.show .notification_inner,
@@ -153,14 +158,12 @@
 	box-shadow: 0px -2px 3px 2px black;
 	font-size: 1.2em;
 	font-weight: bolder;
-	pointer-events: none;
 }
 .notification_message {
 	min-width: 200px;
 	margin: 0px;
 	padding: 5px 10px;
 	font-size: 1em;
-	pointer-events: none;
 }
 .notification_close {
 	position: absolute;

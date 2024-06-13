@@ -84,3 +84,17 @@ EdgedAI.sayHello = async (tid) => {
 
 	replyRequest(tid, reply, errMsg);
 };
+EdgedAI.summarizeArticle = async (tid, article) => {
+	var tag = 'summarizeArticle' + myInfo.lang.toUpperCase();
+	var prompt = PromptLib.assemble(PromptLib[tag], { article });
+	var reply, errMsg;
+	try {
+		reply = await callAIModel([['human', prompt]]);
+	}
+	catch (err) {
+		console.error(err);
+		errMsg = err.message || err.msg || err.data || (!!err.toString ? err.toString() : err || 'Gemini Error');
+	}
+
+	replyRequest(tid, reply, errMsg);
+};
