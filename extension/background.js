@@ -119,7 +119,7 @@ const onPageActivityChanged = async (tid, state) => {
 			info.active = true;
 			if (!info.active) info.open = now;
 			info.url = url;
-			info.title = title;
+			if (!info.title) info.title = title;
 		}
 	}
 	else if (['hide', 'idle'].includes(state)) {
@@ -464,7 +464,13 @@ EventHandler.PageStateChanged = (data, source, sid) => {
 		duration: 0,
 		open: -1,
 	};
-	console.log('[Page] State Changed', data, info);
+	if (!!data && !!data.pageInfo) {
+		info.title = data.pageInfo.title || info.title;
+		info.description = data.pageInfo.description || info.description;
+		info.isArticle = isBoolean(data.pageInfo.isArticle) ? data.pageInfo.isArticle : info.isArticle;
+		TabInfo[sid] = info;
+	}
+	console.log('[Page] State Changed', info, data);
 
 	onPageActivityChanged(sid, data.state);
 };
