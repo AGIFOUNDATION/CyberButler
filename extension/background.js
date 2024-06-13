@@ -136,7 +136,10 @@ const onPageActivityChanged = async (tid, state) => {
 			info.duration = 0;
 		}
 		else {
+			let shouldRequest = state === 'open';
+
 			if (url !== info.url) {
+				shouldRequest = true;
 				await inactivePage(info, now, true);
 				info.duration = 0;
 			}
@@ -146,14 +149,15 @@ const onPageActivityChanged = async (tid, state) => {
 			info.active = true;
 			info.url = url;
 			await setTabInfo(tid, info);
-		}
 
-		if (info.isArticle) {
-			dispatchEvent({
-				event: "requestCypriteNotify",
-				target: "FrontEnd",
-				tid
-			});
+			console.log(':::::::::::::::::::', shouldRequest, info.isArticle);
+			if (shouldRequest && info.isArticle) {
+				dispatchEvent({
+					event: "requestCypriteNotify",
+					target: "FrontEnd",
+					tid
+				});
+			}
 		}
 	}
 	else if (['hide', 'idle'].includes(state)) {

@@ -98,43 +98,43 @@
 }
 
 .notification.message .notification_inner {
-	background-color: rgba(147, 181, 207, 1.0);
+	background-color: rgba(147, 181, 207, 0.8);
 }
 .notification.success .notification_inner {
-	background-color: rgba(104, 184, 142, 1.0);
+	background-color: rgba(104, 184, 142, 0.8);
 }
 .notification.fail .notification_inner {
-	background-color: rgba(248, 223, 112, 1.0);
+	background-color: rgba(248, 223, 112, 0.8);
 }
 .notification.warn .notification_inner {
-	background-color: rgba(238, 166, 183, 1.0);
+	background-color: rgba(238, 166, 183, 0.8);
 }
 .notification.error .notification_inner {
-	background-color: rgba(240, 124, 130, 1.0);
+	background-color: rgba(240, 124, 130, 0.8);
 }
 .notification.fetal .notification_inner {
-	background-color: rgba(53, 53, 53, 1.0);
+	background-color: rgba(53, 53, 53, 0.8);
 	color: rgba(252, 250, 242, 1.0);
 }
 
 
 .notification.message .notification_title {
-	background-color: rgba(21, 85, 154, 1.0);
+	background-color: rgba(21, 85, 154, 0.9);
 }
 .notification.success .notification_title {
-	background-color: rgba(36, 128, 103, 1.0);
+	background-color: rgba(36, 128, 103, 0.9);
 }
 .notification.fail .notification_title {
-	background-color: rgba(217, 164, 14, 1.0);
+	background-color: rgba(217, 164, 14, 0.9);
 }
 .notification.warn .notification_title {
-	background-color: rgba(168, 69, 107, 1.0);
+	background-color: rgba(168, 69, 107, 0.9);
 }
 .notification.error .notification_title {
-	background-color: rgba(209, 26, 45, 1.0);
+	background-color: rgba(209, 26, 45, 0.9);
 }
 .notification.fetal .notification_title {
-	background-color: rgba(0, 0, 0, 1.0);
+	background-color: rgba(0, 0, 0, 0.9);
 }
 
 .notification_frame, .notification_inner {
@@ -143,6 +143,7 @@
 .notification_inner {
 	border-radius: 5px;
 	box-shadow: 0px 0px 0px rgba(28, 28, 28, 0);
+	backdrop-filter: blur(2px);
 	overflow: hidden;
 }
 .notification.show .notification_inner {

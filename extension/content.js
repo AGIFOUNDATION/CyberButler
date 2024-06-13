@@ -29,196 +29,26 @@ const onPortMessage = msg => {
 
 /* Utils */
 
-var pageInfo = null, needCypriteAsked = false, notificationMounted = false, notificationMountingRes = [];
+var pageInfo = null, notificationMounted = false, notificationMountingRes = [];
 const findContainer = () => {
-	var container = null, size = 0;
-
-	var ele = document.body.querySelector('article');
-	if (!!ele) return ele;
-
-	ele = document.body.querySelector('[id*="article"]');
-	if (!!ele) {
-		let s = ele.innerHTML.length;
-		if (s > size) {
-			container = ele;
-			size = s;
+	console.log('vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv');
+	var candidates = document.body.querySelectorAll('article, section, div, main, container, app, post, content, entry');
+	var maxWeight = 0, target = document.body;
+	for (let ele of candidates) {
+		let size = ele.textContent.match(/[\u4e00-\u9fa5]|[\w-]+|[\d\.]+/g);
+		size = !!size ? size.length : 0;
+		let density = ele.innerHTML.replace(/<([\w\-]+)[\w\W]*?>/g, (m, tag) => '<' + tag + '>').match(/[\u4e00-\u9fa5]|[\w-]+|[\d\.]+/g);
+		density = !!density ? density.length : 0;
+		density = density > 0 ? size / density : 0;
+		let weight = size * (density ** 1.5);
+		if (weight > maxWeight) {
+			maxWeight = weight;
+			target = ele;
 		}
 	}
-	ele = document.body.querySelector('[id*="Article"]');
-	if (!!ele) {
-		let s = ele.innerHTML.length;
-		if (s > size) {
-			container = ele;
-			size = s;
-		}
-	}
-	if (!!container) return container;
-
-	ele = document.body.querySelector('[id*="container"]');
-	if (!!ele) {
-		let s = ele.innerHTML.length;
-		if (s > size) {
-			container = ele;
-			size = s;
-		}
-	}
-	ele = document.body.querySelector('[id*="Container"]');
-	if (!!ele) {
-		let s = ele.innerHTML.length;
-		if (s > size) {
-			container = ele;
-			size = s;
-		}
-	}
-	ele = document.body.querySelector('[id*="main"]');
-	if (!!ele) {
-		let s = ele.innerHTML.length;
-		if (s > size) {
-			container = ele;
-			size = s;
-		}
-	}
-	ele = document.body.querySelector('[id*="Main"]');
-	if (!!ele) {
-		let s = ele.innerHTML.length;
-		if (s > size) {
-			container = ele;
-			size = s;
-		}
-	}
-	ele = document.body.querySelector('[id*="page"]');
-	if (!!ele) {
-		let s = ele.innerHTML.length;
-		if (s > size) {
-			container = ele;
-			size = s;
-		}
-	}
-	ele = document.body.querySelector('[id*="Page"]');
-	if (!!ele) {
-		let s = ele.innerHTML.length;
-		if (s > size) {
-			container = ele;
-			size = s;
-		}
-	}
-	ele = document.body.querySelector('[id*="app"]');
-	if (!!ele) {
-		let s = ele.innerHTML.length;
-		if (s > size) {
-			container = ele;
-			size = s;
-		}
-	}
-	ele = document.body.querySelector('[id*="App"]');
-	if (!!ele) {
-		let s = ele.innerHTML.length;
-		if (s > size) {
-			container = ele;
-			size = s;
-		}
-	}
-	if (!!container) return container;
-
-	ele = document.body.querySelector('section');
-	if (!!ele) {
-		let s = ele.innerHTML.length;
-		if (s > size) {
-			container = ele;
-			size = s;
-		}
-	}
-	ele = document.body.querySelector('main');
-	if (!!ele) {
-		let s = ele.innerHTML.length;
-		if (s > size) {
-			container = ele;
-			size = s;
-		}
-	}
-	ele = document.body.querySelector('[class*="article"]');
-	if (!!ele) {
-		let s = ele.innerHTML.length;
-		if (s > size) {
-			container = ele;
-			size = s;
-		}
-	}
-	ele = document.body.querySelector('[class*="Article"]');
-	if (!!ele) {
-		let s = ele.innerHTML.length;
-		if (s > size) {
-			container = ele;
-			size = s;
-		}
-	}
-	ele = document.body.querySelector('[class*="container"]');
-	if (!!ele) {
-		let s = ele.innerHTML.length;
-		if (s > size) {
-			container = ele;
-			size = s;
-		}
-	}
-	ele = document.body.querySelector('[class*="Container"]');
-	if (!!ele) {
-		let s = ele.innerHTML.length;
-		if (s > size) {
-			container = ele;
-			size = s;
-		}
-	}
-	ele = document.body.querySelector('[class*="page"]');
-	if (!!ele) {
-		let s = ele.innerHTML.length;
-		if (s > size) {
-			container = ele;
-			size = s;
-		}
-	}
-	ele = document.body.querySelector('[class*="Page"]');
-	if (!!ele) {
-		let s = ele.innerHTML.length;
-		if (s > size) {
-			container = ele;
-			size = s;
-		}
-	}
-	ele = document.body.querySelector('[class*="main"]');
-	if (!!ele) {
-		let s = ele.innerHTML.length;
-		if (s > size) {
-			container = ele;
-			size = s;
-		}
-	}
-	ele = document.body.querySelector('[class*="Main"]');
-	if (!!ele) {
-		let s = ele.innerHTML.length;
-		if (s > size) {
-			container = ele;
-			size = s;
-		}
-	}
-	ele = document.body.querySelector('[class*="contain"]');
-	if (!!ele) {
-		let s = ele.innerHTML.length;
-		if (s > size) {
-			container = ele;
-			size = s;
-		}
-	}
-	ele = document.body.querySelector('[class*="Contain"]');
-	if (!!ele) {
-		let s = ele.innerHTML.length;
-		if (s > size) {
-			container = ele;
-			size = s;
-		}
-	}
-
-	if (!container) container = document.body;
-	return container;
+	console.log(maxWeight);
+	console.log(target);
+	return target;
 };
 const removeChildren = (container, tag) => {
 	var list = container.querySelectorAll(tag);
@@ -494,9 +324,6 @@ EventHandler.notificationMounted = () => {
 	list.forEach(res => res());
 };
 EventHandler.requestCypriteNotify = async (data, source, sid) => {
-	if (needCypriteAsked) return;
-	needCypriteAsked = true;
-
 	var [lang] = await Promise.all([
 		chrome.storage.sync.get('lang'),
 		waitForMountNotification()
@@ -505,7 +332,8 @@ EventHandler.requestCypriteNotify = async (data, source, sid) => {
 	myLang = lang;
 
 	var messages = I18NMessages[lang] || I18NMessages.len;
-	var notify = Notification.show(messages.cypriteName, messages.newArticleMentionMessage, 'rightTop', 'message', 15 * 3600 * 1000);
+	if (!!CypriteNotify.RequestOperation) CypriteNotify.RequestOperation._hide();
+	var notify = Notification.show(messages.cypriteName, messages.newArticleMentionMessage, 'rightTop', 'message', 20 * 1000);
 	notify.addEventListener('click', async evt => {
 		if (evt.target.tagName !== 'BUTTON') return;
 		var name = evt.target.name;
@@ -517,6 +345,7 @@ EventHandler.requestCypriteNotify = async (data, source, sid) => {
 		}
 		notify._hide();
 	});
+	CypriteNotify.RequestOperation = notify;
 };
 EventHandler.pageSummarized = async (data) => {
 	if (!!CypriteNotify.summary) CypriteNotify.summary._hide();
