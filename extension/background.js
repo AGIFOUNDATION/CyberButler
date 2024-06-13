@@ -180,16 +180,10 @@ const TabInfo = {};
 var LastActiveTab = null;
 const TabPorts = new Map();
 chrome.tabs.onActivated.addListener(tab => {
-	if (!!LastActiveTab) onPageActivityChanged(LastActiveTab, "hide");
 	LastActiveTab = tab.tabId;
-	if (!!LastActiveTab) onPageActivityChanged(LastActiveTab, "show");
-});
-chrome.tabs.onUpdated.addListener(tabId => {
-	if (!!LastActiveTab) onPageActivityChanged(tabId, "update");
 });
 chrome.tabs.onRemoved.addListener(async tabId => {
 	if (LastActiveTab === tabId) LastActiveTab = null;
-	await onPageActivityChanged(tabId, "close");
 	delete TabInfo[tabId];
 });
 chrome.idle.onStateChanged.addListener((state) => {
@@ -470,7 +464,9 @@ EventHandler.PageStateChanged = (data, source, sid) => {
 		info.isArticle = isBoolean(data.pageInfo.isArticle) ? data.pageInfo.isArticle : info.isArticle;
 		TabInfo[sid] = info;
 	}
-	console.log('[Page] State Changed', info, data);
+	console.log('[Page] State Changed: ' + data.state);
+	console.log(info);
+	console.log(data);
 
 	onPageActivityChanged(sid, data.state);
 };

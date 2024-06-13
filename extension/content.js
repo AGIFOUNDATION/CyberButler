@@ -412,15 +412,6 @@ document.addEventListener('visibilitychange', function() {
 		sendMessage("VisibilityChanged", 'show', "BackEnd");
 	}
 });
-window.addEventListener('focus', function() {
-	sendMessage("VisibilityChanged", 'show', "BackEnd");
-});
-window.addEventListener('blur', function() {
-	sendMessage("VisibilityChanged", 'hide', "BackEnd");
-});
-window.addEventListener('beforeunload', function() {
-	sendMessage("VisibilityChanged", 'close', "BackEnd");
-});
 window.addEventListener('unload', function() {
 	sendMessage("VisibilityChanged", 'close', "BackEnd");
 });

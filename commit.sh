@@ -1,3 +1,6 @@
+printf "[CHANGES]\n\n" >> diff.diff
+git status >> diff.diff
+printf "\n[DIFF]\n\n" >> diff.diff
 git diff >> diff.diff
 
 if [ -z "$1" ]
