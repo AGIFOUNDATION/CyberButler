@@ -1,6 +1,7 @@
 import "./gemini.js";
 
 const ResMap = new Map();
+var callAIModel = callGemini; // For the integration of various different AI models.
 
 globalThis.callAIandWait = (action, data) => new Promise((res, rej) => {
 	var taskId = newID();
@@ -74,7 +75,7 @@ EdgedAI.sayHello = async (tid) => {
 	});
 	var reply, errMsg;
 	try {
-		reply = await callGemini([['human', prompt]]);
+		reply = await callAIModel([['human', prompt]]);
 	}
 	catch (err) {
 		console.error(err);

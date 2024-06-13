@@ -1,9 +1,12 @@
 import "./script/common.js";
+import "./script/lrucache.js";
+import "./script/cachedDB.js";
 import "./script/ai.js";
 import "./script/prompts.js";
 
 const i18nList = ['en', 'zh'];
 const DefaultLang = "zh";
+const TabInfoPrefix = 'page_activity:';
 
 globalThis.LangName = {
 	'zh': "Chinese",
@@ -26,6 +29,23 @@ globalThis.myInfo = {
 	lang: DefaultLang,
 	name: '主人',
 	info: '(Not set yet)',
+};
+
+/* DB */
+
+const DBs = {};
+const initDB = async () => {
+	var db = new CachedDB("PageInfos", 1);
+	db.onUpdate(() => {
+		db.open('tabInfo', 'tid', 10);
+		db.open('pageInfo', 'url', 10);
+		console.log('[DB] Updated');
+	});
+	db.onConnect(() => {
+		console.log('[DB] Connected');
+	});
+	await db.connect();
+	DBs.pageInfos = db;
 };
 
 /* Management */
@@ -69,21 +89,15 @@ const isPageForbidden = (url) => {
 };
 const onPageActivityChanged = async (tid, state) => {
 	if (!tid) return;
-	console.log('>>>>>>>>>>>>>>>>>>>>', tid, state);
 
-	var info = TabInfo[tid] || {
-		active: false,
-		duration: 0,
-		open: -1,
-	};
+	var info = await getTabInfo(tid);
 	if (info.active) {
 		if (state === 'show') return;
 	}
 	else {
 		if (state === 'hide') return;
 	}
-	console.log('                   >', tid, state);
-	TabInfo[tid] = info;
+	console.log('>>>>>>>>>>>>>>>>>>>>', tid, state);
 
 	var tab;
 	try {
@@ -93,7 +107,7 @@ const onPageActivityChanged = async (tid, state) => {
 		tab = null;
 	}
 	if (!tab) {
-		delete TabInfo[tid];
+		await delTabInfo(tid);
 		if (state === 'close') {
 			tab = {};
 		}
@@ -120,6 +134,7 @@ const onPageActivityChanged = async (tid, state) => {
 			if (!info.active) info.open = now;
 			info.url = url;
 			if (!info.title) info.title = title;
+			await setTabInfo(tid, info);
 		}
 	}
 	else if (['hide', 'idle'].includes(state)) {
@@ -149,29 +164,57 @@ const onPageDurationUpdated = (closed, url, duration, title) => {
 	sendMessage("SavePageActivity", {url, duration, title, closed}, "BackEnd");
 };
 const savePageActivities = async (url, duration, title, closed) => {
-	var totalList = await chrome.storage.local.get('activity_total');
-	totalList = (totalList || {}).activity_total || [];
+	var info = await DBs.pageInfos.get('pageInfo', url);
+	if (!info) {
+		info = {
+			url,
+			totalDuration: 0
+		};
+	}
 
-	var info;
-	if (!totalList.includes(url)) {
-		totalList.push(url);
-		await chrome.storage.local.set({activity_total: totalList});
-		info = {url, totalDuration: 0};
-	}
-	else {
-		info = await chrome.storage.local.get('page_activity:' + url);
-		info = info['page_activity:' + url] || {url, totalDuration: 0};
-	}
 	info.reading = !closed;
 	info.title = title;
 	info.totalDuration += duration;
 	info.currentDuration = duration;
 	info.timestamp = timestmp2str("YYYY/MM/DD hh:mm:ss :WDE:");
 
-	var item = {};
-	item['page_activity:' + url] = info;
-	console.log(info, item);
-	await chrome.storage.local.set(item);
+	await DBs.pageInfos.set('pageInfo', url, info);
+	console.log('[DB] Page Info Saved: ' + url);
+};
+const getTabInfo = async tid => {
+	var info = TabInfo[tid];
+	if (!info) {
+		info = await DBs.pageInfos.get('tabInfo', tid);
+		console.log('[DB] Get TabInfo: ' + tid);
+	}
+	if (!info) {
+		info = {
+			active: false,
+			duration: 0,
+			open: -1,
+		};
+	}
+	return info;
+};
+const setTabInfo = async (tid, info) => {
+	TabInfo[tid] = info;
+	if (!!DBs.tmrPageInfos) {
+		clearTimeout(DBs.tmrPageInfos);
+	}
+	DBs.tmrPageInfos = setTimeout(async () => {
+		await DBs.pageInfos.set('tabInfo', tid, info);
+		console.log('[DB] Set TabInfo: ' + tid);
+	}, 200);
+};
+const delTabInfo = async (tid) => {
+	delete TabInfo[tid];
+	if (!!DBs.tmrPageInfos) {
+		clearTimeout(DBs.tmrPageInfos);
+	}
+	DBs.tmrPageInfos = setTimeout(async () => {
+		await DBs.pageInfos.del('tabInfo', tid);
+		console.log('[DB] Del TabInfo: ' + tid);
+	}, 200);
 };
 const TabInfo = {};
 
@@ -184,7 +227,7 @@ chrome.tabs.onActivated.addListener(tab => {
 });
 chrome.tabs.onRemoved.addListener(async tabId => {
 	if (LastActiveTab === tabId) LastActiveTab = null;
-	delete TabInfo[tabId];
+	await delTabInfo(tabId);
 });
 chrome.idle.onStateChanged.addListener((state) => {
 	console.log('[Ext] Idle State Changed: ' + state);
@@ -335,8 +378,6 @@ const prepareWS = (wsUrl) => new Promise((res, rej) => {
 	};
 });
 
-initWS();
-
 /* EventHandler */
 
 const EventHandler = {};
@@ -450,19 +491,15 @@ EventHandler.SetConfig = async (data, source, sid) => {
 		sender: 'BackEnd',
 	});
 };
-EventHandler.PageStateChanged = (data, source, sid) => {
+EventHandler.PageStateChanged = async (data, source, sid) => {
 	if (source !== 'FrontEnd') return;
 
-	var info = TabInfo[sid] || {
-		active: false,
-		duration: 0,
-		open: -1,
-	};
+	var info = await getTabInfo(sid);
 	if (!!data && !!data.pageInfo) {
 		info.title = data.pageInfo.title || info.title;
 		info.description = data.pageInfo.description || info.description;
 		info.isArticle = isBoolean(data.pageInfo.isArticle) ? data.pageInfo.isArticle : info.isArticle;
-		TabInfo[sid] = info;
+		await setTabInfo(sid, info);
 	}
 	console.log('[Page] State Changed: ' + data.state);
 	console.log(info);
@@ -502,6 +539,7 @@ const sayHello = async () => {
 
 	var lastHello = await chrome.storage.session.get('lastHello');
 	lastHello = lastHello.lastHello;
+	console.log('>>>>>>>', lastHello, currentDate);
 	if (!!lastHello && lastHello === currentDate) return;
 	chrome.storage.session.set({lastHello: currentDate});
 
@@ -517,3 +555,8 @@ const sayHello = async () => {
 		showSystemNotification(err);
 	}
 };
+
+/* Init */
+
+initDB();
+initWS();

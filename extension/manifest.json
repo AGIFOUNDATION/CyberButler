@@ -23,6 +23,7 @@
 		"idle",
 		"webRequest",
 		"storage",
+		"unlimitedStorage",
 		"notifications"
 	],
 	"host_permissions": [
