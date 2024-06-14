@@ -1,11 +1,34 @@
-var myLang = "en";
+const RegChar = /[\u4e00-\u9fa5]|[\w-]+|[\d\.]+/g;
 const CypriteNotify = {};
+const TagNameWeight = {
+	ARTICLE: 5.0,
+	POST: 3.0,
+	SECTION: 2.0,
+	CONTENT: 1.5,
+	CONTAINER: 1.0,
+	MAIN: 1.0,
+	DIV: 0.1,
+};
+const TagClassWeight = {
+	article: 3.0,
+	post: 1.5,
+	content: 1.0,
+	notion: 0.5,
+	page: 0.2,
+	container: 0.1,
+};
+var myLang = "en";
 
 /* Communiation */
 
 var port;
 var sendMessage = (event, data, target, tid) => {
 	if (!port) {
+		if (!chrome.runtime.id) {
+			logger.error('Runtime', 'Runtime cannot connect');
+			return;
+			}
+		logger.log('Runtime', 'Runtime Reconnect');
 		port = chrome.runtime.connect({name: "cyberbutler_contentscript"});
 		port.onDisconnect.addListener(onPortDisconnect);
 		port.onMessage.addListener(onPortMessage);
@@ -17,8 +40,8 @@ var sendMessage = (event, data, target, tid) => {
 	});
 };
 const onPortDisconnect = () => {
+	logger.error('PORT', 'Disconnected');
 	port = null;
-	console.log('[PORT] Disconnected and Reconnecting');
 };
 const onPortMessage = msg => {
 	if (msg.target !== 'FrontEnd') return;
@@ -26,29 +49,127 @@ const onPortMessage = msg => {
 	if (!handler) return;
 	handler(msg.data, msg.source || 'ServerEnd');
 };
+chrome.runtime.onConnect.addListener(() => {
+	logger.log('Runtime', 'HeartBeated');
+});
 
 /* Utils */
 
 var pageInfo = null, notificationMounted = false, notificationMountingRes = [];
 const findContainer = () => {
-	console.log('vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv');
-	var candidates = document.body.querySelectorAll('article, section, div, main, container, app, post, content, entry');
-	var maxWeight = 0, target = document.body;
+	/* Search for the main tag that records the content of the body text */
+	var tagInfo = {}, contentTag, maxWeight = 0;
+	var candidates = document.body.querySelectorAll('p, div, span');
 	for (let ele of candidates) {
-		let size = ele.textContent.match(/[\u4e00-\u9fa5]|[\w-]+|[\d\.]+/g);
-		size = !!size ? size.length : 0;
-		let density = ele.innerHTML.replace(/<([\w\-]+)[\w\W]*?>/g, (m, tag) => '<' + tag + '>').match(/[\u4e00-\u9fa5]|[\w-]+|[\d\.]+/g);
-		density = !!density ? density.length : 0;
-		density = density > 0 ? size / density : 0;
-		let weight = size * (density ** 1.5);
-		if (weight > maxWeight) {
-			maxWeight = weight;
-			target = ele;
+		let tag = ele.tagName;
+		let info = tagInfo[tag] || {
+			total: 0,
+			value: 0,
+		};
+		let total = ele.innerHTML.replace(/<([\w\-]+)[\w\W]*?>/g, (m, tag) => '<' + tag + '>').match(RegChar);
+		total = !!total ? total.length : 0;
+		if (total > 0) {
+			let size = ele.textContent.match(RegChar);
+			size = !!size ? size.length : 0;
+			info.total ++;
+			info.value += size / total;
+			tagInfo[tag] = info;
 		}
 	}
-	console.log(maxWeight);
-	console.log(target);
+	for (let tag in tagInfo) {
+		let info = tagInfo[tag];
+		let weight = info.value / info.total;
+		if (weight > maxWeight) {
+			maxWeight = weight;
+			contentTag = tag;
+		}
+		info.weight = weight;
+		info.density = info.value / info.total;
+	}
+
+	/* Assign values to the main text node */
+	candidates = document.body.querySelectorAll(contentTag);
+	for (let ele of candidates) {
+		var size = ele.textContent.match(RegChar);
+		size = !!size ? size.length : 0;
+		var total = ele.innerHTML.replace(/<([\w\-]+)[\w\W]*?>/g, (m, tag) => '<' + tag + '>').match(RegChar);
+		total = !!total ? total.length : 0;
+		ele._density = total > 0 ? size / total : 0;
+		ele._tagWeight = calculateTagWeight(ele);
+		ele._value = size * ele._tagWeight;
+		ele._weight = size * ele._density;
+	}
+
+	/* Search for the most likely container that holds the main body content */
+	candidates = document.body.querySelectorAll('article, section, div, main, container, app, post, content, entry');
+	candidates = [...candidates];
+	candidates = candidates.filter(ele => !!ele.textContent.trim().length);
+	candidates.sort((a, b) => a.textContent.length - b.textContent.length);
+	candidates = candidates.map(ele => {
+		if (ele.tagName === contentTag) return;
+
+		var size = ele.textContent.match(RegChar);
+		size = !!size ? size.length : 0;
+		var total = ele.innerHTML.replace(/<([\w\-]+)[\w\W]*?>/g, (m, tag) => '<' + tag + '>').match(RegChar);
+		total = !!total ? total.length : 0;
+		ele._density = total > 0 ? size / total : 0;
+
+		var childValue = 0, childCount = 0;
+		for (let n of ele.children) {
+			childCount ++;
+			childValue += n._weight || 1;
+		}
+		var nodeValue = 0, nodeCount = 0;
+		for (let n of ele.querySelectorAll(contentTag)) {
+			nodeCount ++;
+			nodeValue += n._weight;
+		}
+		childCount ++;
+		nodeCount ++;
+		ele._tagWeight = calculateTagWeight(ele);
+		ele._value = (childValue + nodeValue) * ele._tagWeight;
+		ele._weight = (childValue + nodeValue * childCount / nodeCount) / 2 * ele._density;
+		return ele;
+	});
+
+	// console.log('VVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV');
+	candidates.sort((a, b) => b._value - a._value);
+	// candidates.splice(Math.min(Math.ceil(candidates.length / 3), 10));
+	// candidates.forEach(ele => {
+	// 	console.log(ele, ele._value, ele._weight, ele._tagWeight);
+	// });
+	target = candidates[0];
+	// console.log('xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx');
+	// console.log(target, target._value, target._weight);
 	return target;
+};
+const calculateTagWeight = ele => {
+	var weight = 1, has = false, maxWeight = 0;
+	weight += TagNameWeight[ele.tagName] || 0;
+
+	for (let id in TagClassWeight) {
+		let name = ele.id;
+		if (!name) continue;
+		name = name.toLowerCase();
+		if (name.indexOf(id) < 0) continue;
+		let w = TagClassWeight[id];
+		if (w > maxWeight) maxWeight = w;
+		has = true;
+	}
+	weight += maxWeight;
+
+	maxWeight = 0;
+	for (let id in TagClassWeight) {
+		let name = ele.className;
+		if (!name) continue;
+		name = name.toLowerCase();
+		if (name.indexOf(id) < 0) continue;
+		let w = TagClassWeight[id] / 2;
+		if (w > maxWeight) maxWeight = w;
+	}
+	weight += maxWeight;
+
+	return weight;
 };
 const removeChildren = (container, tag) => {
 	var list = container.querySelectorAll(tag);
@@ -178,7 +299,7 @@ const getPageShotContent = container => {
 		line = line.replace(/\s+/g, ' ');
 		line = line.trim();
 		if (line.match(/^[\w\.]+$/)) return;
-		var match = line.match(/[\u4e00-\u9fa5]|[\w-]+/g);
+		var match = line.match(RegChar);
 		if (!match) return;
 		if (match.length < 10) return;
 		count += match.length;
@@ -198,7 +319,7 @@ const getPageContent = async container => {
 		await wait();
 	}
 	time2 = Date.now();
-	console.log('[Page] Parse Page Content Stage 1: ' + (time2 - time1) + 'ms');
+	logger.log('Page', 'Parse Page Content Stage 1: ' + (time2 - time1) + 'ms');
 	time1 = time2;
 
 	content = content.replace(/<form[\w\W]*?>[\w\W]*?<\/form>/gi, '');
@@ -231,7 +352,7 @@ const getPageContent = async container => {
 		return inner;
 	});
 	time2 = Date.now();
-	console.log('[Page] Parse Page Content Stage 2: ' + (time2 - time1) + 'ms');
+	logger.log('Page', 'Parse Page Content Stage 2: ' + (time2 - time1) + 'ms');
 	time1 = time2;
 
 	temp = '';
@@ -252,7 +373,7 @@ const getPageContent = async container => {
 		await wait();
 	}
 	time2 = Date.now();
-	console.log('[Page] Parse Page Content Stage 3: ' + (time2 - time1) + 'ms');
+	logger.log('Page', 'Parse Page Content Stage 3: ' + (time2 - time1) + 'ms');
 	time1 = time2;
 
 	content = content.replace(/\s*<br>\s*/gi, '\n');
@@ -261,13 +382,15 @@ const getPageContent = async container => {
 	content = content.replace(/\n\n+/g, '\n\n');
 	content = content.trim();
 	time2 = Date.now();
-	console.log('[Page] Parse Page Content Stage 4: ' + (time2 - time1) + 'ms');
+	logger.log('Page', 'Parse Page Content Stage 4: ' + (time2 - time1) + 'ms');
 
 	return content;
 };
 const getPageInfo = () => {
+	console.log('xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx');
 	var info = {};
 	var container = findContainer();
+	console.log(container);
 	var isBody = container === document.body;
 	container = getCleanContainer(container);
 
@@ -304,12 +427,12 @@ EventHandler.notify = (data, source) => {
 	else if (source === "FrontEnd") sourceName = 'Content';
 	else if (source === "PageEnd") sourceName = 'Injection';
 	if (!isString(data) && !isNumber(data) && !isBoolean(data)) data = JSON.stringify(data);
-	console.log(`[Notify | ${sourceName}] ` + data);
+	logger.log(`Notify | ${sourceName}`, data);
 };
 EventHandler.getPageInfo = (data, source) => {
 	if (source !== 'BackEnd') return;
 
-	console.log('[Page] Analyze Page Info: ' + document.readyState);
+	logger.log('Page', 'Analyze Page Info: ' + document.readyState);
 	if (!pageInfo) {
 		getPageInfo();
 	}
@@ -332,9 +455,10 @@ EventHandler.requestCypriteNotify = async (data, source, sid) => {
 	myLang = lang;
 
 	var messages = I18NMessages[lang] || I18NMessages.len;
-	if (!!CypriteNotify.RequestOperation) CypriteNotify.RequestOperation._hide();
+	if (!!CypriteNotify.RequestOperation) return;
+	// if (!!CypriteNotify.RequestOperation) CypriteNotify.RequestOperation._hide();
 	var notify = Notification.show(messages.cypriteName, messages.newArticleMentionMessage, 'rightTop', 'message', 20 * 1000);
-	notify.addEventListener('click', async evt => {
+	const onClick = async evt => {
 		if (evt.target.tagName !== 'BUTTON') return;
 		var name = evt.target.name;
 		if (name === 'summarize') {
@@ -344,7 +468,13 @@ EventHandler.requestCypriteNotify = async (data, source, sid) => {
 			await translatePage();
 		}
 		notify._hide();
-	});
+	};
+	notify.addEventListener('click', onClick);
+	notify.onclose = () => {
+		notify.removeEventListener('click', onClick);
+		notify.onclose = null;
+		CypriteNotify.RequestOperation = null;
+	};
 	CypriteNotify.RequestOperation = notify;
 };
 EventHandler.pageSummarized = async (data) => {
@@ -371,6 +501,7 @@ EventHandler.pageSummarized = async (data) => {
 /* Tab */
 
 document.onreadystatechange = () => {
+	logger.log('DOC', 'Ready State Changed: ' + document.readyState);
 	pageInfo = null;
 	getPageInfo();
 	if (document.readyState === 'complete') {
@@ -381,7 +512,7 @@ document.onreadystatechange = () => {
 		}, "BackEnd");
 	}
 };
-document.addEventListener('visibilitychange', function() {
+document.addEventListener('visibilitychange', () => {
 	if (document.hidden) {
 		sendMessage("VisibilityChanged", 'hide', "BackEnd");
 	}
@@ -389,11 +520,14 @@ document.addEventListener('visibilitychange', function() {
 		sendMessage("VisibilityChanged", 'show', "BackEnd");
 	}
 });
-window.addEventListener('unload', function() {
+window.addEventListener('unload', () => {
 	sendMessage("VisibilityChanged", 'close', "BackEnd");
 });
-window.addEventListener('idle', function() {
+window.addEventListener('idle', () => {
 	sendMessage("VisibilityChanged", 'idle', "BackEnd");
+});
+window.addEventListener('load', () => {
+	logger.log('WIN', 'Loaded');
 });
 
 var timerMutationObserver;
@@ -402,6 +536,7 @@ const observer = new MutationObserver(() => {
 		clearTimeout(timerMutationObserver);
 	}
 	timerMutationObserver = setTimeout(() => {
+		logger.log('DOC', 'Mutation Observered');
 		pageInfo = null;
 		getPageInfo();
 		sendMessage("PageStateChanged", {

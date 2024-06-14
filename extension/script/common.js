@@ -1,3 +1,17 @@
+globalThis.logger = {};
+logger.log = (tag, ...logs) => {
+	console.log(`%c [${tag}]`, "color: blue; font-weight: bolder;", ...logs);
+};
+logger.info = (tag, ...logs) => {
+	console.info(`%c [${tag}]`, "color: green; font-weight: bolder;", ...logs);
+};
+logger.warn = (tag, ...logs) => {
+	console.log(`%c [${tag}]`, "color: magenta; font-weight: bolder;", ...logs);
+};
+logger.error = (tag, ...logs) => {
+	console.log(`%c [${tag}]`, "color: red; font-weight: bolder;", ...logs);
+};
+
 globalThis.wait = delay => new Promise(res => setTimeout(res, delay));
 
 globalThis.newID = (len=16) => {
@@ -17,13 +31,7 @@ globalThis.isObject = obj => obj !== null && obj !== undefined && !!obj.__proto_
 globalThis.isFunction = obj => obj !== null && obj !== undefined && !!obj.__proto__ && (obj.__proto__.constructor === Function || obj.__proto__.constructor === AsyncFunction);
 globalThis.isAsyncFunction = obj => obj !== null && obj !== undefined && !!obj.__proto__ && obj.__proto__.constructor === AsyncFunction;
 
-/**
- * Name:	Auxillary Utils and Extends for DateTime
- * Desc:    日期时间相关拓展
- * Author:	LostAbaddon
- * Version:	0.0.3
- * Date:	2023.12.15
- */
+/* Auxillary Utils and Extends for DateTime */
 
 const WeekDayNames = {
 	enS: ['Sun', "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],

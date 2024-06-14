@@ -29,7 +29,8 @@ const newNotification = (title, message, duration=3000, type, position) => {
 		if (!!timer) {
 			clearTimeout(timer);
 		}
-		if (timeLeft <= 0) return;
+		// if (timeLeft <= 0) return;
+		if (timeLeft <= 0) timeLeft = 0;
 		timeStart = Date.now();
 		timer = setTimeout(notify._hide, timeLeft);
 	};
@@ -111,6 +112,9 @@ const newNotification = (title, message, duration=3000, type, position) => {
 	closer.innerText = 'X';
 	closer.addEventListener('click', notify._hide);
 	inner.appendChild(closer);
+
+	notify._getTimeLeft = () => timeLeft;
+	window.currentNotify = notify;
 
 	return notify;
 };

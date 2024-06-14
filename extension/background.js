@@ -32,7 +32,7 @@ globalThis.myInfo = {
 
 const waitUntil = fun => new Promise(res => {
 	var untiler = setInterval(() => {
-		console.log('[Ext] Reactive and waiting...');
+		logger.log('Ext', 'Reactive and waiting...');
 	}, 10 * 1000);
 	fun().finally(() => {
 		clearInterval(untiler);
@@ -48,10 +48,10 @@ const initDB = async () => {
 	db.onUpdate(() => {
 		db.open('tabInfo', 'tid', 10);
 		db.open('pageInfo', 'url', 10);
-		console.log('[DB] Updated');
+		logger.info('DB', 'Updated');
 	});
 	db.onConnect(() => {
-		console.log('[DB] Connected');
+		logger.info('DB', 'Connected');
 	});
 	await db.connect();
 	DBs.pageInfos = db;
@@ -148,16 +148,17 @@ const onPageActivityChanged = async (tid, state) => {
 			if (!info.title) info.title = title;
 			info.active = true;
 			info.url = url;
-			await setTabInfo(tid, info);
 
 			console.log(':::::::::::::::::::', shouldRequest, info.isArticle);
-			if (shouldRequest && info.isArticle) {
+			if ((shouldRequest || !info.requested) && info.isArticle) {
+				info.requested = true;
 				dispatchEvent({
 					event: "requestCypriteNotify",
 					target: "FrontEnd",
 					tid
 				});
 			}
+			await setTabInfo(tid, info);
 		}
 	}
 	else if (['hide', 'idle'].includes(state)) {
@@ -179,7 +180,7 @@ const inactivePage = async (info, now, needCall=false) => {
 	await onPageDurationUpdated(needCall, info.url, info.duration, info.title);
 };
 const onPageDurationUpdated = async (closed, url, duration, title) => {
-	console.log('[PageActivity] Save Data: ' + url);
+	logger.log('PageActivity', 'Save Data: ' + url);
 
 	// save info locally
 	await savePageActivities(url, duration, title, closed);
@@ -206,7 +207,7 @@ const getPageInfo = async url => {
 	var info = TabInfo[url];
 	if (!info) {
 		info = await DBs.pageInfos.get('pageInfo', url);
-		console.log('[DB] Get Page Info: ' + url);
+		logger.log('DB', 'Get Page Info: ' + url);
 		if (!info) {
 			info = {
 				totalDuration: 0,
@@ -222,7 +223,7 @@ const setPageInfo = async (url, info) => {
 	}
 	DBs.tmrPageInfos = setTimeout(async () => {
 		await DBs.pageInfos.set('pageInfo', url, info);
-		console.log('[DB] Set Page Info: ' + url);
+		logger.log('DB', 'Set Page Info: ' + url);
 	}, 200);
 };
 const delPageInfo = async (url) => {
@@ -231,14 +232,14 @@ const delPageInfo = async (url) => {
 	}
 	DBs.tmrPageInfos = setTimeout(async () => {
 		await DBs.pageInfos.del('pageInfo', url);
-		console.log('[DB] Del Page Info: ' + url);
+		logger.log('DB', 'Del Page Info: ' + url);
 	}, 200);
 };
 const getTabInfo = async tid => {
 	var info = TabInfo[tid];
 	if (!info) {
 		info = await DBs.pageInfos.get('tabInfo', tid);
-		console.log('[DB] Get TabInfo: ' + tid);
+		logger.log('DB', 'Get TabInfo: ' + tid);
 		if (!info) {
 			info = {
 				active: false,
@@ -256,7 +257,7 @@ const setTabInfo = async (tid, info) => {
 	}
 	DBs.tmrTabInfos = setTimeout(async () => {
 		await DBs.pageInfos.set('tabInfo', tid, info);
-		console.log('[DB] Set TabInfo: ' + tid);
+		logger.log('DB', 'Set TabInfo: ' + tid);
 	}, 200);
 };
 const delTabInfo = async (tid) => {
@@ -266,7 +267,7 @@ const delTabInfo = async (tid) => {
 	}
 	DBs.tmrTabInfos = setTimeout(async () => {
 		await DBs.pageInfos.del('tabInfo', tid);
-		console.log('[DB] Del TabInfo: ' + tid);
+		logger.log('DB', 'Del TabInfo: ' + tid);
 	}, 200);
 };
 const TabInfo = {};
@@ -277,18 +278,20 @@ var LastActiveTab = null;
 const TabPorts = new Map();
 chrome.tabs.onActivated.addListener(tab => {
 	LastActiveTab = tab.tabId;
+	chrome.tabs.connect(LastActiveTab);
 });
 chrome.tabs.onRemoved.addListener(async tabId => {
 	if (LastActiveTab === tabId) LastActiveTab = null;
 });
 chrome.idle.onStateChanged.addListener((state) => {
-	console.log('[Ext] Idle State Changed: ' + state);
+	logger.log('Ext', 'Idle State Changed: ' + state);
 	if (!LastActiveTab) return;
 	if (state === 'idle') {
 		onPageActivityChanged(LastActiveTab, "idle");
 	}
 	else {
 		onPageActivityChanged(LastActiveTab, "active");
+		chrome.tabs.connect(LastActiveTab);
 	}
 });
 chrome.runtime.onMessage.addListener((msg, sender) => {
@@ -303,7 +306,7 @@ chrome.runtime.onConnect.addListener(port => {
 	if (port.name !== "cyberbutler_contentscript") return;
 	var tid = port.sender?.tab?.id;
 	if (!tid) return;
-	console.log('[PORT] Connect: ' + tid);
+	logger.info('PORT', 'Connect: ' + tid);
 	TabPorts.set(tid, port);
 	port.onMessage.addListener(msg => {
 		if (msg.sender !== "PopupEnd") {
@@ -313,7 +316,7 @@ chrome.runtime.onConnect.addListener(port => {
 		dispatchEvent(msg);
 	});
 	port.onDisconnect.addListener(() => {
-		console.log('[PORT] Disconnect: ' + tid);
+		logger.info('PORT', 'Disconnect: ' + tid);
 		TabPorts.delete(tid);
 	});
 });
@@ -357,7 +360,7 @@ const getWSConfig = async () => {
 const initWS = async () => {
 	var wsHost = await getWSConfig();
 	if (!wsHost) {
-		console.log('[WS] Use Edged Knowledge Vault');
+		logger.info('WS', 'Use Edged Knowledge Vault');
 
 		let installed = await chrome.storage.local.get('installed');
 		installed = installed.installed || false;
@@ -366,7 +369,7 @@ const initWS = async () => {
 		sayHello();
 	}
 	else {
-		console.log('[WS] Host: ' + wsHost);
+		logger.info('WS', 'Host: ' + wsHost);
 		prepareWS(wsHost);
 	}
 };
@@ -389,7 +392,7 @@ const prepareWS = (wsUrl) => new Promise((res, rej) => {
 	var socket = new WebSocket(wsUrl);
 
 	socket.onopen = async () => {
-		console.log('[WS] Opened');
+		logger.info('WS', 'Opened');
 
 		webSocket = socket;
 		sendMessage = async (event, data, sender, sid) => {
@@ -413,7 +416,7 @@ const prepareWS = (wsUrl) => new Promise((res, rej) => {
 	socket.onmessage = evt => {
 		var msg = parseMsg(evt);
 		if (msg.event === 'initial') {
-			console.log('[WS] Initialized: ' + msg.data);
+			logger.info('WS', 'Initialized: ' + msg.data);
 			return;
 		}
 
@@ -421,10 +424,10 @@ const prepareWS = (wsUrl) => new Promise((res, rej) => {
 		dispatchEvent(msg);
 	};
 	socket.onerror = err => {
-		console.error("[WS] Error:", err);
+		logger.error("WS", "Error:", err);
 	};
 	socket.onclose = () => {
-		console.log("[WS] Close");
+		logger.info("WS", "Close");
 		if (socket === webSocket) webSocket = null;
 		res(false);
 	};
@@ -449,7 +452,7 @@ const dispatchEvent = async (msg) => {
 				} catch {}
 			}
 			else {
-				console.log(`[Sys] Tab ${msg.tid} does not exist.`);
+				logger.error("Sys", `Tab ${msg.tid} does not exist.`);
 			}
 		}
 		// 发送给当前页面
@@ -483,7 +486,7 @@ const dispatchEvent = async (msg) => {
 	// Background事件
 	else {
 		let handler = EventHandler[msg.event];
-		if (!handler) return console.log('[SW | Service] Got Event', msg);
+		if (!handler) return logger.log('SW', 'Got Event', msg);
 
 		handler(msg.data, msg.sender, msg.sid, msg.target, msg.tid);
 	}
@@ -501,7 +504,7 @@ EventHandler.OpenPopup = async (data, source) => {
 };
 EventHandler.SetConfig = async (data, source, sid) => {
 	if (source !== 'ConfigPage') return;
-	console.log('[WS] Set Host: ' + data.wsHost);
+	logger.info('WS', 'Set Host: ' + data.wsHost);
 
 	myInfo.name = data.myName || myInfo.name;
 	myInfo.info = data.myInfo || myInfo.info;
@@ -545,7 +548,7 @@ EventHandler.SetConfig = async (data, source, sid) => {
 };
 EventHandler.PageStateChanged = async (data, source, sid) => {
 	if (source !== 'FrontEnd') return;
-	console.log('[Page] State Changed: ' + data.state);
+	logger.log('Page', 'State Changed: ' + data.state);
 
 	var info = await getTabInfo(sid);
 	if (!!data && !!data.pageInfo) {
@@ -577,7 +580,7 @@ EventHandler.MountNotification = async (data, source, sid) => {
 		injectImmediately: true,
 	}));
 	await Promise.all(tasks);
-	console.log('[Page] Notification has mounted!');
+	logger.log('Page', 'Notification has mounted!');
 	dispatchEvent({
 		event: "notificationMounted",
 		target: 'FrontEnd',
@@ -586,7 +589,7 @@ EventHandler.MountNotification = async (data, source, sid) => {
 };
 EventHandler.SummarizePage = async (data, source, sid) => {
 	var summary = await summarizeArticle(data);
-	console.log('[AI] Summary Finished: ' + !!summary);
+	logger.log('AI', 'Summary Finished: ' + !!summary);
 	dispatchEvent({
 		event: "pageSummarized",
 		data: summary,
@@ -611,7 +614,7 @@ EventHandler.notify = (data, source, sid) => {
 	else if (source === "FrontEnd") sourceName = 'Content';
 	else if (source === "PageEnd") sourceName = 'Injection';
 	if (!isString(data) && !isNumber(data) && !isBoolean(data)) data = JSON.stringify(data);
-	console.log(`[Notify | ${sourceName}] ` + data);
+	logger.log(`Notify | ${sourceName}`, data);
 };
 
 /* AI */
