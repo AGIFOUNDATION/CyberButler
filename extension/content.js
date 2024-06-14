@@ -24,11 +24,11 @@ var myLang = "en";
 var port;
 var sendMessage = (event, data, target, tid) => {
 	if (!port) {
-		if (!chrome.runtime.id) {
+		if (!chrome.runtime || !chrome.runtime.id) {
 			logger.error('Runtime', 'Runtime cannot connect');
 			return;
-			}
-		logger.log('Runtime', 'Runtime Reconnect');
+		}
+		logger.info('Runtime', 'Runtime Reconnect');
 		port = chrome.runtime.connect({name: "cyberbutler_contentscript"});
 		port.onDisconnect.addListener(onPortDisconnect);
 		port.onMessage.addListener(onPortMessage);
@@ -40,7 +40,7 @@ var sendMessage = (event, data, target, tid) => {
 	});
 };
 const onPortDisconnect = () => {
-	logger.error('PORT', 'Disconnected');
+	logger.info('PORT', 'Disconnected');
 	port = null;
 };
 const onPortMessage = msg => {
@@ -50,7 +50,7 @@ const onPortMessage = msg => {
 	handler(msg.data, msg.source || 'ServerEnd');
 };
 chrome.runtime.onConnect.addListener(() => {
-	logger.log('Runtime', 'HeartBeated');
+	logger.info('Runtime', 'HeartBeated');
 });
 
 /* Utils */
@@ -202,6 +202,30 @@ const getCleanContainer = container => {
 	removeChildren(frame, 'footer');
 
 	return shadow;
+};
+const checkIsArticle = (container) => {
+	var total = document.body.textContent.match(RegChar);
+	total = !!total ? total.length : 0;
+	var content = 0;
+	if (!!container && !!container.textContent) content = container.textContent.match(RegChar);
+	content = !!content ? content.length : 0;
+	var contentDensity = total === 0 ? 0 : content / total;
+
+	var html = document.body.innerHTML.replace(/<([\w\-]+)[\w\W]*?>/g, (m, tag) => '<' + tag + '>').match(RegChar);
+	html = !!html ? html.length : 0;
+	var pageDensity = html === 0 ? 0 : total / html;
+
+	html = 0;
+	if (!!container && !!container.innerHTML) html = container.innerHTML.replace(/<([\w\-]+)[\w\W]*?>/g, (m, tag) => '<' + tag + '>').match(RegChar);
+	html = !!html ? html.length : 0;
+	var innerDensity = html === 0 ? 0 : content / html;
+
+	logger.em    ('Article', 'Size   :', content, total, html);
+	logger.strong('Article', 'Density:', contentDensity, pageDensity, innerDensity);
+	var weight = contentDensity * 1.2 + pageDensity * 0.8 + (innerDensity / pageDensity / 0.9);
+	weight *= content / (400 + content);
+	logger.blank ('Article', 'Check  :', content > 500, contentDensity > 0.8, pageDensity > 0.3, innerDensity > pageDensity * 0.9, weight);
+	return weight > 1.5;
 };
 const getPageTitle = (isBody, container) => {
 	var ele, title;
@@ -391,13 +415,15 @@ const getPageInfo = () => {
 	var info = {};
 	var container = findContainer();
 	console.log(container);
+	info.isArticle = checkIsArticle(container);
+
 	var isBody = container === document.body;
 	container = getCleanContainer(container);
 
 	info.title = getPageTitle(isBody, container);
 	var [content, size] = getPageShotContent(container);
 	info.description = getPageDescription(isBody, content);
-	info.isArticle = !isBody && size > 50;
+	console.log(info);
 
 	pageInfo = info;
 };
@@ -458,19 +484,23 @@ EventHandler.requestCypriteNotify = async (data, source, sid) => {
 	if (!!CypriteNotify.RequestOperation) return;
 	// if (!!CypriteNotify.RequestOperation) CypriteNotify.RequestOperation._hide();
 	var notify = Notification.show(messages.cypriteName, messages.newArticleMentionMessage, 'rightTop', 'message', 20 * 1000);
+	var userAction = false;
 	const onClick = async evt => {
 		if (evt.target.tagName !== 'BUTTON') return;
 		var name = evt.target.name;
 		if (name === 'summarize') {
 			await summarizePage();
+			userAction = true;
 		}
 		else if (name === 'translate') {
 			await translatePage();
+			userAction = true;
 		}
 		notify._hide();
 	};
 	notify.addEventListener('click', onClick);
 	notify.onclose = () => {
+		console.log('>>>>>>>>>>>>> User Action: ' + userAction);
 		notify.removeEventListener('click', onClick);
 		notify.onclose = null;
 		CypriteNotify.RequestOperation = null;

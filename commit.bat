@@ -1,4 +1,7 @@
 @echo off
+
+del diff.diff
+
 echo [CHANGES] >> diff.diff
 echo. >> diff.diff
 git status >> diff.diff
@@ -12,5 +15,3 @@ IF "%1"=="" (
 ) ELSE (
     node ..\AIVerse\tools\autoCommit.js -f diff.diff -e %1
 )
-
-del diff.diff

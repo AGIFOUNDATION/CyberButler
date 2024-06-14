@@ -280,11 +280,12 @@ chrome.tabs.onActivated.addListener(tab => {
 	LastActiveTab = tab.tabId;
 	chrome.tabs.connect(LastActiveTab);
 });
-chrome.tabs.onRemoved.addListener(async tabId => {
+chrome.tabs.onRemoved.addListener(tabId => {
 	if (LastActiveTab === tabId) LastActiveTab = null;
+	onPageActivityChanged(tabId, "close");
 });
 chrome.idle.onStateChanged.addListener((state) => {
-	logger.log('Ext', 'Idle State Changed: ' + state);
+	logger.info('Ext', 'Idle State Changed: ' + state);
 	if (!LastActiveTab) return;
 	if (state === 'idle') {
 		onPageActivityChanged(LastActiveTab, "idle");
@@ -504,7 +505,7 @@ EventHandler.OpenPopup = async (data, source) => {
 };
 EventHandler.SetConfig = async (data, source, sid) => {
 	if (source !== 'ConfigPage') return;
-	logger.info('WS', 'Set Host: ' + data.wsHost);
+	logger.log('WS', 'Set Host: ' + data.wsHost);
 
 	myInfo.name = data.myName || myInfo.name;
 	myInfo.info = data.myInfo || myInfo.info;

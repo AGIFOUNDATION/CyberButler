@@ -1,15 +1,24 @@
 globalThis.logger = {};
 logger.log = (tag, ...logs) => {
-	console.log(`%c [${tag}]`, "color: blue; font-weight: bolder;", ...logs);
+	console.log(`%c[${tag}]`, "color: blue; font-weight: bolder;", ...logs);
 };
 logger.info = (tag, ...logs) => {
-	console.info(`%c [${tag}]`, "color: green; font-weight: bolder;", ...logs);
+	console.info(`%c[${tag}]`, "color: green; font-weight: bolder;", ...logs);
 };
 logger.warn = (tag, ...logs) => {
-	console.log(`%c [${tag}]`, "color: magenta; font-weight: bolder;", ...logs);
+	console.log(`%c[${tag}]`, "color: magenta; font-weight: bolder;", ...logs);
 };
 logger.error = (tag, ...logs) => {
-	console.log(`%c [${tag}]`, "color: red; font-weight: bolder;", ...logs);
+	console.log(`%c[${tag}]`, "color: red; font-weight: bolder;", ...logs);
+};
+logger.em = (tag, ...logs) => {
+	console.log(`%c[${tag}]`, "background-color: blue; color: white; font-weight: bolder;", ...logs);
+};
+logger.strong = (tag, ...logs) => {
+	console.log(`%c[${tag}]`, "background-color: red; color: white; font-weight: bolder;", ...logs);
+};
+logger.blank = (tag, ...logs) => {
+	console.log(`%c[${tag}]`, "background-color: black; color: white; font-weight: bolder;", ...logs);
 };
 
 globalThis.wait = delay => new Promise(res => setTimeout(res, delay));

@@ -1,3 +1,5 @@
+rm diff.diff
+
 printf "[CHANGES]\n\n" >> diff.diff
 git status >> diff.diff
 printf "\n[DIFF]\n\n" >> diff.diff
@@ -9,5 +11,3 @@ then
 else
 	node ../AIVerse/tools/autoCommit.js -f diff.diff -e $1
 fi
-
-rm diff.diff
