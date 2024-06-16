@@ -437,7 +437,12 @@ const getPageInfo = () => {
 	var container = findContainer();
 	console.log(container);
 	info.isArticle = checkIsArticle(container);
-	info.title = getPageTitle(container);
+	if (info.isArticle) {
+		info.title = getPageTitle(container);
+	}
+	else {
+		info.title = document.title.trim();
+	}
 
 	var isBody = container === document.body;
 	container = getCleanContainer(container);
