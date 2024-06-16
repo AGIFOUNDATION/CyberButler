@@ -229,13 +229,13 @@ const checkIsArticle = (container) => {
 };
 const getPageTitle = (container) => {
 	// Locate the content container position
-	var html = document.body.innerHTML.replace(/<([\w\-]+)[\w\W]*?>/g, (m, tag) => '<' + tag + '>');
+	var html = document.querySelector('html').innerHTML.replace(/<([\w\-]+)[\w\W]*?>/g, (m, tag) => '<' + tag + '>');
 	var content = container.outerHTML.replace(/<([\w\-]+)[\w\W]*?>/g, (m, tag) => '<' + tag + '>');
 	var poses = [];
 	html.replace(content, (m, pos) => {
 		poses.push([pos, pos + content.length]);
 	});
-	
+
 	// Find out all title candidates
 	var candidates = document.querySelectorAll('header, h1, h2, [id*="title"], [name*="title"], [property*="title"]');
 	candidates = [...candidates];
@@ -301,21 +301,18 @@ const getPageTitle = (container) => {
 	else if (candidates[2].length > 0) return candidates[2][0];
 	else return titleContainer.textContent.trim();
 };
-const getPageDescription = (isBody, content) => {
-	var desc;
+const getPageDescription = (isArticle, content) => {
+	var candidates;
 
-	if (isBody) {
-		let ele = document.head.querySelector('[name*="description"]');
-		if (!!ele) {
-			desc = ele.content.trim();
-			if (!!desc) return desc;
-		}
-		ele = document.head.querySelector('[property*="description"]');
-		if (!!ele) {
-			desc = ele.content.trim();
-			if (!!desc) return desc;
-		}
+	if (!isArticle) {
+		candidates = document.head.querySelectorAll('[name*="description"], [property*="description"]');
+		candidates = [...candidates].map(ele => (ele.content || '').trim()).filter(ctx => !!ctx);
+		candidates.sort((a, b) => b.length - a.length);
+		return candidates[0];
 	}
+
+
+
 
 	if (content.length === 1) {
 		desc = content[0];
@@ -443,12 +440,12 @@ const getPageInfo = () => {
 	else {
 		info.title = document.title.trim();
 	}
+	info.description = getPageDescription(info.isArticle, container);
 
 	var isBody = container === document.body;
 	container = getCleanContainer(container);
 
 	var [content, size] = getPageShotContent(container);
-	info.description = getPageDescription(isBody, content);
 	console.log(info);
 	info.isArticle = false;
 
