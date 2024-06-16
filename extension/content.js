@@ -227,58 +227,79 @@ const checkIsArticle = (container) => {
 	logger.blank ('Article', 'Check  :', content > 500, contentDensity > 0.8, pageDensity > 0.3, innerDensity > pageDensity * 0.9, weight);
 	return weight > 1.5;
 };
-const getPageTitle = (isBody, container) => {
-	var ele, title;
-	if (isBody) {
-		ele = document.head.querySelector('[property*="title"]');
-		if (!!ele) {
-			title = ele.content.trim();
-			if (!!title) return title;
-		}
-		ele = container.querySelector('[id*="title"]');
-		if (!!ele) {
-			title = ele.textContent.trim();
-			if (!!title) return title;
-		}
-		ele = container.querySelector('[name*="title"]');
-		if (!!ele) {
-			title = ele.textContent.trim();
-			if (!!title) return title;
+const getPageTitle = (container) => {
+	// Locate the content container position
+	var html = document.body.innerHTML.replace(/<([\w\-]+)[\w\W]*?>/g, (m, tag) => '<' + tag + '>');
+	var content = container.outerHTML.replace(/<([\w\-]+)[\w\W]*?>/g, (m, tag) => '<' + tag + '>');
+	var poses = [];
+	html.replace(content, (m, pos) => {
+		poses.push([pos, pos + content.length]);
+	});
+	
+	// Find out all title candidates
+	var candidates = document.querySelectorAll('header, h1, h2, [id*="title"], [name*="title"], [property*="title"]');
+	candidates = [...candidates];
+
+	// Calculate the distance between title candidate container and the content container
+	candidates = candidates.map(ele => {
+		if (!ele.outerHTML) return;
+		if (!ele.textContent || !ele.textContent.trim()) return;
+
+		var ctx = ele.outerHTML.replace(/<([\w\-]+)[\w\W]*?>/g, (m, tag) => '<' + tag + '>');
+		var delta = [];
+		html.replace(ctx, (m, p) => {
+			// Calculate the distance
+			poses.forEach(block => {
+				if (p < block[0]) {
+					delta.push(block[0] - p - ctx.length);
+				}
+				else if (p < block[1]) {
+					delta.push(p - block[0]);
+				}
+			});
+		});
+		delta = delta.filter(d => d > 0);
+		if (delta.length === 0) return;
+
+		// The final distance
+		delta.sort((a, b) => a - b);
+		return [ele, delta[0]];
+	}).filter(ele => !!ele);
+
+	// Return page title if no suitable title container
+	if (candidates.length === 0) return document.title.trim();
+
+	candidates.sort((a, b) => a[1] - b[1]);
+	var titleContainer = candidates[0][0];
+
+	// Find out the inner container
+	candidates = [[], [], []];
+	for (let node of titleContainer.childNodes) {
+		let t = node.textContent || node.content || '';
+		t = t.trim();
+		if (!!t) {
+			let nodeName = node.nodeName, className = (node.className || '').toLowerCase(), id = (node.id || '').toLowerCase();
+			if (['TITLE', "H1"].includes(nodeName)) {
+				candidates[0].push(t);
+			}
+			else if (id.indexOf('title') >= 0) {
+				candidates[0].push(t);
+			}
+			else if (['H2'].includes(nodeName)) {
+				candidates[1].push(t);
+			}
+			else if (className.indexOf('title') >= 0) {
+				candidates[1].push(t);
+			}
+			else if (['DIV', 'P'].includes(nodeName)) {
+				candidates[1].push(t);
+			}
 		}
 	}
-	else {
-		ele = container.querySelector('header[class*="title"]');
-		if (!!ele) {
-			title = ele.textContent.trim();
-			if (!!title) return title;
-		}
-		ele = container.querySelector('h1');
-		if (!!ele) {
-			title = ele.textContent.trim();
-			if (!!title) return title;
-		}
-		ele = container.querySelector('h2');
-		if (!!ele) {
-			title = ele.textContent.trim();
-			if (!!title) return title;
-		}
-		ele = container.querySelector('[id*="title"]');
-		if (!!ele) {
-			title = ele.textContent.trim();
-			if (!!title) return title;
-		}
-		ele = container.querySelector('[name*="title"]');
-		if (!!ele) {
-			title = ele.textContent.trim();
-			if (!!title) return title;
-		}
-		ele = document.head.querySelector('[property*="title"]');
-		if (!!ele) {
-			title = ele.content.trim();
-			if (!!title) return title;
-		}
-	}
-	return document.title.trim();
+	if (candidates[0].length > 0) return candidates[0].join(' ');
+	else if (candidates[1].length > 0) return candidates[1][0];
+	else if (candidates[2].length > 0) return candidates[2][0];
+	else return titleContainer.textContent.trim();
 };
 const getPageDescription = (isBody, content) => {
 	var desc;
@@ -416,14 +437,15 @@ const getPageInfo = () => {
 	var container = findContainer();
 	console.log(container);
 	info.isArticle = checkIsArticle(container);
+	info.title = getPageTitle(container);
 
 	var isBody = container === document.body;
 	container = getCleanContainer(container);
 
-	info.title = getPageTitle(isBody, container);
 	var [content, size] = getPageShotContent(container);
 	info.description = getPageDescription(isBody, content);
 	console.log(info);
+	info.isArticle = false;
 
 	pageInfo = info;
 };
