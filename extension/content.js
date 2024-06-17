@@ -66,7 +66,7 @@ const findContainer = () => {
 			total: 0,
 			value: 0,
 		};
-		let total = ele.innerHTML.replace(/<([\w\-]+)[\w\W]*?>/g, (m, tag) => '<' + tag + '>').match(RegChar);
+		let total = ele.innerHTML.replace(/<([\w\-]+)(\s+[\w\W]*?)?>/g, (m, tag) => '<' + tag + '>').match(RegChar);
 		total = !!total ? total.length : 0;
 		if (total > 0) {
 			let size = ele.textContent.match(RegChar);
@@ -92,7 +92,7 @@ const findContainer = () => {
 	for (let ele of candidates) {
 		var size = ele.textContent.match(RegChar);
 		size = !!size ? size.length : 0;
-		var total = ele.innerHTML.replace(/<([\w\-]+)[\w\W]*?>/g, (m, tag) => '<' + tag + '>').match(RegChar);
+		var total = ele.innerHTML.replace(/<([\w\-]+)(\s+[\w\W]*?)?>/g, (m, tag) => '<' + tag + '>').match(RegChar);
 		total = !!total ? total.length : 0;
 		ele._density = total > 0 ? size / total : 0;
 		ele._tagWeight = calculateTagWeight(ele);
@@ -110,7 +110,7 @@ const findContainer = () => {
 
 		var size = ele.textContent.match(RegChar);
 		size = !!size ? size.length : 0;
-		var total = ele.innerHTML.replace(/<([\w\-]+)[\w\W]*?>/g, (m, tag) => '<' + tag + '>').match(RegChar);
+		var total = ele.innerHTML.replace(/<([\w\-]+)(\s+[\w\W]*?)?>/g, (m, tag) => '<' + tag + '>').match(RegChar);
 		total = !!total ? total.length : 0;
 		ele._density = total > 0 ? size / total : 0;
 
@@ -211,12 +211,12 @@ const checkIsArticle = (container) => {
 	content = !!content ? content.length : 0;
 	var contentDensity = total === 0 ? 0 : content / total;
 
-	var html = document.body.innerHTML.replace(/<([\w\-]+)[\w\W]*?>/g, (m, tag) => '<' + tag + '>').match(RegChar);
+	var html = document.body.innerHTML.replace(/<([\w\-]+)(\s+[\w\W]*?)?>/g, (m, tag) => '<' + tag + '>').match(RegChar);
 	html = !!html ? html.length : 0;
 	var pageDensity = html === 0 ? 0 : total / html;
 
 	html = 0;
-	if (!!container && !!container.innerHTML) html = container.innerHTML.replace(/<([\w\-]+)[\w\W]*?>/g, (m, tag) => '<' + tag + '>').match(RegChar);
+	if (!!container && !!container.innerHTML) html = container.innerHTML.replace(/<([\w\-]+)(\s+[\w\W]*?)?>/g, (m, tag) => '<' + tag + '>').match(RegChar);
 	html = !!html ? html.length : 0;
 	var innerDensity = html === 0 ? 0 : content / html;
 
@@ -229,8 +229,8 @@ const checkIsArticle = (container) => {
 };
 const getPageTitle = (container) => {
 	// Locate the content container position
-	var html = document.querySelector('html').innerHTML.replace(/<([\w\-]+)[\w\W]*?>/g, (m, tag) => '<' + tag + '>');
-	var content = container.outerHTML.replace(/<([\w\-]+)[\w\W]*?>/g, (m, tag) => '<' + tag + '>');
+	var html = document.querySelector('html').innerHTML.replace(/<([\w\-]+)(\s+[\w\W]*?)?>/g, (m, tag) => '<' + tag + '>');
+	var content = container.outerHTML.replace(/<([\w\-]+)(\s+[\w\W]*?)?>/g, (m, tag) => '<' + tag + '>');
 	var poses = [];
 	html.replace(content, (m, pos) => {
 		poses.push([pos, pos + content.length]);
@@ -245,7 +245,7 @@ const getPageTitle = (container) => {
 		if (!ele.outerHTML) return;
 		if (!ele.textContent || !ele.textContent.trim()) return;
 
-		var ctx = ele.outerHTML.replace(/<([\w\-]+)[\w\W]*?>/g, (m, tag) => '<' + tag + '>');
+		var ctx = ele.outerHTML.replace(/<([\w\-]+)(\s+[\w\W]*?)?>/g, (m, tag) => '<' + tag + '>');
 		var delta = [];
 		html.replace(ctx, (m, p) => {
 			// Calculate the distance
@@ -301,7 +301,7 @@ const getPageTitle = (container) => {
 	else if (candidates[2].length > 0) return candidates[2][0];
 	else return titleContainer.textContent.trim();
 };
-const getPageDescription = (isArticle, content) => {
+const getPageDescription = (isArticle, container) => {
 	var candidates;
 
 	if (!isArticle) {
@@ -311,8 +311,8 @@ const getPageDescription = (isArticle, content) => {
 		return candidates[0];
 	}
 
-
-
+	var content = getPageContent(container);
+	content = content.split(/\n+/);
 
 	if (content.length === 1) {
 		desc = content[0];
@@ -331,100 +331,67 @@ const getPageDescription = (isArticle, content) => {
 
 	return desc;
 };
-const getPageShotContent = container => {
-	var desc = container.innerText, list = [], count = 0;
-	desc = desc.replace(/(\r*\n\r*)/g, '\n');
-	desc = desc.replace(/\n\n+/g, '\n');
-	desc = desc.replace(/  +/g, ' ');
-	desc = desc.split(/\n+/);
-	desc.forEach(line => {
-		line = line.replace(/\s+/g, ' ');
-		line = line.trim();
-		if (line.match(/^[\w\.]+$/)) return;
-		var match = line.match(RegChar);
-		if (!match) return;
-		if (match.length < 10) return;
-		count += match.length;
-		list.push(line);
-	});
-
-	return [list, count];
-};
-const getPageContent = async container => {
-	var content = container.innerHTML, time1 = Date.now(), time2;
+const getPageContent = (container, keepLink=false) => {
+	var content = container.innerHTML;
 
 	var temp;
 	while (content !== temp) {
 		temp = content;
 		content = content.replace(/(\w+)>[\s\n\r]+<(\/?\w+)/gi, (m, a, b) => a + '><' + b);
 		content = content.trim();
-		await wait();
 	}
-	time2 = Date.now();
-	logger.log('Page', 'Parse Page Content Stage 1: ' + (time2 - time1) + 'ms');
-	time1 = time2;
 
-	content = content.replace(/<form[\w\W]*?>[\w\W]*?<\/form>/gi, '');
-	content = content.replace(/<select[\w\W]*?>[\w\W]*?<\/select>/gi, '');
-	content = content.replace(/<object[\w\W]*?>[\w\W]*?<\/object>/gi, '');
-	content = content.replace(/<script[\w\W]*?>[\w\W]*?<\/script>/gi, '');
-	content = content.replace(/<style[\w\W]*?>[\w\W]*?<\/style>/gi, '');
-	content = content.replace(/<nostyle[\w\W]*?>[\w\W]*?<\/nostyle>/gi, '');
-	content = content.replace(/<textarea[\w\W]*?>[\w\W]*?<\/textarea>/gi, '');
-	content = content.replace(/<button[\w\W]*?>[\w\W]*?<\/button>/gi, '');
-	content = content.replace(/<input[\w\W]*?>/gi, '');
-	content = content.replace(/<link[\w\W]*?>/gi, '');
+	content = content.replace(/<form(\s+[\w\W]*?)?>[\w\W]*?<\/form>/gi, '');
+	content = content.replace(/<select(\s+[\w\W]*?)?>[\w\W]*?<\/select>/gi, '');
+	content = content.replace(/<object(\s+[\w\W]*?)?>[\w\W]*?<\/object>/gi, '');
+	content = content.replace(/<script(\s+[\w\W]*?)?>[\w\W]*?<\/script>/gi, '');
+	content = content.replace(/<style(\s+[\w\W]*?)?>[\w\W]*?<\/style>/gi, '');
+	content = content.replace(/<nostyle(\s+[\w\W]*?)?>[\w\W]*?<\/nostyle>/gi, '');
+	content = content.replace(/<textarea(\s+[\w\W]*?)?>[\w\W]*?<\/textarea>/gi, '');
+	content = content.replace(/<button(\s+[\w\W]*?)?>[\w\W]*?<\/button>/gi, '');
+	content = content.replace(/<input(\s+[\w\W]*?)?>/gi, '');
+	content = content.replace(/<link(\s+[\w\W]*?)?>/gi, '');
 
-	content = content.replace(/<\/?(article|header|section|aside|footer|div|p|ul|ol|tr)[\w\W]*?>/gi, '<br><br>');
-	content = content.replace(/<\/?(option|span|font)[\w\W]*?>/gi, '');
-	content = content.replace(/<\/(td|th)><\1[\w\W]*?>/gi, ' | ');
-	content = content.replace(/<(td|th)[\w\W]*?>/gi, '| ');
+	content = content.replace(/<\/?(article|header|section|aside|footer|div|p|center|ul|ol|tr)(\s+[\w\W]*?)?>/gi, '<br><br>');
+	content = content.replace(/<\/?(option|span|font)(\s+[\w\W]*?)?>/gi, '');
+	content = content.replace(/<\/(td|th)><\1(\s+[\w\W]*?)?>/gi, ' | ');
+	content = content.replace(/<(td|th)(\s+[\w\W]*?)?>/gi, '| ');
 	content = content.replace(/<\/(td|th)>/gi, ' |');
-	content = content.replace(/<hr[\w\W]*?>/gi, '<br>----<br>');
-	content = content.replace(/<li[\w\W]*?>/gi, '-\t');
+	content = content.replace(/<hr(\s+[\w\W]*?)?>/gi, '<br>----<br>');
+	content = content.replace(/<li(\s+[\w\W]*?)?>/gi, '-\t');
 	content = content.replace(/<\/li>/gi, '\n');
-	content = content.replace(/<(h\d)[\w\W]*?>([\w\W]*?)<\/\1>/gi, (m, tag, inner) => {
-		var lev = tag.match(/h(\d)/i);
-		lev = lev[1] * 1;
-		if (lev === 1) return '\n\n#\t' + inner + '\n\n';
-		if (lev === 2) return '\n\n##\t' + inner + '\n\n';
-		if (lev === 3) return '\n\n###\t' + inner + '\n\n';
-		if (lev === 4) return '\n\n####\t' + inner + '\n\n';
-		if (lev === 5) return '\n\n#####\t' + inner + '\n\n';
-		return inner;
-	});
-	time2 = Date.now();
-	logger.log('Page', 'Parse Page Content Stage 2: ' + (time2 - time1) + 'ms');
-	time1 = time2;
+	content = content.replace(/<\/?(b|strong)(\s+[\w\W]*?)?>/gi, '**');
+	content = content.replace(/<\/?(i|em)(\s+[\w\W]*?)?>/gi, '*');
+	if (!keepLink) content = content.replace(/<\/?a(\s+[\w\W]*?)?>/gi, '');
 
 	temp = '';
 	while (content !== temp) {
 		temp = content;
-		content = content.replace(/<(b|strong)[\w\W]*?>([\w\W]*?)<\/\1>/gi, (m, tag, inner) => {
-			return '**' + inner + '**';
+		if (keepLink) {
+			content = content.replace(/<a(\s+[\w\W]*?)?>([\w\W]*?)<\/a>/gi, (m, prop, inner) => {
+				var match = prop.match(/href=('|")([\w\W]*?)\1/);
+				if (!match) return inner;
+				match = match[2];
+				return '[' + inner + '](' + match + ')';
+			});
+		}
+		content = content.replace(/<(h\d)(\s+[\w\W]*?)?>([\w\W]*?)<\/\1>/gi, (m, tag, prop, inner) => {
+			var lev = tag.match(/h(\d)/i);
+			lev = lev[1] * 1;
+			if (lev === 1) return '\n\n#\t' + inner + '\n\n';
+			if (lev === 2) return '\n\n##\t' + inner + '\n\n';
+			if (lev === 3) return '\n\n###\t' + inner + '\n\n';
+			if (lev === 4) return '\n\n####\t' + inner + '\n\n';
+			if (lev === 5) return '\n\n#####\t' + inner + '\n\n';
+			return inner;
 		});
-		content = content.replace(/<(i|em)[\w\W]*?>([\w\W]*?)<\/\1>/gi, (m, tag, inner) => {
-			return '*' + inner + '*';
-		});
-		content = content.replace(/<a\s+([\w\W]*?)>([\w\W]*?)<\/a>/gi, (m, prop, inner) => {
-			var match = prop.match(/href=('|")([\w\W]*?)\1/);
-			if (!match) return inner;
-			match = match[2];
-			return '[' + inner + '](' + match + ')';
-		});
-		await wait();
 	}
-	time2 = Date.now();
-	logger.log('Page', 'Parse Page Content Stage 3: ' + (time2 - time1) + 'ms');
-	time1 = time2;
 
 	content = content.replace(/\s*<br>\s*/gi, '\n');
-	content = content.replace(/<\/?([\w\-\_]+)[\w\W]*?>/gi, '');
+	content = content.replace(/<\/?([\w\-\_]+)(\s+[\w\W]*?)?>/gi, '');
 	content = content.replace(/\r/g, '');
 	content = content.replace(/\n\n+/g, '\n\n');
 	content = content.trim();
-	time2 = Date.now();
-	logger.log('Page', 'Parse Page Content Stage 4: ' + (time2 - time1) + 'ms');
 
 	return content;
 };
@@ -442,10 +409,7 @@ const getPageInfo = () => {
 	}
 	info.description = getPageDescription(info.isArticle, container);
 
-	var isBody = container === document.body;
-	container = getCleanContainer(container);
-
-	var [content, size] = getPageShotContent(container);
+	// Test
 	console.log(info);
 	info.isArticle = false;
 
@@ -457,13 +421,13 @@ const waitForMountNotification = () => new Promise(res => {
 	sendMessage("MountNotification", null, 'BackEnd');
 });
 const summarizePage = async () => {
-	var article = await getPageContent(findContainer());
+	var article = getPageContent(findContainer());
 	var messages = I18NMessages[myLang] || I18NMessages.len;
 	CypriteNotify.summary = Notification.show(messages.cypriteName, messages.summarizingPage, 'rightTop', 'message', 24 * 3600 * 1000);
 	sendMessage("SummarizePage", article, "BackEnd");
 };
 const translatePage = async () => {
-	var article = await getPageContent(findContainer());
+	var article = getPageContent(findContainer());
 	console.log(article);
 };
 
