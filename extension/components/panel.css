@@ -175,7 +175,9 @@ a:hover {
 }
 .input_container .input_area {
 	display: block;
+	min-height: calc(2em + 10px);
 	max-height: 300px;
+	padding: 5px;
 	text-align: justify;
 	color: var(--back-color);
 	outline: none;

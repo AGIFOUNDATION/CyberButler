@@ -272,6 +272,7 @@ const getPageTitle = (container) => {
 
 	candidates.sort((a, b) => a[1] - b[1]);
 	var titleContainer = candidates[0][0];
+	logger.strong('Ext', titleContainer);
 
 	// Find out the inner container
 	candidates = [[], [], []];
@@ -403,19 +404,19 @@ const getPageContent = (container, keepLink=false) => {
 	return content;
 };
 const getPageInfo = () => {
-	console.log('xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx');
 	var info = {};
 	var container = findContainer();
-	console.log(container);
+	logger.strong('Ext', container);
 	info.isArticle = checkIsArticle(container);
 	if (info.isArticle) {
 		info.title = getPageTitle(container);
+		info.content = getPageContent(container);
 	}
 	else {
 		info.title = document.title.trim();
 	}
 	info.description = getPageDescription(info.isArticle, container);
-	console.log(info);
+	logger.em('Ext', info);
 
 	pageInfo = info;
 };
@@ -439,7 +440,10 @@ const waitForMountUtil = (util) => new Promise(res => {
 
 var pageSummary = null, showChatter = false, chatTrigger = null, AIPanel = null, AIAsker = null;
 const summarizePage = async () => {
-	var article = getPageContent(findContainer());
+	if (!pageInfo) getPageInfo();
+	var article = pageInfo.content;
+	article = 'TITLE: ' + pageInfo.title + '\n\n' + article;
+
 	var messages = I18NMessages[myLang] || I18NMessages.en;
 	CypriteNotify.summary = Notification.show(messages.cypriteName, messages.summarizingPage, 'rightTop', 'message', 24 * 3600 * 1000);
 	sendMessage("SummarizePage", article, "BackEnd");
@@ -512,6 +516,9 @@ const onChatterTrigger = () => {
 	if (showChatter) {
 		chatTrigger.innerText = messages.hideChatPanel;
 		AIPanel.setAttribute('chat', 'true');
+		wait(100).then(() => {
+			AIAsker.focus();
+		});
 	}
 	else {
 		chatTrigger.innerText = messages.showChatPanel;
@@ -525,7 +532,9 @@ const onSendToCyprite = () => {
 };
 
 const translatePage = async () => {
-	var article = getPageContent(findContainer());
+	if (!pageInfo) getPageInfo();
+	var article = pageInfo.content;
+	article = 'TITLE: ' + pageInfo.title + '\n\n' + article;
 	console.log(article);
 };
 
