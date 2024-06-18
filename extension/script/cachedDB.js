@@ -7,7 +7,6 @@
 			this.db = null;
 			this.cbUpdates = [];
 			this.cbConnects = [];
-			this.caches = {};
 			this.ready = false;
 			this.available = false;
 		}
@@ -38,7 +37,7 @@
 		onUpdate (cb) {
 			this.cbUpdates.push(cb);
 		}
-		open (name, keyPath='id', cacheSize=0, indexes) {
+		open (name, keyPath='id', indexes) {
 			if (!this.db.objectStoreNames.contains(name)) {
 				let store = this.db.createObjectStore(name, { keyPath });
 				store.createIndex(keyPath, keyPath, { unique: true });
@@ -47,12 +46,6 @@
 						store.createIndex(idx, idx, { unique: false });
 					});
 				}
-			}
-			if (cacheSize > 0) this.cache(keyPath, cacheSize);
-		}
-		cache (name, size) {
-			if (!this.caches[name]) {
-				this.caches[name] = new LRUCache(size);
 			}
 		}
 		set (store, key, value) {
@@ -70,8 +63,6 @@
 				item.data = value;
 				var result = cache.put(item);
 				result.onsuccess = evt => {
-					var ufc = this.caches[store];
-					if (!!ufc) ufc.set(key, value);
 					res(evt.result);
 				};
 				result.onerror = err => {
@@ -81,19 +72,14 @@
 		}
 		get (store, key) {
 			return new Promise((res, rej) => {
-				var tx = this.db.transaction([store], "readonly");
+				// var tx = this.db.transaction([store], "readonly");
+				var tx = this.db.transaction([store], "readwrite");
 				if (!tx) rej(new Error('Open IndexedDB Transaction Failed: ' + store));
 				var cache = tx.objectStore(store);
 				if (!store) rej(new Error('Open IndexedDB ObjectStore Failed: ' + store));
 				var index = cache.index(cache.keyPath);
 
-				var ufc = this.caches[store], result;
-				if (!!ufc) {
-					result = ufc.get(key);
-					if (result !== undefined) return res(result);
-				}
-
-				result = index.get(key);
+				var result = index.get(key);
 				result.onsuccess = evt => {
 					if (!evt.target.result) res(undefined);
 					else res(evt.target.result.data);
@@ -105,7 +91,8 @@
 		}
 		all (store, idx) {
 			return new Promise((res, rej) => {
-				var tx = this.db.transaction([store], "readonly");
+				// var tx = this.db.transaction([store], "readonly");
+				var tx = this.db.transaction([store], "readwrite");
 				if (!tx) rej(new Error('Open IndexedDB Transaction Failed: ' + store));
 				var cache = tx.objectStore(store);
 				if (!store) rej(new Error('Open IndexedDB ObjectStore Failed: ' + store));
@@ -144,8 +131,6 @@
 
 				var result = cache.delete(key);
 				result.onsuccess = evt => {
-					var ufc = this.caches[store];
-					if (!!ufc) ufc.del(key);
 					res(evt.result);
 				};
 				result.onerror = err => {
@@ -162,19 +147,12 @@
 
 				var result = cache.clear();
 				result.onsuccess = evt => {
-					var ufc = this.caches[store];
-					if (!!ufc) ufc.clear();
 					res(evt.result);
 				};
 				result.onerror = err => {
 					rej(err);
 				};
 			});
-		}
-		clearCache (store) {
-			var ufc = this.caches[store];
-			if (!ufc) return;
-			ufc.clear();
 		}
 
 		get name () {

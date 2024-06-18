@@ -408,10 +408,7 @@ const getPageInfo = () => {
 		info.title = document.title.trim();
 	}
 	info.description = getPageDescription(info.isArticle, container);
-
-	// Test
 	console.log(info);
-	info.isArticle = false;
 
 	pageInfo = info;
 };

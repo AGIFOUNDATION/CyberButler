@@ -1,5 +1,4 @@
 import "./script/common.js";
-import "./script/lrucache.js";
 import "./script/cachedDB.js";
 import "./script/ai.js";
 import "./script/prompts.js";
@@ -133,7 +132,6 @@ const onPageActivityChanged = async (tid, state) => {
 		}
 		else if (isPageForbidden(url)) {
 			await inactivePage(info, now, true);
-			info.duration = 0;
 		}
 		else {
 			let shouldRequest = state === 'open';
@@ -141,7 +139,6 @@ const onPageActivityChanged = async (tid, state) => {
 			if (url !== info.url) {
 				shouldRequest = true;
 				await inactivePage(info, now, true);
-				info.duration = 0;
 			}
 
 			if (!info.active || state === 'open') info.open = now;
@@ -149,7 +146,7 @@ const onPageActivityChanged = async (tid, state) => {
 			info.active = true;
 			info.url = url;
 
-			console.log(':::::::::::::::::::', shouldRequest, info.isArticle);
+			console.log(':::::::::::::::::::', shouldRequest, info.requested, info.isArticle);
 			if ((shouldRequest || !info.requested) && info.isArticle) {
 				info.requested = true;
 				dispatchEvent({
@@ -166,18 +163,21 @@ const onPageActivityChanged = async (tid, state) => {
 	}
 	else if (state === 'close') {
 		await inactivePage(info, now, true);
-		info.duration = 0;
 		await delTabInfo(tid);
 	}
 };
-const inactivePage = async (info, now, needCall=false) => {
+const inactivePage = async (info, now, closed=false) => {
 	var shouldCall = !!info.url;
 	if (info.open > 0) info.duration += now - info.open;
 	else shouldCall = false;
 	info.open = -1;
 	info.active = false;
-	if (!shouldCall) return;
-	await onPageDurationUpdated(needCall, info.url, info.duration, info.title);
+	if (!shouldCall) {
+		if (closed) info.duration = 0;
+		return;
+	}
+	await onPageDurationUpdated(closed, info.url, info.duration, info.title);
+	if (closed) info.duration = 0;
 };
 const onPageDurationUpdated = async (closed, url, duration, title) => {
 	logger.log('PageActivity', 'Save Data: ' + url);
@@ -222,6 +222,7 @@ const setPageInfo = async (url, info) => {
 		clearTimeout(DBs.tmrPageInfos);
 	}
 	DBs.tmrPageInfos = setTimeout(async () => {
+		delete DBs.tmrPageInfos;
 		await DBs.pageInfos.set('pageInfo', url, info);
 		logger.log('DB', 'Set Page Info: ' + url);
 	}, 200);
@@ -231,6 +232,7 @@ const delPageInfo = async (url) => {
 		clearTimeout(DBs.tmrPageInfos);
 	}
 	DBs.tmrPageInfos = setTimeout(async () => {
+		delete DBs.tmrPageInfos;
 		await DBs.pageInfos.del('pageInfo', url);
 		logger.log('DB', 'Del Page Info: ' + url);
 	}, 200);
@@ -238,7 +240,7 @@ const delPageInfo = async (url) => {
 const getTabInfo = async tid => {
 	var info = TabInfo[tid];
 	if (!info) {
-		info = await DBs.pageInfos.get('tabInfo', tid);
+		info = await DBs.pageInfos.get('tabInfo', 'T-' + tid);
 		logger.log('DB', 'Get TabInfo: ' + tid);
 		if (!info) {
 			info = {
@@ -256,7 +258,8 @@ const setTabInfo = async (tid, info) => {
 		clearTimeout(DBs.tmrTabInfos);
 	}
 	DBs.tmrTabInfos = setTimeout(async () => {
-		await DBs.pageInfos.set('tabInfo', tid, info);
+		delete DBs.tmrTabInfos;
+		await DBs.pageInfos.set('tabInfo', 'T-' + tid, info);
 		logger.log('DB', 'Set TabInfo: ' + tid);
 	}, 200);
 };
@@ -264,11 +267,20 @@ const delTabInfo = async (tid) => {
 	delete TabInfo[tid];
 	if (!!DBs.tmrTabInfos) {
 		clearTimeout(DBs.tmrTabInfos);
+		delete DBs.tmrTabInfos;
 	}
-	DBs.tmrTabInfos = setTimeout(async () => {
-		await DBs.pageInfos.del('tabInfo', tid);
-		logger.log('DB', 'Del TabInfo: ' + tid);
-	}, 200);
+
+	var allTabInfos = await DBs.pageInfos.all('tabInfo');
+	for (let name in allTabInfos) {
+		let tid = name.replace(/^T\-/, '');
+		try {
+			await chrome.tabs.get(tid * 1);
+		}
+		catch {
+			await DBs.pageInfos.del('tabInfo', name);
+			logger.log('DB', 'Del TabInfo: ' + tid);
+		}
+	}
 };
 const TabInfo = {};
 
