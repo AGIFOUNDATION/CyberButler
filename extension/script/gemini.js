@@ -39,17 +39,17 @@ const assembleConversation = conversation => {
 	return prompt;
 };
 
-globalThis.callGemini = async (conversation, model='gemini-1.5-flash') => {
+globalThis.callGemini = async (conversation, model='gemini-1.5-flash', options={}) => {
 	var prompt = assembleConversation(conversation);
 	prompt.generationConfig = {
-		temperature: 1.0,
-		topP: 1,
-		topK: 3,
-		candidateCount: 1,
-		maxOutputTokens: 8192,
-		stopSequences: [],
+		temperature: options.temperature || 1.0,
+		topP: options.topP || 1,
+		topK: options.topK || 3,
+		candidateCount: options.candidateCount || 1,
+		maxOutputTokens: options.maxOutputTokens || 8192,
+		stopSequences: options.stopSequences || [],
 	};
-	prompt.safetySettings = [
+	prompt.safetySettings = options.safetySettings || [
 		{
 			"category": "HARM_CATEGORY_HARASSMENT",
 			"threshold": "BLOCK_NONE"

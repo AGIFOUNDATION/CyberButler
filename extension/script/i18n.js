@@ -5,6 +5,9 @@ globalThis.I18NMessages = {
 		summarizingPage: 'The article is currently being summarizing, please wait a moment...',
 		summarizeSuccess: '<div class="article_operation_title">The article has been summarized, click to view:</div><div class="article_operations"><button name="viewnow">View Now</button><button name="close">View Later</button></div>',
 		summarizeFailed: 'The article summary has failed, you may try again later!',
+		showChatPanel: 'Ask Cyprite',
+		hideChatPanel: 'Hide Cyprite',
+		sendMessageToCyprite: 'Send',
 	},
 	zh: {
 		cypriteName: "机灵",
@@ -12,5 +15,8 @@ globalThis.I18NMessages = {
 		summarizingPage: '文章正在总结概述中，请稍等……',
 		summarizeSuccess: '<div class="article_operation_title">文章已完成总结概述，点击查看：</div><div class="article_operations"><button name="viewnow">现在看看</button><button name="close">以后再看</button></div>',
 		summarizeFailed: '文章总结失败了，您可以稍后再试一次哦！',
+		showChatPanel: '提问机灵',
+		hideChatPanel: '隐藏机灵',
+		sendMessageToCyprite: '提问',
 	},
 };

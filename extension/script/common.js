@@ -1,3 +1,5 @@
+globalThis.DefaultLang = 'en';
+
 globalThis.logger = {};
 logger.log = (tag, ...logs) => {
 	console.log(`%c[${tag}]`, "color: blue; font-weight: bolder; padding: 2px 5px;", ...logs);
@@ -22,6 +24,15 @@ logger.blank = (tag, ...logs) => {
 };
 
 globalThis.wait = delay => new Promise(res => setTimeout(res, delay));
+globalThis.waitUntil = fun => new Promise(res => {
+	var untiler = setInterval(() => {
+		logger.log('Ext', 'Reactive and waiting...');
+	}, 10 * 1000);
+	fun().finally(() => {
+		clearInterval(untiler);
+		res();
+	});
+});
 
 globalThis.newID = (len=16) => {
 	var id = [];

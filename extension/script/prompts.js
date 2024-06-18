@@ -5,10 +5,19 @@ PromptLib.assemble = (prompt, ...infos) => {
 	if (infos.length === 0) return prompt;
 
 	var info = Object.assign({}, ... infos);
+	var regs = {};
 	for (let key in info) {
-		let value = info[key];
-		let reg = new RegExp("\\{\\{\\s*" + key + '\\s*\\}\\}', "g");
-		prompt = prompt.replace(reg, value);
+		regs[key] = new RegExp("\\{\\{\\s*" + key + '\\s*\\}\\}', "g");
+	}
+
+	var temp;
+	while (prompt !== temp) {
+		temp = prompt;
+		for (let key in info) {
+			let value = info[key];
+			let reg = regs[key];
+			prompt = prompt.replace(reg, value);
+		}
 	}
 	return prompt;
 };
@@ -34,6 +43,19 @@ PromptLib.sayHello = `You are the user's personal assistant, your name is "Cypri
 - You must greet in {{lang}}.
 - Be friendly, natural, and humorous.
 - The content of the greeting should match the current time (no neccessary to tell user the current time) and your identity as an assistant.`;
+PromptLib.summarizeArticle = `Below is the HTML source code of a web page, which is an article. Please summarize the content of this article for me.
+
+#	Requirements
+
+1.	**All answers must be based on the content of this article and should not speculate beyond the content provided;**
+2.	All responses must be in the language "{{lang}}";
+3.	Provide the main content of this article;
+4.	Divide the article into sections, and list which paragraphs each section contains and the main content of each section;
+5.	List the core ideas of the article, and under each core idea, the main arguments must be listed.
+
+#	Article Content to Be Summarized
+
+{{article}}`;
 
 PromptLib.summarizeArticleEN = `Below is the HTML source code of a web page, which is an article. Please summarize the content of this article for me.
 

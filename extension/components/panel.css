@@ -1,0 +1,196 @@
+:root {
+	--front-color: rgba(234, 238, 219, 1.0);
+	--back-color: rgba(29, 30, 27, 1.0);
+	--emphasize-color: rgba(36, 134, 185, 1.0);
+}
+
+a, a:visited, a:active {
+	text-decoration: none;
+}
+a:hover {
+	text-decoration: underline;
+	text-underline-position: from-font;
+	text-underline-offset: 1px;
+}
+
+.content_container div, .content_container p {
+	margin-top: 1rem;
+	margin-bottom: 1rem;
+}
+
+.content_container h1, .content_container h2, .content_container h3, .content_container h4, .content_container h5 {
+	font-weight: bolder;
+	color: var(--emphasize-color);
+}
+.content_container h1 {
+	margin-top: 2.5em;
+	margin-bottom: 2em;
+	font-size: 2.5em;
+}
+.content_container h2 {
+	margin-top: 2em;
+	margin-bottom: 1.8em;
+	font-size: 2.0em;
+}
+.content_container h3 {
+	margin-top: 1.8em;
+	margin-bottom: 1.5em;
+	font-size: 1.8em;
+}
+.content_container h4 {
+	margin-top: 1.5em;
+	margin-bottom: 1.2em;
+	font-size: 1.5em;
+}
+.content_container h5 {
+	margin-top: 1.2em;
+	margin-bottom: 1em;
+	font-size: 1.2em;
+}
+
+.content_container hr {
+	height: 2px;
+	margin-top: 2.5rem;
+	margin-bottom: 2.5rem;
+	margin-left: 50px;
+	margin-right: 50px;
+	border-color: transparent;
+	background-image: linear-gradient(to right, rgb(from var(--emphasize-color) r g b / 0%) 0%, var(--emphasize-color) 10%, var(--emphasize-color) 90%, rgb(from var(--emphasize-color) r g b / 0%) 100%);
+	transform: scaleY(0.3);
+}
+
+.content_container ul, .content_container ol {
+	padding-left: 2em;
+}
+.content_container li {
+	margin-top: 0;
+	margin-bottom: 0.5em;
+}
+.content_container ul > li:last-child, .content_container ol > li:last-child {
+	margin-bottom: 0;
+}
+
+.scrollable {
+	overflow-x: hidden;
+	overflow-y: auto;
+}
+.scrollable::-webkit-scrollbar {
+	width: 10px;
+	background-color: transparent;
+	cursor: pointer;
+}
+.scrollable::-webkit-scrollbar-thumb {
+	border-radius: 5px;
+	background-color: rgb(from var(--front-color) r g b / 50%);
+	box-shadow: inset 2px 2px 3px rgb(from var(--back-color) r g b / 50%);
+	cursor: pointer;
+}
+.scrollable::-webkit-scrollbar-track {
+	border-radius: 5px;
+	background-color: rgb(from var(--back-color) r g b / 20%);
+	box-shadow: inset 2px 2px 3px rgb(from var(--front-color) r g b / 30%);
+	cursor: pointer;
+}
+
+.panel_mask {
+	position: fixed;
+	z-index: 99990;
+	top: 0;
+	bottom: 0;
+	left: 0;
+	right: 0;
+	display: block;
+	backdrop-filter: blur(3px);
+}
+.panel_frame {
+	position: relative;
+	height: 100%;
+	width: 95%;
+	max-width: 1500px;
+	margin-left: auto;
+	margin-right: auto;
+}
+.panel_container {
+	position: absolute;
+	top: 20px;
+	bottom: 20px;
+	width: 100%;
+	border-radius: 15px;
+	background-color: rgb(from var(--back-color) r g b / 90%);
+	box-shadow: 1px 1px 5px rgb(from var(--front-color) r g b / 60%);
+	color: --front-color;
+}
+.panel_container .panel_left, .panel_container .panel_right {
+	box-sizing: border-box;
+	position: absolute;
+	height: 100%;
+}
+.panel_container .panel_left {
+	width: 100%;
+	left: 0px;
+}
+.panel_container[chat="true"] .panel_left {
+	width: 66%;
+	left: 0px;
+}
+.panel_container .panel_right {
+	display: none;
+	width: calc(34% + 10px);
+	right: 0px;
+	padding: 10px;
+	border-left: 1px solid black;
+}
+.panel_container[chat="true"] .panel_right {
+	display: block;
+}
+.content_container {
+	position: absolute;
+	top: 10px;
+	bottom: 10px;
+	left: 10px;
+	right: 10px;
+}
+.panel_chat_switch {
+	position: absolute;
+	z-index: 1;
+	top: 10px;
+	right: 20px;
+	padding: 5px 10px;
+	border-radius: 3px;
+	border: 1px solid var(--front-color);
+	background-color: rgb(from var(--back-color) r g b / 90%);
+	cursor: pointer;
+	user-select: none;
+}
+.input_container {
+	position: absolute;
+	left: 10px;
+	right: 10px;
+	bottom: 40px;
+	padding: 5px;
+	border-radius: 8px;
+	border: 1px solid var(--back-color);
+	background-color: var(--front-color);
+	box-shadow: inset 2px 2px 5px rgb(from var(--back-color) r g b / 80%);
+}
+.input_container .input_area {
+	display: block;
+	max-height: 300px;
+	text-align: justify;
+	color: var(--back-color);
+	outline: none;
+}
+.panel_right .input_sender {
+	position: absolute;
+	bottom: 10px;
+	left: 10px;
+	right: 10px;
+	height: 30px;
+	line-height: 30px;
+	border-radius: 5px;
+	background-color: var(--emphasize-color);
+	box-shadow: inset -2px -2px 5px rgb(from var(--back-color) r g b / 50%);
+	text-align: center;
+	color: var(--front-color);
+	cursor: pointer;
+}

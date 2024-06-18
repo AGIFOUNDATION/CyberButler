@@ -17,7 +17,15 @@ const TagClassWeight = {
 	page: 0.2,
 	container: 0.1,
 };
-var myLang = "en";
+var myLang = DefaultLang;
+chrome.storage.sync.onChanged.addListener(evt => {
+	var lang = evt.lang;
+	if (!lang) return;
+	myLang = lang.newValue;
+});
+chrome.storage.sync.get('lang', (item) => {
+	myLang = item.lang || myLang;
+});
 
 /* Communiation */
 
@@ -55,7 +63,7 @@ chrome.runtime.onConnect.addListener(() => {
 
 /* Utils */
 
-var pageInfo = null, notificationMounted = false, notificationMountingRes = [];
+var pageInfo = null;
 const findContainer = () => {
 	/* Search for the main tag that records the content of the body text */
 	var tagInfo = {}, contentTag, maxWeight = 0;
@@ -132,15 +140,8 @@ const findContainer = () => {
 		return ele;
 	});
 
-	// console.log('VVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV');
 	candidates.sort((a, b) => b._value - a._value);
-	// candidates.splice(Math.min(Math.ceil(candidates.length / 3), 10));
-	// candidates.forEach(ele => {
-	// 	console.log(ele, ele._value, ele._weight, ele._tagWeight);
-	// });
 	target = candidates[0];
-	// console.log('xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx');
-	// console.log(target, target._value, target._weight);
 	return target;
 };
 const calculateTagWeight = ele => {
@@ -393,6 +394,12 @@ const getPageContent = (container, keepLink=false) => {
 	content = content.replace(/\n\n+/g, '\n\n');
 	content = content.trim();
 
+	content = content.replace(/&lt;|&#60;/g, '<');
+	content = content.replace(/&gt;|&#62;/g, '>');
+	content = content.replace(/&amp;|&#38;/g, '&');
+	content = content.replace(/&nbsp;|&#160;/g, ' ');
+	content = content.replace(/&quot;|&#34;/g, '"');
+
 	return content;
 };
 const getPageInfo = () => {
@@ -412,21 +419,137 @@ const getPageInfo = () => {
 
 	pageInfo = info;
 };
-const waitForMountNotification = () => new Promise(res => {
-	if (notificationMounted) return res();
-	notificationMountingRes.push(res);
-	sendMessage("MountNotification", null, 'BackEnd');
+
+var notificationMounted = false, notificationMountingRes = [];
+const UtilsState = {};
+const waitForMountUtil = (util) => new Promise(res => {
+	var state = UtilsState[util];
+	if (!state) {
+		state = {
+			loaded: false,
+			reses: []
+		};
+		UtilsState[util] = state;
+	}
+
+	if (state.loaded) return res();
+	state.reses.push(res);
+	sendMessage("MountUtil", util, 'BackEnd');
 });
+
+var pageSummary = null, showChatter = false, chatTrigger = null, AIPanel = null, AIAsker = null;
 const summarizePage = async () => {
 	var article = getPageContent(findContainer());
-	var messages = I18NMessages[myLang] || I18NMessages.len;
+	var messages = I18NMessages[myLang] || I18NMessages.en;
 	CypriteNotify.summary = Notification.show(messages.cypriteName, messages.summarizingPage, 'rightTop', 'message', 24 * 3600 * 1000);
 	sendMessage("SummarizePage", article, "BackEnd");
 };
+const loadPageSummary = () => new Promise(res => {
+	var cid = newID();
+	while (!!NeedAIChecker[cid]) {
+		cid = newID();
+	}
+	NeedAIChecker[cid] = res;
+
+	sendMessage("LoadPageSummary", {cid}, 'BackEnd');
+});
+const afterPageSummary = (summary) => {
+	var messages = I18NMessages[myLang] || I18NMessages.en;
+	var notify = Notification.show(messages.cypriteName, messages.summarizeSuccess, 'rightTop', 'success', 10 * 1000);
+	notify.addEventListener('click', evt => {
+		if (evt.target.tagName !== 'BUTTON') return;
+		var name = evt.target.name;
+		if (name === 'viewnow') {
+			showPageSummary(summary);
+		}
+		notify._hide();
+	});
+};
+const showPageSummary = async (summary) => {
+	var messages = I18NMessages[myLang] || I18NMessages.en;
+	showChatter = false;
+
+	await waitForMountUtil('panel');
+
+	var background = newEle('div', 'panel_mask');
+	var frame = newEle('div', "panel_frame");
+	var panel = newEle('div', "panel_container");
+	panel.setAttribute('chat', 'false');
+	chatTrigger = newEle('div', 'panel_chat_switch');
+	chatTrigger.addEventListener('click', onChatterTrigger);
+	chatTrigger.innerText = messages.showChatPanel;
+	var leftPanel = newEle('div', "panel_left");
+	var rightPanel = newEle('div', "panel_right");
+	var container = newEle('div', 'content_container', 'scrollable');
+	var inputContainer = newEle('div', 'input_container');
+	var inputArea = newEle('span', 'input_area', 'cyprite_sender', 'scrollable');
+	inputArea.setAttribute('contentEditable', 'true');
+	var sender = newEle('span', 'input_sender');
+	sender.innerText = messages.sendMessageToCyprite;
+	sender.addEventListener('click', onSendToCyprite);
+
+	container.innerHTML = marked.parse(summary);
+
+	inputContainer.appendChild(inputArea);
+	rightPanel.appendChild(inputContainer);
+	rightPanel.appendChild(sender);
+	leftPanel.appendChild(container);
+	panel.appendChild(chatTrigger);
+	panel.appendChild(leftPanel);
+	panel.appendChild(rightPanel);
+	frame.appendChild(panel);
+	background.appendChild(frame);
+	document.body.appendChild(background);
+
+	AIPanel = panel;
+	AIAsker = inputArea;
+};
+const onChatterTrigger = () => {
+	if (!chatTrigger) return;
+
+	var messages = I18NMessages[myLang] || I18NMessages.en;
+	showChatter = !showChatter;
+	if (showChatter) {
+		chatTrigger.innerText = messages.hideChatPanel;
+		AIPanel.setAttribute('chat', 'true');
+	}
+	else {
+		chatTrigger.innerText = messages.showChatPanel;
+		AIPanel.setAttribute('chat', 'false');
+	}
+};
+const onSendToCyprite = () => {
+	var content = getPageContent(AIAsker, true);
+	console.log('xxxxxxxxxxxxxxxxxxxxxxxxxxxx');
+	console.log(content);
+};
+
 const translatePage = async () => {
 	var article = getPageContent(findContainer());
 	console.log(article);
 };
+
+const NeedAIChecker = {};
+const checkPageNeedAI = (page, path, host) => new Promise(res => {
+	var cid = newID();
+	while (!!NeedAIChecker[cid]) {
+		cid = newID();
+	}
+	NeedAIChecker[cid] = res;
+
+	page = page.replace(/^[\w\-\d_]*?:\/\//i, '');
+	sendMessage("CheckPageNeedAI", {cid, page, path, host}, 'BackEnd');
+});
+const updatePageNeedAIInfo = (page, path, host, need) => new Promise(res => {
+	var cid = newID();
+	while (!!NeedAIChecker[cid]) {
+		cid = newID();
+	}
+	NeedAIChecker[cid] = res;
+
+	page = page.replace(/^[\w\-\d_]*?:\/\//i, '');
+	sendMessage("UpdatePageNeedAIInfo", {cid, page, path, host, need}, 'BackEnd');
+});
 
 /* EventHandler */
 
@@ -450,22 +573,27 @@ EventHandler.getPageInfo = (data, source) => {
 
 	sendMessage('GotPageInfo', pageInfo, 'BackEnd');
 };
-EventHandler.notificationMounted = () => {
-	if (!notificationMountingRes) return;
-	notificationMounted = true;
-	var list = notificationMountingRes;
-	notificationMountingRes = null;
+EventHandler.utilMounted = (util) => {
+	var state = UtilsState[util];
+	if (!state) return;
+	state.loaded = true;
+	logger.info('Page', 'Utile Loaded: ' + util);
+	var list = state.reses;
+	delete state.reses;
 	list.forEach(res => res());
 };
 EventHandler.requestCypriteNotify = async (data, source, sid) => {
-	var [lang] = await Promise.all([
-		chrome.storage.sync.get('lang'),
-		waitForMountNotification()
-	]);
-	lang = lang.lang || myLang;
-	myLang = lang;
+	if (!data || !data.forceShow) {
+		// Determine whether to display the AI component: Check the situation of this page, this URL, and this HOST
+		let needAI = await checkPageNeedAI(location.href, location.pathname, location.hostname);
+		logger.em('Page', "Need AI: " + needAI);
+		if (!needAI) return;
+	}
 
-	var messages = I18NMessages[lang] || I18NMessages.len;
+	// Mount Notification
+	await waitForMountUtil('notification');
+
+	var messages = I18NMessages[myLang] || I18NMessages.en;
 	if (!!CypriteNotify.RequestOperation) return;
 	// if (!!CypriteNotify.RequestOperation) CypriteNotify.RequestOperation._hide();
 	var notify = Notification.show(messages.cypriteName, messages.newArticleMentionMessage, 'rightTop', 'message', 20 * 1000);
@@ -474,7 +602,15 @@ EventHandler.requestCypriteNotify = async (data, source, sid) => {
 		if (evt.target.tagName !== 'BUTTON') return;
 		var name = evt.target.name;
 		if (name === 'summarize') {
-			await summarizePage();
+			if (!pageSummary) {
+				pageSummary = await loadPageSummary();
+			}
+			if (!!pageSummary && (!data || !data.forceSummary)) {
+				afterPageSummary(pageSummary);
+			}
+			else {
+				await summarizePage();
+			}
 			userAction = true;
 		}
 		else if (name === 'translate') {
@@ -484,33 +620,46 @@ EventHandler.requestCypriteNotify = async (data, source, sid) => {
 		notify._hide();
 	};
 	notify.addEventListener('click', onClick);
-	notify.onclose = () => {
-		console.log('>>>>>>>>>>>>> User Action: ' + userAction);
+	notify.onclose = async () => {
+		await updatePageNeedAIInfo(location.href, location.pathname, location.hostname, userAction);
 		notify.removeEventListener('click', onClick);
 		notify.onclose = null;
 		CypriteNotify.RequestOperation = null;
 	};
 	CypriteNotify.RequestOperation = notify;
 };
-EventHandler.pageSummarized = async (data) => {
+EventHandler.pageSummarized = (data) => {
 	if (!!CypriteNotify.summary) CypriteNotify.summary._hide();
 	CypriteNotify.summary = null;
 
-	var messages = I18NMessages[myLang] || I18NMessages.len;
 	if (!!data) {
-		let notify = Notification.show(messages.cypriteName, messages.summarizeSuccess, 'rightTop', 'success', 10 * 1000);
-		notify.addEventListener('click', evt => {
-			if (evt.target.tagName !== 'BUTTON') return;
-			var name = evt.target.name;
-			if (name === 'viewnow') {
-				console.log(data);
-			}
-			notify._hide();
-		});
+		pageSummary = data;
+		sendMessage("SavePageSummary", data, 'BackEnd');
+		afterPageSummary(data);
 	}
 	else {
+		let messages = I18NMessages[myLang] || I18NMessages.en;
 		Notification.show(messages.cypriteName, messages.summarizeFailed, 'rightTop', 'fail', 5 * 1000);
 	}
+};
+EventHandler.pageSummaryLoaded = (data) => {
+	var res = NeedAIChecker[data.cid];
+	if (!res) return;
+	res(data.description);
+};
+EventHandler.pageNeedAIChecked = (data) => {
+	var res = NeedAIChecker[data.cid];
+	if (!res) return;
+	var pageNeed = (data.page.need + 1) / (data.page.visited + 1);
+	var pathNeed = (data.path.need + 1) / (data.path.visited + 1);
+	var hostNeed = (data.host.need + 1) / (data.host.visited + 1);
+	var needed = (pageNeed + pathNeed + hostNeed) > 1.0;
+	res(needed);
+};
+EventHandler.pageNeedAIUpdated = (data) => {
+	var res = NeedAIChecker[data.cid];
+	if (!res) return;
+	res();
 };
 
 /* Tab */
@@ -546,7 +695,34 @@ window.addEventListener('load', () => {
 });
 
 var timerMutationObserver;
-const observer = new MutationObserver(() => {
+const observer = new MutationObserver((list) => {
+	var available = false;
+	for (let evt of list) {
+		if (evt.target.className.indexOf('cyprite_sender') >= 0) {
+			continue;
+		}
+
+		let items = [...evt.addedNodes, ...evt.removedNodes];
+		items.some(item => {
+			if (!item.className && item.className !== '') return false;
+			if (item.classList.contains('panel_mask')) {
+				return false;
+			}
+			if (item.className.indexOf('notification') >= 0) {
+				if (evt.target === document.body) {
+					return false;
+				}
+				else {
+					available = true;
+					return true;
+				}
+			}
+			available = true;
+			return true;
+		});
+	}
+	if (!available) return;
+
 	if (!!timerMutationObserver) {
 		clearTimeout(timerMutationObserver);
 	}
@@ -572,3 +748,4 @@ sendMessage("PageStateChanged", {
 	state: 'open',
 	url: location.href
 }, "BackEnd");
+loadPageSummary();

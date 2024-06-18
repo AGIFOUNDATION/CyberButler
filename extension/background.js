@@ -4,8 +4,16 @@ import "./script/ai.js";
 import "./script/prompts.js";
 
 const i18nList = ['en', 'zh'];
-const DefaultLang = "zh";
-const TabInfoPrefix = 'page_activity:';
+const UtilList = {
+	notification: {
+		js : ["/components/notification.js"],
+		css: ["/components/notification.css", "/components/mention.css"],
+	},
+	panel: {
+		js : ['/components/marked.min.js'],
+		css: ["/components/panel.css"],
+	},
+};
 
 globalThis.LangName = {
 	'zh': "Chinese",
@@ -29,24 +37,15 @@ globalThis.myInfo = {
 	info: '(Not set yet)',
 };
 
-const waitUntil = fun => new Promise(res => {
-	var untiler = setInterval(() => {
-		logger.log('Ext', 'Reactive and waiting...');
-	}, 10 * 1000);
-	fun().finally(() => {
-		clearInterval(untiler);
-		res();
-	});
-});
-
 /* DB */
 
 const DBs = {};
 const initDB = async () => {
 	var db = new CachedDB("PageInfos", 1);
 	db.onUpdate(() => {
-		db.open('tabInfo', 'tid', 10);
-		db.open('pageInfo', 'url', 10);
+		db.open('tabInfo', 'tid');
+		db.open('pageInfo', 'url');
+		db.open('notifyChecker', 'url');
 		logger.info('DB', 'Updated');
 	});
 	db.onConnect(() => {
@@ -54,7 +53,7 @@ const initDB = async () => {
 		logger.info('DB', 'Connected');
 	});
 	await db.connect();
-	DBs.pageInfos = db;
+	DBs.pageInfo = db;
 };
 
 /* Management */
@@ -80,7 +79,7 @@ chrome.runtime.onInstalled.addListener(async () => {
 	configureCyberButler();
 });
 const showSystemNotification = (message) => {
-	console.log(message);
+	logger.info('MSG', message);
 	chrome.notifications.create({
 		title: Hints[myInfo.lang].talkHint,
 		message,
@@ -106,7 +105,6 @@ const onPageActivityChanged = async (tid, state) => {
 	else {
 		if (state === 'hide') return;
 	}
-	console.log('>>>>>>>>>>>>>>>>>>>>', tid, state);
 
 	var tab;
 	try {
@@ -147,8 +145,8 @@ const onPageActivityChanged = async (tid, state) => {
 			info.active = true;
 			info.url = url;
 
-			console.log(':::::::::::::::::::', shouldRequest, info.requested, info.isArticle);
-			if ((shouldRequest || !info.requested) && info.isArticle) {
+			info.requested = false; // test
+			if (shouldRequest && info.isArticle && !info.requested) {
 				info.requested = true;
 				dispatchEvent({
 					event: "requestCypriteNotify",
@@ -200,7 +198,7 @@ const savePageActivities = async (url, duration, title, closed) => {
 	info.timestamp = timestmp2str("YYYY/MM/DD hh:mm:ss :WDE:");
 	console.log(info);
 
-	await setPageInfo(url, info);
+	// await setPageInfo(url, info);
 };
 
 /* Infos */
@@ -208,7 +206,7 @@ const savePageActivities = async (url, duration, title, closed) => {
 const getPageInfo = async url => {
 	var info = TabInfo[url];
 	if (!info) {
-		info = await DBs.pageInfos.get('pageInfo', url);
+		info = await DBs.pageInfo.get('pageInfo', url);
 		logger.log('DB', 'Get Page Info: ' + url);
 		if (!info) {
 			info = {
@@ -225,7 +223,7 @@ const setPageInfo = async (url, info) => {
 	}
 	DBs.tmrPageInfos = setTimeout(async () => {
 		delete DBs.tmrPageInfos;
-		await DBs.pageInfos.set('pageInfo', url, info);
+		await DBs.pageInfo.set('pageInfo', url, info);
 		logger.log('DB', 'Set Page Info: ' + url);
 	}, 200);
 };
@@ -235,14 +233,14 @@ const delPageInfo = async (url) => {
 	}
 	DBs.tmrPageInfos = setTimeout(async () => {
 		delete DBs.tmrPageInfos;
-		await DBs.pageInfos.del('pageInfo', url);
+		await DBs.pageInfo.del('pageInfo', url);
 		logger.log('DB', 'Del Page Info: ' + url);
 	}, 200);
 };
 const getTabInfo = async tid => {
 	var info = TabInfo[tid];
 	if (!info) {
-		info = await DBs.pageInfos.get('tabInfo', 'T-' + tid);
+		info = await DBs.pageInfo.get('tabInfo', 'T-' + tid);
 		logger.log('DB', 'Get TabInfo: ' + tid);
 		if (!info) {
 			info = {
@@ -261,7 +259,7 @@ const setTabInfo = async (tid, info) => {
 	}
 	DBs.tmrTabInfos = setTimeout(async () => {
 		delete DBs.tmrTabInfos;
-		await DBs.pageInfos.set('tabInfo', 'T-' + tid, info);
+		await DBs.pageInfo.set('tabInfo', 'T-' + tid, info);
 		logger.log('DB', 'Set TabInfo: ' + tid);
 	}, 200);
 };
@@ -272,14 +270,14 @@ const delTabInfo = async (tid) => {
 		delete DBs.tmrTabInfos;
 	}
 
-	var allTabInfos = await DBs.pageInfos.all('tabInfo');
+	var allTabInfos = await DBs.pageInfo.all('tabInfo');
 	for (let name in allTabInfos) {
 		let tid = name.replace(/^T\-/, '');
 		try {
 			await chrome.tabs.get(tid * 1);
 		}
 		catch {
-			await DBs.pageInfos.del('tabInfo', name);
+			await DBs.pageInfo.del('tabInfo', name);
 			logger.log('DB', 'Del TabInfo: ' + tid);
 		}
 	}
@@ -511,11 +509,31 @@ EventHandler.OpenPopup = async (data, source) => {
 	if (source !== 'PopupEnd') return;
 
 	var wsHost = await getWSConfig();
-	configureCyberButler();
-	if (!!wsHost) return;
-
-	callPopup("ClosePopup");
-	configureCyberButler();
+	if (!wsHost) {
+		callPopup("ClosePopup");
+		configureCyberButler();
+	}
+	else {
+		let [tab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
+		// Call Popup Cyprite
+		if (isPageForbidden(tab.url)) {
+			console.log('Call Popup Cyprite');
+		}
+		// Call Page Cyprite
+		else {
+			callPopup("ClosePopup");
+			console.log(tab);
+			let info = await getTabInfo(tab.id);
+			info.requested = true;
+			dispatchEvent({
+				event: "requestCypriteNotify",
+				data: {forceShow: true},
+				target: "FrontEnd",
+				tid: tab.id
+			});
+			await setTabInfo(tab.id, info);
+		}
+	}
 };
 EventHandler.SetConfig = async (data, source, sid) => {
 	if (source !== 'ConfigPage') return;
@@ -572,8 +590,6 @@ EventHandler.PageStateChanged = async (data, source, sid) => {
 		info.isArticle = isBoolean(data.pageInfo.isArticle) ? data.pageInfo.isArticle : info.isArticle;
 		await setTabInfo(sid, info);
 	}
-	console.log(info);
-	// console.log(data);
 
 	onPageActivityChanged(sid, data.state);
 };
@@ -581,23 +597,32 @@ EventHandler.VisibilityChanged = (data, source, sid) => {
 	if (source !== 'FrontEnd') return;
 	onPageActivityChanged(sid, data);
 };
-EventHandler.MountNotification = async (data, source, sid) => {
+EventHandler.MountUtil = async (util, source, sid) => {
 	if (source !== 'FrontEnd') return;
 
-	var tasks = [];
-	tasks.push(chrome.scripting.insertCSS({
-		target: { tabId: sid },
-		files: ["/components/notification.css", "/components/mention.css"]
-	}));
-	tasks.push(chrome.scripting.executeScript({
-		target: { tabId: sid },
-		files: ["/components/notification.js"],
-		injectImmediately: true,
-	}));
-	await Promise.all(tasks);
-	logger.log('Page', 'Notification has mounted!');
+	var utilFiles = UtilList[util];
+	if (!!utilFiles) {
+		let tasks = [];
+		if (!!utilFiles.css) {
+			tasks.push(chrome.scripting.insertCSS({
+				target: { tabId: sid },
+				files: utilFiles.css,
+			}));
+		}
+		if (!!utilFiles.js) {
+			tasks.push(chrome.scripting.executeScript({
+				target: { tabId: sid },
+				files: utilFiles.js,
+				injectImmediately: true,
+			}));
+		}
+		await Promise.all(tasks);
+		logger.log('Page', 'Notification has mounted!');
+	}
+
 	dispatchEvent({
-		event: "notificationMounted",
+		event: "utilMounted",
+		data: util,
 		target: 'FrontEnd',
 		tid: sid
 	});
@@ -612,24 +637,61 @@ EventHandler.SummarizePage = async (data, source, sid) => {
 		tid: sid
 	});
 };
+EventHandler.CheckPageNeedAI = async (data, source, sid) => {
+	var info = await getPageNeedAIInfo(data);
+	info.cid = data.cid;
 
-/* ------------ */
-
-EventHandler.ContentScriptLoaded = (data, source, sid, target, tid) => {
-	if (source !== 'FrontEnd') return;
-	chrome.scripting.executeScript({
-		target: { tabId: sid },
-		files: [ "insider.js" ],
-		injectImmediately: true,
+	dispatchEvent({
+		event: "pageNeedAIChecked",
+		data: info,
+		target: source,
+		tid: sid
 	});
 };
-EventHandler.notify = (data, source, sid) => {
-	var sourceName = 'Server';
-	if (source === "BackEnd") sourceName = 'Background';
-	else if (source === "FrontEnd") sourceName = 'Content';
-	else if (source === "PageEnd") sourceName = 'Injection';
-	if (!isString(data) && !isNumber(data) && !isBoolean(data)) data = JSON.stringify(data);
-	logger.log(`Notify | ${sourceName}`, data);
+EventHandler.UpdatePageNeedAIInfo = async (data, source, sid) => {
+	var info = await getPageNeedAIInfo(data);
+	info.page.visited ++;
+	info.path.visited ++;
+	info.host.visited ++;
+	if (data.need) {
+		info.page.need ++;
+		info.path.need ++;
+		info.host.need ++;
+	}
+	await updatePageNeedAIInfo(data, info);
+
+	dispatchEvent({
+		event: "pageNeedAIUpdated",
+		data: {cid: data.cid},
+		target: source,
+		tid: sid
+	});
+};
+EventHandler.SavePageSummary = async (data, source, sid) => {
+	var tabInfo = await getTabInfo(sid);
+	tabInfo.description = data;
+
+	var pageInfo = await getPageInfo(tabInfo.url);
+	pageInfo.description = data;
+
+	await Promise.all([
+		setTabInfo(sid, tabInfo),
+		setPageInfo(tabInfo.url, pageInfo),
+	]);
+};
+EventHandler.LoadPageSummary = async (data, source, sid) => {
+	var tab = await chrome.tabs.get(sid);
+	if (!!tab && !isPageForbidden(tab.url)) {
+		let pageInfo = await getPageInfo(tab.url);
+		data.description = pageInfo.description;
+	}
+
+	dispatchEvent({
+		event: "pageSummaryLoaded",
+		data,
+		target: source,
+		tid: sid
+	});
 };
 
 /* AI */
@@ -671,7 +733,52 @@ const summarizeArticle = async (article) => {
 	return reply;
 };
 
+/* Utils */
+
+const getPageNeedAIInfo = async data => {
+	var info = await Promise.all([
+		DBs.pageInfo.get('notifyChecker', data.page),
+		DBs.pageInfo.get('notifyChecker', data.path),
+		DBs.pageInfo.get('notifyChecker', data.host),
+	]);
+	info = {
+		page: info[0],
+		path: info[1],
+		host: info[2],
+	};
+	if (!info.page) info.page = {need: 0, visited: 0};
+	if (!info.path) info.path = {need: 0, visited: 0};
+	if (!info.host) info.host = {need: 0, visited: 0};
+	return info;
+};
+const updatePageNeedAIInfo = async (data, info) => {
+	await Promise.all([
+		DBs.pageInfo.set('notifyChecker', data.page, info.page),
+		DBs.pageInfo.set('notifyChecker', data.path, info.path),
+		DBs.pageInfo.set('notifyChecker', data.host, info.host),
+	]);
+};
+
 /* Init */
 
 initDB();
 initWS();
+
+/* ------------ */
+
+EventHandler.ContentScriptLoaded = (data, source, sid, target, tid) => {
+	if (source !== 'FrontEnd') return;
+	chrome.scripting.executeScript({
+		target: { tabId: sid },
+		files: [ "insider.js" ],
+		injectImmediately: true,
+	});
+};
+EventHandler.notify = (data, source, sid) => {
+	var sourceName = 'Server';
+	if (source === "BackEnd") sourceName = 'Background';
+	else if (source === "FrontEnd") sourceName = 'Content';
+	else if (source === "PageEnd") sourceName = 'Injection';
+	if (!isString(data) && !isNumber(data) && !isBoolean(data)) data = JSON.stringify(data);
+	logger.log(`Notify | ${sourceName}`, data);
+};

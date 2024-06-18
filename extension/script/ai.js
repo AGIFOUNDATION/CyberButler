@@ -85,8 +85,7 @@ EdgedAI.sayHello = async (tid) => {
 	replyRequest(tid, reply, errMsg);
 };
 EdgedAI.summarizeArticle = async (tid, article) => {
-	var tag = 'summarizeArticle' + myInfo.lang.toUpperCase();
-	var prompt = PromptLib.assemble(PromptLib[tag], { article });
+	var prompt = PromptLib.assemble(PromptLib.summarizeArticle, { article, lang: LangName[myInfo.lang] });
 	var reply, errMsg;
 	try {
 		reply = await callAIModel([['human', prompt]]);

@@ -33,7 +33,3 @@ chrome.runtime.onMessage.addListener(msg => {
 });
 
 sendMessage("OpenPopup");
-
-window.addEventListener('load', () => {
-	displayMessage('Document Loaded');
-});
