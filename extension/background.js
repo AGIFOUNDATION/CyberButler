@@ -50,6 +50,7 @@ const initDB = async () => {
 		logger.info('DB', 'Updated');
 	});
 	db.onConnect(() => {
+		globalThis.dbPageInfos = db;
 		logger.info('DB', 'Connected');
 	});
 	await db.connect();
@@ -197,6 +198,7 @@ const savePageActivities = async (url, duration, title, closed) => {
 	info.totalDuration += duration;
 	info.currentDuration = duration;
 	info.timestamp = timestmp2str("YYYY/MM/DD hh:mm:ss :WDE:");
+	console.log(info);
 
 	await setPageInfo(url, info);
 };

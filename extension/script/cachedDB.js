@@ -72,8 +72,8 @@
 		}
 		get (store, key) {
 			return new Promise((res, rej) => {
-				// var tx = this.db.transaction([store], "readonly");
-				var tx = this.db.transaction([store], "readwrite");
+				var tx = this.db.transaction([store], "readonly");
+				// var tx = this.db.transaction([store], "readwrite");
 				if (!tx) rej(new Error('Open IndexedDB Transaction Failed: ' + store));
 				var cache = tx.objectStore(store);
 				if (!store) rej(new Error('Open IndexedDB ObjectStore Failed: ' + store));
@@ -91,8 +91,8 @@
 		}
 		all (store, idx) {
 			return new Promise((res, rej) => {
-				// var tx = this.db.transaction([store], "readonly");
-				var tx = this.db.transaction([store], "readwrite");
+				var tx = this.db.transaction([store], "readonly");
+				// var tx = this.db.transaction([store], "readwrite");
 				if (!tx) rej(new Error('Open IndexedDB Transaction Failed: ' + store));
 				var cache = tx.objectStore(store);
 				if (!store) rej(new Error('Open IndexedDB ObjectStore Failed: ' + store));
