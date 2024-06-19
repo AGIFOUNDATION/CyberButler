@@ -744,10 +744,11 @@ AIHandler.askArticle = async (data, source, sid) => {
 		AIHistory[data.title] = list;
 	}
 	list.push(['human', data.question]);
-	console.log(list);
 
 	try {
-		return await callAIandWait('askArticle', list);
+		let result = await callAIandWait('askArticle', list);
+		list.push(['ai', result]);
+		return result;
 	}
 	catch (err) {
 		console.error(err);
