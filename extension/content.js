@@ -609,8 +609,17 @@ const onSendToCyprite = async () => {
 const onContentPaste = evt => {
 	evt.preventDefault();
 
-	var content = evt.clipboardData.getData("text/html");
-	content = getPageContent(content, true);
+	var html = evt.clipboardData.getData('text/html');
+	var text = evt.clipboardData.getData('text/plain') || evt.clipboardData.getData('text');
+	console.log(evt, html, text);
+
+	var content;
+	if (!!html) {
+		content = getPageContent(html, true);
+	}
+	else {
+		content = text;
+	}
 	if (!content) return;
 
 	document.execCommand('insertText', false, content);
@@ -806,6 +815,9 @@ EventHandler.requestCypriteNotify = async (data, source, sid) => {
 			await translatePage();
 			userAction = true;
 		}
+		else {
+			notify._hide();
+		}
 	};
 	notify.addEventListener('click', onClick);
 	notify.onclose = async () => {
@@ -909,7 +921,13 @@ var timerMutationObserver;
 const observer = new MutationObserver((list) => {
 	var available = false;
 	for (let evt of list) {
-		if (evt.target.className.indexOf('cyprite') >= 0) {
+		let target = evt.target, isCyprite = false;
+		while (!isCyprite) {
+			target = target.parentElement;
+			if (!target || target === document.body) break;
+			isCyprite = target.className.indexOf('cyprite') >= 0;
+		}
+		if (isCyprite) {
 			continue;
 		}
 

@@ -54,5 +54,12 @@
 			"512": "images/icon512.png",
 			"1024": "images/icon1024.png"
 		}
+	},
+	"commands": {
+		"_execute_action": {
+			"suggested_key": {
+				"default": "Ctrl+Shift+A"
+			}
+		}
 	}
 }

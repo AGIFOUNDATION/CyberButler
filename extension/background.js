@@ -405,7 +405,13 @@ const prepareWS = (wsUrl) => new Promise((res, rej) => {
 	// Close last socket
 	if (!!webSocket) webSocket.close();
 
-	var socket = new WebSocket(wsUrl);
+	var socket;
+	try {
+		socket = new WebSocket(wsUrl);
+	}
+	catch {
+		return;
+	}
 
 	socket.onopen = async () => {
 		logger.info('WS', 'Opened');
@@ -738,6 +744,7 @@ AIHandler.askArticle = async (data, source, sid) => {
 		AIHistory[data.title] = list;
 	}
 	list.push(['human', data.question]);
+	console.log(list);
 
 	try {
 		return await callAIandWait('askArticle', list);
