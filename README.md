@@ -17,10 +17,35 @@ $$
 
 ---
 
+##	How To Use
+
+###	Initialize
+
+When you first use this plugin, it will pop up a basic information setup page, and you can also choose to click the plugin's Action button to bring up the settings page.
+
+In the settings page, you can enter your basic information, including your name, personal introduction, and preferred language, and you can set the URL for the local knowledge base server, or set the APIKey for the front end to call Gemini.
+
+Please rest assured: if you use our official local knowledge base, it will not leak your personal information. But please make sure that the local knowledge base you connect to is provided by the official source.
+
+Additionally, in the future, we will integrate with more AI platforms.
+
+###	Usage
+
+This plugin will determine the type of page you are currently browsing and automatically remind you of the operations that can be performed.
+
+You can also click on the plugin's Action button, or use the shortcut key (Ctrl + Shift + A) to manually invoke it.
+
+For article-style web pages, this plugin can summarize the content for you and interact with you based on the web page content.
+
+Additionally, the plugin will remember all the web pages you have interacted with and load the historical pages when communicating with you, providing comprehensive interaction based on all these pages—of course, you can also choose to manually add or remove these pages to limit the interaction to the areas you are more interested in.
+
+When using a local knowledge base, the plugin will load local information through the server and use local files along with the web pages you have browsed as the current knowledge for Q&A interaction during the interaction.
+
 ##	Abilities
 
-1.	Summarize web page content and list the outline of the web page content (in progress);
+1.	Summarize web page content and list the outline of the page content, conversation based on page content;
 2.	Translate text (in progress);
-3.	Automatically generate text;
-4.	Provide comprehensive responses based on the content of web pages browsed;
-5.	Learn user habits and preferences for personalized responses.
+3.	Automatically analyze user preferences and automatically obtain information that users might be interested in.
+4.	Provide comprehensive responses based on the user's recent browsing history across different pages.
+5.	Calculate page embedding vectors for subsequent multi-page association.
+6.	Automatically generate text;
