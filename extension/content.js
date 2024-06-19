@@ -26,25 +26,39 @@ chrome.storage.sync.onChanged.addListener(evt => {
 chrome.storage.sync.get('lang', (item) => {
 	myLang = item.lang || myLang;
 });
+const isRuntimeAvailable = () => {
+	try {
+		chrome.runtime;
+		return !!chrome.runtime && !!chrome.runtime.connect;
+	}
+	catch {
+		return false;
+	}
+};
 
 /* Communiation */
 
 var port;
-var sendMessage = (event, data, target, tid) => {
+var sendMessage = (event, data, target, tid, sender="FrontEnd") => {
 	if (!port) {
-		if (!chrome.runtime || !chrome.runtime.id) {
+		if (!isRuntimeAvailable()) {
 			logger.error('Runtime', 'Runtime cannot connect');
 			return;
 		}
+
 		logger.info('Runtime', 'Runtime Reconnect');
 		port = chrome.runtime.connect({name: "cyberbutler_contentscript"});
 		port.onDisconnect.addListener(onPortDisconnect);
 		port.onMessage.addListener(onPortMessage);
 	}
 
-	port.postMessage({
-		event, data, target, tid,
-		sender: "FrontEnd",
+	port.postMessage({event, data, target, tid, sender});
+};
+const sendMessageToCyprite = (event, data, sender, sid) => {
+	window.postMessage({
+		extension: "CypriteTheCyberButler",
+		type: "F2P",
+		data: {event, data, sender, sid}
 	});
 };
 const onPortDisconnect = () => {
@@ -52,10 +66,14 @@ const onPortDisconnect = () => {
 	port = null;
 };
 const onPortMessage = msg => {
-	if (msg.target !== 'FrontEnd') return;
-	let handler = EventHandler[msg.event];
-	if (!handler) return;
-	handler(msg.data, msg.source || 'ServerEnd');
+	if (msg.target === 'FrontEnd') {
+		let handler = EventHandler[msg.event];
+		if (!handler) return;
+		handler(msg.data, msg.sender || 'BackEnd', msg.sid);
+	}
+	else if (msg.target === 'PageEnd') {
+		sendMessageToCyprite(msg.event, msg.data, msg.sender, msg.sid);
+	}
 };
 chrome.runtime.onConnect.addListener(() => {
 	logger.info('Runtime', 'HeartBeated');
@@ -438,7 +456,8 @@ const waitForMountUtil = (util) => new Promise(res => {
 	sendMessage("MountUtil", util, 'BackEnd');
 });
 
-var pageSummary = null, showChatter = false, chatTrigger = null, AIPanel = null, AIAsker = null;
+var pageSummary = null, showChatter = false, chatTrigger = null;
+var AIPanel = null, AIAsker = null, AIHistory = null;
 const summarizePage = async () => {
 	if (!pageInfo) getPageInfo();
 	var article = pageInfo.content;
@@ -489,12 +508,15 @@ const showPageSummary = async (summary) => {
 	var inputArea = newEle('div', 'input_area', 'cyprite_sender', 'scrollable');
 	inputArea.setAttribute('contentEditable', 'true');
 	inputArea.addEventListener('paste', onContentPaste);
+	inputArea.addEventListener('keyup', onAfterInput);
 	var sender = newEle('div', 'input_sender');
 	sender.innerText = messages.sendMessageToCyprite;
 	sender.addEventListener('click', onSendToCyprite);
+	var historyList = newEle('div', "chat_history_area", "scrollable");
 
 	container.innerHTML = marked.parse(summary);
 
+	rightPanel.appendChild(historyList);
 	inputContainer.appendChild(inputArea);
 	rightPanel.appendChild(inputContainer);
 	rightPanel.appendChild(sender);
@@ -508,6 +530,9 @@ const showPageSummary = async (summary) => {
 
 	AIPanel = panel;
 	AIAsker = inputArea;
+	AIHistory = historyList;
+
+	resizeHistoryArea(true);
 };
 const onChatterTrigger = () => {
 	if (!chatTrigger) return;
@@ -519,6 +544,7 @@ const onChatterTrigger = () => {
 		AIPanel.setAttribute('chat', 'true');
 		wait(100).then(() => {
 			AIAsker.focus();
+			resizeHistoryArea(true);
 		});
 	}
 	else {
@@ -539,6 +565,51 @@ const onContentPaste = evt => {
 	if (!content) return;
 
 	document.execCommand('insertText', false, content);
+};
+const onAfterInput = evt => {
+	resizeHistoryArea();
+	if (!evt.ctrlKey || evt.key !== 'Enter') return;
+	evt.preventDefault();
+	onSendToCyprite();
+};
+const resizeHistoryArea = (immediately=false) => {
+	if (!!resizeHistoryArea.timer) clearTimeout(resizeHistoryArea.timer);
+
+	resizeHistoryArea.timer = setTimeout(() => {
+		resizeHistoryArea.timer = null;
+
+		var inputerBox = AIAsker.parentNode.getBoundingClientRect();
+		var containerBox = AIHistory.parentNode.getBoundingClientRect();
+		var height = containerBox.height - 20 - inputerBox.height - 30 - 1;
+		AIHistory.style.height = height + 'px';
+	}, immediately ? 0 : 250);
+};
+const addChatItem = (content, type) => {
+	var messages = I18NMessages[myLang] || I18NMessages.en;
+
+	var item = newEle('div', 'chat_item'), isOther = false;
+
+	var titleBar = newEle('div', "chat_title");
+	if (type === 'human') {
+		titleBar.innerText = messages.yourTalkPrompt + ':';
+	}
+	else if (type === 'cyprite') {
+		titleBar.innerText = messages.cypriteName + ':';
+	}
+	else {
+		isOther = true;
+		titleBar.innerText = type;
+	}
+	item.appendChild(titleBar);
+
+	if (!!content) {
+		if (!isOther) return;
+		let contentPad = newEle('div', "chat_title");
+		contentPad.innerText = content;
+		item.appendChild(contentPad);
+	}
+
+	var operatorBar = newEle('div', 'operator_bar');
 };
 
 const translatePage = async () => {
@@ -712,6 +783,21 @@ window.addEventListener('idle', () => {
 window.addEventListener('load', () => {
 	logger.log('WIN', 'Loaded');
 });
+window.addEventListener('message', ({data}) => {
+	var extension = data.extension, type = data.type;
+	if (extension !== 'CypriteTheCyberButler') return;
+	if (type !== 'P2F') return;
+
+	data = data.data;
+	// If the target is current page
+	if (data.target === 'FrontEnd' && (data.tid === null || data.tid === undefined)) {
+		onPortMessage(data);
+	}
+	// Send to backend
+	else {
+		sendMessage(data.event, data.data, data.target, data.tid, data.sender);
+	}
+});
 
 var timerMutationObserver;
 const observer = new MutationObserver((list) => {
@@ -767,4 +853,5 @@ sendMessage("PageStateChanged", {
 	state: 'open',
 	url: location.href
 }, "BackEnd");
+
 loadPageSummary();

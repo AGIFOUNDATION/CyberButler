@@ -450,39 +450,12 @@ const prepareWS = (wsUrl) => new Promise((res, rej) => {
 
 const EventHandler = {};
 const dispatchEvent = async (msg) => {
-	// 服务器端事件
+	// To Server via WebSocket
 	if (msg.target === 'ServerEnd') {
-		sendMessage(msg.event, msg.data, msg.sender, msg.sid);
+		sendMessage(msg.event, msg.data, msg.sender || 'BackEnd', msg.sid);
 	}
-	// 页面端事件
-	else if (msg.target === "PageEnd") {
-		// 发送给指定页面
-		if (!!msg.tid) {
-			let tab = await chrome.tabs.get(msg.tid);
-			if (!!tab) {
-				try {
-					await chrome.tabs.sendMessage(msg.tid, msg);
-				} catch {}
-			}
-			else {
-				logger.error("Sys", `Tab ${msg.tid} does not exist.`);
-			}
-		}
-		// 发送给当前页面
-		else if (!!LastActiveTab) {
-			let tid = LastActiveTab;
-			let [tab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
-			if (!!tab) {
-				tid = tab.id;
-			}
-			if (!tid) return;
-			try {
-				await chrome.tabs.sendMessage(tid, msg);
-			} catch {}
-		}
-	}
-	// Content端事件
-	else if (msg.target === "FrontEnd") {
+	// To ContentScript and UserScript
+	else if (msg.target === "FrontEnd" || msg.target === 'PageEnd') {
 		let tid = msg.tid;
 		if (!tid) {
 			let [tab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
@@ -492,11 +465,12 @@ const dispatchEvent = async (msg) => {
 		if (!tid) return;
 		let port = TabPorts.get(tid);
 		if (!port) return;
+		msg.sender = msg.sender || 'BackEnd';
 		try {
 			await port.postMessage(msg);
 		} catch {}
 	}
-	// Background事件
+	// To ServiceWorker itself
 	else {
 		let handler = EventHandler[msg.event];
 		if (!handler) return logger.log('SW', 'Got Event', msg);
@@ -522,7 +496,6 @@ EventHandler.OpenPopup = async (data, source) => {
 		// Call Page Cyprite
 		else {
 			callPopup("ClosePopup");
-			console.log(tab);
 			let info = await getTabInfo(tab.id);
 			info.requested = true;
 			dispatchEvent({
@@ -758,22 +731,31 @@ const updatePageNeedAIInfo = async (data, info) => {
 		DBs.pageInfo.set('notifyChecker', data.host, info.host),
 	]);
 };
+const initInjectScript = async () => {
+	const USID = "CypriteInjection";
+
+	var scripts = await chrome.userScripts.getScripts({ids: [USID]});
+	if (scripts.length > 0) return;
+
+	chrome.userScripts.configureWorld({ messaging: true });
+
+	await chrome.userScripts.register([{
+		id: USID,
+		matches: ['*://*/*'],
+		js: [{file: 'inject.js'}],
+		// js: [{file: 'https://cdn.jsdelivr.net/npm/marked/marked.min.js'}],
+		world: "MAIN",
+	}]);
+};
 
 /* Init */
 
 initDB();
 initWS();
+initInjectScript();
 
 /* ------------ */
 
-EventHandler.ContentScriptLoaded = (data, source, sid, target, tid) => {
-	if (source !== 'FrontEnd') return;
-	chrome.scripting.executeScript({
-		target: { tabId: sid },
-		files: [ "insider.js" ],
-		injectImmediately: true,
-	});
-};
 EventHandler.notify = (data, source, sid) => {
 	var sourceName = 'Server';
 	if (source === "BackEnd") sourceName = 'Background';
