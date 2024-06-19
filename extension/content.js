@@ -457,15 +457,39 @@ const waitForMountUtil = (util) => new Promise(res => {
 });
 
 var pageSummary = null, showChatter = false, chatTrigger = null;
-var AIPanel = null, AIAsker = null, AIHistory = null;
+var AIContainer = null, AIPanel = null, AIAsker = null, AIHistory = null;
+const ChatHistory = [];
 const summarizePage = async () => {
 	if (!pageInfo) getPageInfo();
 	var article = pageInfo.content;
 	article = 'TITLE: ' + pageInfo.title + '\n\n' + article;
 
 	var messages = I18NMessages[myLang] || I18NMessages.en;
-	CypriteNotify.summary = Notification.show(messages.cypriteName, messages.summarizingPage, 'rightTop', 'message', 24 * 3600 * 1000);
-	sendMessage("SummarizePage", article, "BackEnd");
+	var notify = Notification.show(messages.cypriteName, messages.summarizingPage, 'rightTop', 'message', 24 * 3600 * 1000);
+
+	var summary = await askAIandWait('summarizeArticle', article);
+	notify._hide();
+
+	if (!!summary) {
+		pageSummary = summary;
+		sendMessage("SavePageSummary", summary, 'BackEnd');
+		notify = Notification.show(messages.cypriteName, messages.summarizeSuccess, 'rightTop', 'success', 10 * 1000);
+		let onClick = evt => {
+			if (evt.target.tagName !== 'BUTTON') return;
+			var name = evt.target.name;
+			if (name === 'viewnow') {
+				showPageSummary(summary);
+			}
+			notify._hide();
+		};
+		notify.onclose = () => {
+			notify.removeEventListener('click', onClick);
+		};
+		notify.addEventListener('click', onClick);
+	}
+	else {
+		Notification.show(messages.cypriteName, messages.summarizeFailed, 'rightTop', 'fail', 5 * 1000);
+	}
 };
 const loadPageSummary = () => new Promise(res => {
 	var cid = newID();
@@ -489,33 +513,44 @@ const afterPageSummary = (summary) => {
 	});
 };
 const showPageSummary = async (summary) => {
-	var messages = I18NMessages[myLang] || I18NMessages.en;
 	showChatter = false;
+	if (!!AIContainer) {
+		AIContainer.style.display = 'block';
+		return;
+	}
+
+	var messages = I18NMessages[myLang] || I18NMessages.en;
 
 	await waitForMountUtil('panel');
 
-	var background = newEle('div', 'panel_mask');
-	var frame = newEle('div', "panel_frame");
-	var panel = newEle('div', "panel_container");
+	var background = newEle('div', 'cyprite', 'panel_mask');
+	var frame = newEle('div', 'cyprite', "panel_frame");
+	var panel = newEle('div', 'cyprite', "panel_container");
 	panel.setAttribute('chat', 'false');
-	chatTrigger = newEle('div', 'panel_chat_switch');
+	chatTrigger = newEle('div', 'cyprite', 'panel_chat_switch');
 	chatTrigger.addEventListener('click', onChatterTrigger);
 	chatTrigger.innerText = messages.showChatPanel;
-	var leftPanel = newEle('div', "panel_left");
-	var rightPanel = newEle('div', "panel_right");
-	var container = newEle('div', 'content_container', 'scrollable');
-	var inputContainer = newEle('div', 'input_container');
-	var inputArea = newEle('div', 'input_area', 'cyprite_sender', 'scrollable');
+	var leftPanel = newEle('div', 'cyprite', "panel_left");
+	var rightPanel = newEle('div', 'cyprite', "panel_right");
+	var container = newEle('div', 'cyprite', 'content_container', 'scrollable');
+	var inputContainer = newEle('div', 'cyprite', 'input_container');
+	var inputArea = newEle('div', 'cyprite', 'input_area', 'cyprite_sender', 'scrollable');
 	inputArea.setAttribute('contentEditable', 'true');
 	inputArea.addEventListener('paste', onContentPaste);
 	inputArea.addEventListener('keyup', onAfterInput);
-	var sender = newEle('div', 'input_sender');
+	var sender = newEle('div', 'cyprite', 'input_sender');
 	sender.innerText = messages.sendMessageToCyprite;
 	sender.addEventListener('click', onSendToCyprite);
-	var historyList = newEle('div', "chat_history_area", "scrollable");
+	var historyList = newEle('div', 'cyprite', "chat_history_area", "scrollable");
+	historyList.__inner = newEle('div', 'cyprite', "chat_history_list");
+	historyList.__inner.addEventListener('mouseup', onClickChatItem);
+	var closeMe = newEle('div', 'cyprite', 'panel_closer');
+	closeMe.innerHTML = '<i class="fas fa-times-circle"></i>';
+	closeMe.addEventListener('click', onCloseMe);
 
 	container.innerHTML = marked.parse(summary);
 
+	historyList.appendChild(historyList.__inner);
 	rightPanel.appendChild(historyList);
 	inputContainer.appendChild(inputArea);
 	rightPanel.appendChild(inputContainer);
@@ -524,10 +559,12 @@ const showPageSummary = async (summary) => {
 	panel.appendChild(chatTrigger);
 	panel.appendChild(leftPanel);
 	panel.appendChild(rightPanel);
+	panel.appendChild(closeMe);
 	frame.appendChild(panel);
 	background.appendChild(frame);
 	document.body.appendChild(background);
 
+	AIContainer = background;
 	AIPanel = panel;
 	AIAsker = inputArea;
 	AIHistory = historyList;
@@ -552,10 +589,22 @@ const onChatterTrigger = () => {
 		AIPanel.setAttribute('chat', 'false');
 	}
 };
-const onSendToCyprite = () => {
+const onSendToCyprite = async () => {
+	var messages = I18NMessages[myLang] || I18NMessages.en;
 	var content = getPageContent(AIAsker, true);
-	console.log('xxxxxxxxxxxxxxxxxxxxxxxxxxxx');
-	console.log(content);
+	addChatItem(content, 'human');
+	AIAsker.innerText = messages.waitForAI;
+	AIAsker.setAttribute('contentEditable', 'false');
+	var result = await askAIandWait('askArticle', {
+		title: pageInfo.title,
+		content: pageInfo.content,
+		question: content
+	});
+	addChatItem(result, 'cyprite');
+	AIAsker.innerText = '';
+	AIAsker.setAttribute('contentEditable', 'true');
+	await wait();
+	AIAsker.focus();
 };
 const onContentPaste = evt => {
 	evt.preventDefault();
@@ -572,6 +621,33 @@ const onAfterInput = evt => {
 	evt.preventDefault();
 	onSendToCyprite();
 };
+const onClickChatItem = ({target}) => {
+	while (target.getAttribute('button') !== 'true') {
+		target = target.parentNode;
+		if (target === document.body) return;
+	}
+
+	var action = target.getAttribute('action');
+	if (!action) return;
+	if (action === 'copyContent') {
+		onCopyContent(target);
+	}
+};
+const onCopyContent = async target => {
+	while (!target.classList.contains('chat_item')) {
+		target = target.parentElement;
+		if (target === document.body) return;
+	}
+	target = target.querySelector('.chat_content');
+
+	var content = getPageContent(target, true);
+	await navigator.clipboard.writeText(content);
+	var messages = I18NMessages[myLang] || I18NMessages.en;
+	Notification.show(messages.cypriteName, messages.contentCopied, 'middleTop', 'success', 2 * 1000);
+};
+const onCloseMe = () => {
+	AIContainer.style.display = 'none';
+};
 const resizeHistoryArea = (immediately=false) => {
 	if (!!resizeHistoryArea.timer) clearTimeout(resizeHistoryArea.timer);
 
@@ -580,36 +656,47 @@ const resizeHistoryArea = (immediately=false) => {
 
 		var inputerBox = AIAsker.parentNode.getBoundingClientRect();
 		var containerBox = AIHistory.parentNode.getBoundingClientRect();
-		var height = containerBox.height - 20 - inputerBox.height - 30 - 1;
+		var height = containerBox.height - 20 - inputerBox.height - 30 - 10;
 		AIHistory.style.height = height + 'px';
 	}, immediately ? 0 : 250);
 };
 const addChatItem = (content, type) => {
 	var messages = I18NMessages[myLang] || I18NMessages.en;
+	var item = newEle('div', 'cyprite', 'chat_item'), isOther = false;
 
-	var item = newEle('div', 'chat_item'), isOther = false;
-
-	var titleBar = newEle('div', "chat_title");
+	var titleBar = newEle('div', 'cyprite', "chat_title");
 	if (type === 'human') {
 		titleBar.innerText = messages.yourTalkPrompt + ':';
+		item.classList.add('human');
 	}
 	else if (type === 'cyprite') {
 		titleBar.innerText = messages.cypriteName + ':';
+		item.classList.add('ai');
 	}
 	else {
 		isOther = true;
 		titleBar.innerText = type;
+		item.classList.add('other');
 	}
 	item.appendChild(titleBar);
 
 	if (!!content) {
-		if (!isOther) return;
-		let contentPad = newEle('div', "chat_title");
-		contentPad.innerText = content;
+		let contentPad = newEle('div', 'cyprite', "chat_content");
+		contentPad.innerHTML = marked.parse(content);
 		item.appendChild(contentPad);
 	}
+	else {
+		if (!isOther) return;
+	}
 
-	var operatorBar = newEle('div', 'operator_bar');
+	var operatorBar = newEle('div', 'cyprite', 'operator_bar');
+	operatorBar.innerHTML = '<i class="far fa-copy" button="true" action="copyContent"></i>';
+	item.appendChild(operatorBar);
+
+	AIHistory.__inner.appendChild(item);
+	wait(60).then(() => {
+		AIHistory.scrollTop = AIHistory.scrollHeight - AIHistory.clientHeight;
+	});
 };
 
 const translatePage = async () => {
@@ -639,6 +726,15 @@ const updatePageNeedAIInfo = (page, path, host, need) => new Promise(res => {
 
 	page = page.replace(/^[\w\-\d_]*?:\/\//i, '');
 	sendMessage("UpdatePageNeedAIInfo", {cid, page, path, host, need}, 'BackEnd');
+});
+const askAIandWait = (action, data) => new Promise(res => {
+	var id = newID();
+	while (!!NeedAIChecker[id]) {
+		id = newID();
+	}
+	NeedAIChecker[id] = res;
+
+	sendMessage('AskAIAndWait', {id, action, data}, 'BackEnd');
 });
 
 /* EventHandler */
@@ -696,18 +792,20 @@ EventHandler.requestCypriteNotify = async (data, source, sid) => {
 				pageSummary = await loadPageSummary();
 			}
 			if (!!pageSummary && (!data || !data.forceSummary)) {
+				notify._hide();
 				afterPageSummary(pageSummary);
 			}
 			else {
+				notify._hide();
 				await summarizePage();
 			}
 			userAction = true;
 		}
 		else if (name === 'translate') {
+			notify._hide();
 			await translatePage();
 			userAction = true;
 		}
-		notify._hide();
 	};
 	notify.addEventListener('click', onClick);
 	notify.onclose = async () => {
@@ -718,28 +816,16 @@ EventHandler.requestCypriteNotify = async (data, source, sid) => {
 	};
 	CypriteNotify.RequestOperation = notify;
 };
-EventHandler.pageSummarized = (data) => {
-	if (!!CypriteNotify.summary) CypriteNotify.summary._hide();
-	CypriteNotify.summary = null;
-
-	if (!!data) {
-		pageSummary = data;
-		sendMessage("SavePageSummary", data, 'BackEnd');
-		afterPageSummary(data);
-	}
-	else {
-		let messages = I18NMessages[myLang] || I18NMessages.en;
-		Notification.show(messages.cypriteName, messages.summarizeFailed, 'rightTop', 'fail', 5 * 1000);
-	}
-};
 EventHandler.pageSummaryLoaded = (data) => {
 	var res = NeedAIChecker[data.cid];
 	if (!res) return;
+	delete NeedAIChecker[data.cid];
 	res(data.description);
 };
 EventHandler.pageNeedAIChecked = (data) => {
 	var res = NeedAIChecker[data.cid];
 	if (!res) return;
+	delete NeedAIChecker[data.cid];
 	var pageNeed = (data.page.need + 1) / (data.page.visited + 1);
 	var pathNeed = (data.path.need + 1) / (data.path.visited + 1);
 	var hostNeed = (data.host.need + 1) / (data.host.visited + 1);
@@ -749,7 +835,14 @@ EventHandler.pageNeedAIChecked = (data) => {
 EventHandler.pageNeedAIUpdated = (data) => {
 	var res = NeedAIChecker[data.cid];
 	if (!res) return;
+	delete NeedAIChecker[data.cid];
 	res();
+};
+EventHandler.askAIandWait = (data) => {
+	var res = NeedAIChecker[data.id];
+	if (!res) return;
+	delete NeedAIChecker[data.id];
+	res(data.result);
 };
 
 /* Tab */
@@ -782,6 +875,19 @@ window.addEventListener('idle', () => {
 });
 window.addEventListener('load', () => {
 	logger.log('WIN', 'Loaded');
+
+	var links = document.querySelectorAll('link');
+	var hasFontAwesome = false;
+	[...links].some(link => {
+		var url = link.href;
+		if (!url) return;
+		var match = url.match(/font[-_ ]*awesome[\w\W]*?\.css/i);
+		hasFontAwesome = !!match;
+		return !!match;
+	});
+	logger.log('PAGE', 'Has FontAwesome: ' + hasFontAwesome);
+	if (hasFontAwesome) return;
+	sendMessageToCyprite('insertCSS', ['https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css']);
 });
 window.addEventListener('message', ({data}) => {
 	var extension = data.extension, type = data.type;
@@ -803,7 +909,7 @@ var timerMutationObserver;
 const observer = new MutationObserver((list) => {
 	var available = false;
 	for (let evt of list) {
-		if (evt.target.className.indexOf('cyprite_sender') >= 0) {
+		if (evt.target.className.indexOf('cyprite') >= 0) {
 			continue;
 		}
 

@@ -43,7 +43,7 @@ PromptLib.sayHello = `You are the user's personal assistant, your name is "Cypri
 - You must greet in {{lang}}.
 - Be friendly, natural, and humorous.
 - The content of the greeting should match the current time (no neccessary to tell user the current time) and your identity as an assistant.`;
-PromptLib.summarizeArticle = `Below is the HTML source code of a web page, which is an article. Please summarize the content of this article for me.
+PromptLib.summarizeArticle = `The following content is the textual content on the webpage in Markdown format; please summarize the content of this article for me..
 
 #	Requirements
 
@@ -56,6 +56,19 @@ PromptLib.summarizeArticle = `Below is the HTML source code of a web page, which
 #	Article Content to Be Summarized
 
 {{article}}`;
+PromptLib.askPageSystem = `#	Requirements
+
+-	All responses must be in "{{lang}}".
+-	Base all responses on the provided text content;
+-	All replies must be in accordance with the provided text content. If you encounter questions that cannot be answered based on the text content, clearly state that you do not know, and do not make assumptions;
+-	Where possible, provide quotes from the text content, including the original text of the sentence and which paragraph it is in.
+
+#	Text Content
+
+{{content}}`;
+
+
+
 
 PromptLib.summarizeArticleEN = `Below is the HTML source code of a web page, which is an article. Please summarize the content of this article for me.
 

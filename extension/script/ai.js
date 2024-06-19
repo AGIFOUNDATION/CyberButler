@@ -21,7 +21,7 @@ globalThis.callAIandWait = (action, data) => new Promise((res, rej) => {
 		let handler = EdgedAI[action];
 		if (!handler) {
 			let errMsg = 'NO such action: ' + action;
-			console.log('[AI] ' + errMsg);
+			logger.error('AI', errMsg);
 			rej(errMsg);
 			return;
 		}
@@ -48,7 +48,7 @@ globalThis.callAI = (action, data) => {
 		let handler = EdgedAI[action];
 		if (!handler) {
 			let errMsg = 'NO such action: ' + action;
-			console.log('[AI] ' + errMsg);
+			logger.error('AI', errMsg);
 			return;
 		}
 		handler(taskId, data);
@@ -89,6 +89,18 @@ EdgedAI.summarizeArticle = async (tid, article) => {
 	var reply, errMsg;
 	try {
 		reply = await callAIModel([['human', prompt]]);
+	}
+	catch (err) {
+		console.error(err);
+		errMsg = err.message || err.msg || err.data || (!!err.toString ? err.toString() : err || 'Gemini Error');
+	}
+
+	replyRequest(tid, reply, errMsg);
+};
+EdgedAI.askArticle = async (tid, conversation) => {
+	var reply, errMsg;
+	try {
+		reply = await callAIModel(conversation);
 	}
 	catch (err) {
 		console.error(err);

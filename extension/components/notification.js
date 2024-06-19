@@ -109,7 +109,7 @@ const newNotification = (title, message, duration=3000, type, position) => {
 	}
 
 	var closer = newEle('div', 'notification_close');
-	closer.innerText = 'X';
+	closer.innerHTML = '<i class="fas fa-times"></i>';
 	closer.addEventListener('click', notify._hide);
 	inner.appendChild(closer);
 

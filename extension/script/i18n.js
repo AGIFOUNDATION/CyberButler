@@ -7,7 +7,10 @@ globalThis.I18NMessages = {
 		summarizeFailed: 'The article summary has failed, you may try again later!',
 		showChatPanel: 'Ask Cyprite',
 		hideChatPanel: 'Hide Cyprite',
+		waitForAI: 'Thinking, please wait...',
 		sendMessageToCyprite: 'Send',
+		yourTalkPrompt: "You",
+		contentCopied: "Content has been copied",
 	},
 	zh: {
 		cypriteName: "机灵",
@@ -17,6 +20,9 @@ globalThis.I18NMessages = {
 		summarizeFailed: '文章总结失败了，您可以稍后再试一次哦！',
 		showChatPanel: '提问机灵',
 		hideChatPanel: '隐藏机灵',
+		waitForAI: '思考中，请稍等……',
 		sendMessageToCyprite: '提问',
+		yourTalkPrompt: "你",
+		contentCopied: "内容已复制",
 	},
 };

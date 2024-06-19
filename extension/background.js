@@ -97,6 +97,9 @@ const isPageForbidden = (url) => {
 };
 const onPageActivityChanged = async (tid, state) => {
 	if (!tid) return;
+	if (state === 'close') {
+		removeAIChatHistory(tid);
+	}
 
 	var info = await getTabInfo(tid);
 	if (info.active) {
@@ -379,7 +382,7 @@ const initWS = async () => {
 		installed = installed.installed || false;
 		if (!installed) return;
 		myInfo.useLocalKV = !wsHost;
-		sayHello();
+		AIHandler.sayHello();
 	}
 	else {
 		logger.info('WS', 'Host: ' + wsHost);
@@ -424,7 +427,7 @@ const prepareWS = (wsUrl) => new Promise((res, rej) => {
 		installed = installed.installed || false;
 		if (!installed) return;
 		myInfo.useLocalKV = false;
-		sayHello();
+		AIHandler.sayHello();
 	};
 	socket.onmessage = evt => {
 		var msg = parseMsg(evt);
@@ -529,7 +532,7 @@ EventHandler.SetConfig = async (data, source, sid) => {
 			sender: 'BackEnd',
 		});
 		myInfo.useLocalKV = true;
-		sayHello();
+		AIHandler.sayHello();
 		return;
 	}
 
@@ -600,12 +603,23 @@ EventHandler.MountUtil = async (util, source, sid) => {
 		tid: sid
 	});
 };
-EventHandler.SummarizePage = async (data, source, sid) => {
-	var summary = await summarizeArticle(data);
-	logger.log('AI', 'Summary Finished: ' + !!summary);
+EventHandler.AskAIAndWait = async (data, source, sid) => {
+	var result = {id: data.id};
+	if (!!data.action) {
+		let handler = AIHandler[data.action];
+		try {
+			let msg = await handler(data.data, source, sid);
+			result.result = msg;
+			logger.log('AI', 'Task ' + data.action + ' Finished');
+		}
+		catch {
+			result.result = '';
+			logger.error('AI', 'Task ' + data.action + ' Failed');
+		}
+	}
 	dispatchEvent({
-		event: "pageSummarized",
-		data: summary,
+		event: "askAIandWait",
+		data: result,
 		target: source,
 		tid: sid
 	});
@@ -669,7 +683,10 @@ EventHandler.LoadPageSummary = async (data, source, sid) => {
 
 /* AI */
 
-const sayHello = async () => {
+const AIHandler = {};
+const AIHistory = {};
+
+AIHandler.sayHello = async () => {
 	var currentDate = timestmp2str('YYYY/MM/DD');
 	console.log('Required to say hello: ' + currentDate);
 
@@ -691,7 +708,7 @@ const sayHello = async () => {
 		showSystemNotification(err);
 	}
 };
-const summarizeArticle = async (article) => {
+AIHandler.summarizeArticle = async (article) => {
 	myInfo.useLocalKV = true; // test
 
 	var reply;
@@ -705,9 +722,41 @@ const summarizeArticle = async (article) => {
 	}
 	return reply;
 };
+AIHandler.askArticle = async (data, source, sid) => {
+	var list = Tab2Article[sid];
+	if (!list) {
+		list = [];
+		Tab2Article[sid] = list;
+	}
+	list.push(data.title);
+
+	list = AIHistory[data.title];
+	if (!list) {
+		list = [];
+		let prompt = PromptLib.assemble(PromptLib.askPageSystem, { content: data.content, lang: LangName[myInfo.lang] });
+		list.push(['system', prompt]);
+		AIHistory[data.title] = list;
+	}
+	list.push(['human', data.question]);
+
+	try {
+		return await callAIandWait('askArticle', list);
+	}
+	catch (err) {
+		console.error(err);
+		return '';
+	}
+};
 
 /* Utils */
 
+const Tab2Article = {};
+const removeAIChatHistory = (tid) => {
+	var list = Tab2Article[tid];
+	if (!list) return;
+	delete Tab2Article[tid];
+	list.forEach(item => delete AIHistory[item]);
+};
 const getPageNeedAIInfo = async data => {
 	var info = await Promise.all([
 		DBs.pageInfo.get('notifyChecker', data.page),
@@ -743,7 +792,6 @@ const initInjectScript = async () => {
 		id: USID,
 		matches: ['*://*/*'],
 		js: [{file: 'inject.js'}],
-		// js: [{file: 'https://cdn.jsdelivr.net/npm/marked/marked.min.js'}],
 		world: "MAIN",
 	}]);
 };

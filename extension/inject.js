@@ -17,3 +17,28 @@ window.addEventListener('message', ({data}) => {
 	if (!handler) return;
 	handler(msg.data, msg.sender || 'FrontEnd', msg.sid);
 });
+
+CypriteEventHandler.insertJS = (data) => {
+	data.forEach(url => {
+		var ele = document.createElement('script');
+		ele.src = url;
+		ele.onload = () => {
+			console.log('Load JS: ' + url);
+		};
+		ele.onerror = (err) => {
+			console.log('Load JS (' + url + ') Failed: ' + (err.message || err.msg || err.data || err));
+		};
+		document.head.appendChild(ele);
+	});
+};
+CypriteEventHandler.insertCSS = (data) => {
+	data.forEach(url => {
+		var ele = document.createElement('link');
+		ele.rel = 'stylesheet';
+		ele.href = url;
+		ele.onload = () => {
+			console.log('Load CSS: ' + url);
+		};
+		document.head.appendChild(ele);
+	});
+};
