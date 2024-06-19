@@ -334,7 +334,7 @@ const getPageDescription = (isArticle, container) => {
 	return desc;
 };
 const getPageContent = (container, keepLink=false) => {
-	var content = container.innerHTML;
+	var content = isString(container) ? container : container.innerHTML || container.toString();
 
 	var temp;
 	while (content !== temp) {
@@ -343,6 +343,7 @@ const getPageContent = (container, keepLink=false) => {
 		content = content.trim();
 	}
 
+	content = content.replace(/\s+data\-mathml="<math(\s+[\w\W]*?)?>[\w\W]*?<\/math>"\s*/gi, ' ');
 	content = content.replace(/<form(\s+[\w\W]*?)?>[\w\W]*?<\/form>/gi, '');
 	content = content.replace(/<select(\s+[\w\W]*?)?>[\w\W]*?<\/select>/gi, '');
 	content = content.replace(/<object(\s+[\w\W]*?)?>[\w\W]*?<\/object>/gi, '');
@@ -395,11 +396,9 @@ const getPageContent = (container, keepLink=false) => {
 	content = content.replace(/\n\n+/g, '\n\n');
 	content = content.trim();
 
-	content = content.replace(/&lt;|&#60;/g, '<');
-	content = content.replace(/&gt;|&#62;/g, '>');
-	content = content.replace(/&amp;|&#38;/g, '&');
-	content = content.replace(/&nbsp;|&#160;/g, ' ');
-	content = content.replace(/&quot;|&#34;/g, '"');
+	var parser = new DOMParser();
+	var dom = parser.parseFromString(content, "text/html");
+	content = dom.body.textContent;
 
 	return content;
 };
@@ -414,6 +413,7 @@ const getPageInfo = () => {
 	}
 	else {
 		info.title = document.title.trim();
+		info.content = "";
 	}
 	info.description = getPageDescription(info.isArticle, container);
 	logger.em('Ext', info);
@@ -486,9 +486,10 @@ const showPageSummary = async (summary) => {
 	var rightPanel = newEle('div', "panel_right");
 	var container = newEle('div', 'content_container', 'scrollable');
 	var inputContainer = newEle('div', 'input_container');
-	var inputArea = newEle('span', 'input_area', 'cyprite_sender', 'scrollable');
+	var inputArea = newEle('div', 'input_area', 'cyprite_sender', 'scrollable');
 	inputArea.setAttribute('contentEditable', 'true');
-	var sender = newEle('span', 'input_sender');
+	inputArea.addEventListener('paste', onContentPaste);
+	var sender = newEle('div', 'input_sender');
 	sender.innerText = messages.sendMessageToCyprite;
 	sender.addEventListener('click', onSendToCyprite);
 
@@ -529,6 +530,15 @@ const onSendToCyprite = () => {
 	var content = getPageContent(AIAsker, true);
 	console.log('xxxxxxxxxxxxxxxxxxxxxxxxxxxx');
 	console.log(content);
+};
+const onContentPaste = evt => {
+	evt.preventDefault();
+
+	var content = evt.clipboardData.getData("text/html");
+	content = getPageContent(content, true);
+	if (!content) return;
+
+	document.execCommand('insertText', false, content);
 };
 
 const translatePage = async () => {
