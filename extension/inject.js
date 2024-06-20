@@ -34,6 +34,7 @@ CypriteEventHandler.insertJS = (data) => {
 CypriteEventHandler.insertCSS = (data) => {
 	data.forEach(url => {
 		var ele = document.createElement('link');
+		ele.crossOrigin = "anonymous";
 		ele.rel = 'stylesheet';
 		ele.href = url;
 		ele.onload = () => {

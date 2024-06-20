@@ -79,7 +79,7 @@ globalThis.callGemini = async (conversation, model='gemini-1.5-flash', options={
 
 	var response;
 	try {
-		response = await fetch(url, request);
+		response = await waitUntil(fetch(url, request));
 	}
 	catch (err) {
 		throw err;

@@ -168,12 +168,14 @@
 }
 .notification_close {
 	position: absolute;
-	top: 2px;
-	right: 4px;
+	top: 0px;
+	right: 5px;
+	width: 1.2em;
 	margin: 0px;
 	padding: 0px;
-	font-family: system-ui, auto, none;
-	font-size: 1.2em;
-	font-weight: bolder;
 	cursor: pointer;
+}
+.notification_close img {
+	width: 100%;
+	pointer-events: none;
 }

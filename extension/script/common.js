@@ -24,13 +24,15 @@ logger.blank = (tag, ...logs) => {
 };
 
 globalThis.wait = delay => new Promise(res => setTimeout(res, delay));
-globalThis.waitUntil = fun => new Promise(res => {
+globalThis.waitUntil = fun => new Promise((res, rej) => {
 	var untiler = setInterval(() => {
 		logger.log('Ext', 'Reactive and waiting...');
 	}, 10 * 1000);
-	fun().finally(() => {
+	fun()
+	.then(result => res(result))
+	.catch(err => rej(err))
+	.finally(() => {
 		clearInterval(untiler);
-		res();
 	});
 });
 

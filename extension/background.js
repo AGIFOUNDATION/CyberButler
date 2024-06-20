@@ -73,6 +73,27 @@ const configureCyberButler = async () => {
 	}
 };
 chrome.runtime.onInstalled.addListener(async () => {
+	const csList = chrome.runtime.getManifest().content_scripts;
+	for (const cs of csList) {
+		const tabs = await chrome.tabs.query({url: cs.matches});
+		for (const tab of tabs) {
+			if (tab.url.match(/^chrome/i)) {
+				continue;
+			}
+			try {
+				await chrome.scripting.executeScript({
+					files: cs.js,
+					target: {
+						tabId: tab.id,
+						allFrames: cs.all_frames
+					},
+					injectImmediately: cs.run_at === 'document_start',
+					// world: cs.world, // uncomment if you use it in manifest.json in Chrome 111+
+				});
+			} catch {}
+		}
+	}
+
 	chrome.storage.local.set({installed: true});
 	var wsHost = await getWSConfig();
 	if (!!wsHost) return;
@@ -808,7 +829,7 @@ const initInjectScript = async () => {
 
 initDB();
 initWS();
-initInjectScript();
+// initInjectScript();
 
 /* ------------ */
 

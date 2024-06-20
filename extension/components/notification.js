@@ -109,7 +109,7 @@ const newNotification = (title, message, duration=3000, type, position) => {
 	}
 
 	var closer = newEle('div', 'notification_close');
-	closer.innerHTML = '<i class="fas fa-times"></i>';
+	closer.innerHTML = '<img src="' + chrome.runtime.getURL('/images/xmark.svg') + '">';
 	closer.addEventListener('click', notify._hide);
 	inner.appendChild(closer);
 

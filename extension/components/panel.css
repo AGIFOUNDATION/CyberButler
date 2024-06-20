@@ -262,15 +262,15 @@ a:hover {
 }
 .panel_container .panel_closer {
 	position: absolute;
-	top: -20px;
-	right: -20px;
+	top: -18px;
+	right: -18px;
+	width: 35px;
 	padding: 5px;
-	font-size: 25px;
-	color: var(--front-color);
-	text-shadow: 1px 1px 1px var(--back-color);
 	cursor: pointer;
 }
-.panel_container .panel_closer i {
+.panel_container .panel_closer img {
+	width: 100%;
+	filter: invert(0.6) sepia(1.0) hue-rotate(160deg) brightness(1.9) drop-shadow(1px 1px 2px black);
 	pointer-events: none;
 }
 .panel_container ul, .panel_container ul > li {

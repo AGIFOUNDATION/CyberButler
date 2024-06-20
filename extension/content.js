@@ -29,7 +29,7 @@ chrome.storage.sync.get('lang', (item) => {
 const isRuntimeAvailable = () => {
 	try {
 		chrome.runtime;
-		return !!chrome.runtime && !!chrome.runtime.connect;
+		return !!chrome.runtime && !!chrome.runtime.connect && !!chrome.runtime.id;
 	}
 	catch {
 		return false;
@@ -38,7 +38,7 @@ const isRuntimeAvailable = () => {
 
 /* Communiation */
 
-var port;
+var port, runtimeID = chrome.runtime.id;
 var sendMessage = (event, data, target, tid, sender="FrontEnd") => {
 	if (!port) {
 		if (!isRuntimeAvailable()) {
@@ -46,8 +46,8 @@ var sendMessage = (event, data, target, tid, sender="FrontEnd") => {
 			return;
 		}
 
-		logger.info('Runtime', 'Runtime Reconnect');
-		port = chrome.runtime.connect({name: "cyberbutler_contentscript"});
+		logger.info('Runtime', 'Runtime Reconnect: ' + runtimeID);
+		port = chrome.runtime.connect(runtimeID, {name: "cyberbutler_contentscript"});
 		port.onDisconnect.addListener(onPortDisconnect);
 		port.onMessage.addListener(onPortMessage);
 	}
@@ -545,7 +545,7 @@ const showPageSummary = async (summary) => {
 	historyList.__inner = newEle('div', 'cyprite', "chat_history_list");
 	historyList.__inner.addEventListener('mouseup', onClickChatItem);
 	var closeMe = newEle('div', 'cyprite', 'panel_closer');
-	closeMe.innerHTML = '<i class="fas fa-times-circle"></i>';
+	closeMe.innerHTML = '<img src="' + chrome.runtime.getURL('/images/circle-xmark.svg') + '">';
 	closeMe.addEventListener('click', onCloseMe);
 
 	container.innerHTML = marked.parse(summary);
@@ -591,15 +591,13 @@ const onChatterTrigger = () => {
 };
 const onSendToCyprite = async () => {
 	var messages = I18NMessages[myLang] || I18NMessages.en;
-	var content = getPageContent(AIAsker, true);
-	addChatItem(content, 'human');
+	var question = getPageContent(AIAsker, true);
+	addChatItem(question, 'human');
 	AIAsker.innerText = messages.waitForAI;
 	AIAsker.setAttribute('contentEditable', 'false');
-	var result = await askAIandWait('askArticle', {
-		title: pageInfo.title,
-		content: pageInfo.content,
-		question: content
-	});
+	var {title, content} = pageInfo;
+	if (!content) content = getPageContent(document.body, true);
+	var result = await askAIandWait('askArticle', { title, content, question });
 	addChatItem(result, 'cyprite');
 	AIAsker.innerText = '';
 	AIAsker.setAttribute('contentEditable', 'true');
@@ -879,7 +877,7 @@ document.addEventListener('visibilitychange', () => {
 		sendMessage("VisibilityChanged", 'show', "BackEnd");
 	}
 });
-window.addEventListener('unload', () => {
+window.addEventListener('beforeUnload', () => {
 	sendMessage("VisibilityChanged", 'close', "BackEnd");
 });
 window.addEventListener('idle', () => {
@@ -887,19 +885,6 @@ window.addEventListener('idle', () => {
 });
 window.addEventListener('load', () => {
 	logger.log('WIN', 'Loaded');
-
-	var links = document.querySelectorAll('link');
-	var hasFontAwesome = false;
-	[...links].some(link => {
-		var url = link.href;
-		if (!url) return;
-		var match = url.match(/font[-_ ]*awesome[\w\W]*?\.css/i);
-		hasFontAwesome = !!match;
-		return !!match;
-	});
-	logger.log('PAGE', 'Has FontAwesome: ' + hasFontAwesome);
-	if (hasFontAwesome) return;
-	sendMessageToCyprite('insertCSS', ['https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css']);
 });
 window.addEventListener('message', ({data}) => {
 	var extension = data.extension, type = data.type;

@@ -41,6 +41,12 @@
 			"js": ["script/i18n.js", "script/common.js", "content.js"]
 		}
 	],
+	"web_accessible_resources": [
+		{
+			"resources": ["/images/xmark.svg", "/images/circle-xmark.svg"],
+			"matches": ["<all_urls>"]
+		}
+	],
 	"action": {
 		"default_popup": "pages/popup.html",
 		"default_title": "Your butler's here.",
