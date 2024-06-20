@@ -727,6 +727,7 @@ EventHandler.FindSimilarArticle = async (vector) => {
 		let info = all[url];
 		if (!info || !info.embedding) continue;
 		let dist = innerProductOfVectors(info.embedding, vector);
+		console.log(info.title, dist, manhattanOfVectors(info.embedding, vector));
 		if (dist <= 0) continue;
 		info.dist = dist;
 		info.url = url;
@@ -855,7 +856,7 @@ const updatePageNeedAIInfo = async (data, info) => {
 		DBs.pageInfo.set('notifyChecker', data.host, info.host),
 	]);
 };
-const hamiltonOfVectors = (v1, v2) => {
+const manhattanOfVectors = (v1, v2) => {
 	var len = Math.min(v1.length, v2.length);
 	var total = 0;
 	for (let i = 0; i < len; i ++) {
