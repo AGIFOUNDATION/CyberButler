@@ -100,7 +100,7 @@ EdgedAI.summarizeArticle = async (tid, article) => {
 EdgedAI.askArticle = async (tid, conversation) => {
 	var reply, errMsg;
 	try {
-		reply = await callAIModel(conversation);
+		reply = await callAIModel(conversation, 'gemini-1.5-pro');
 	}
 	catch (err) {
 		console.error(err);

@@ -1,5 +1,63 @@
 globalThis.DefaultLang = 'en';
 
+globalThis.wait = delay => new Promise(res => setTimeout(res, delay));
+globalThis.waitUntil = fun => new Promise((res, rej) => {
+	const untiler = setInterval(() => {
+		logger.log('Ext', 'Reactive and waiting...');
+	}, 10 * 1000);
+
+	if (isFunction(fun)) {
+		if (isAsyncFunction(fun)) {
+			fun()
+			.then(result => res(result))
+			.catch(err => rej(err))
+			.finally(() => {
+				clearInterval(untiler);
+			});
+		}
+		else {
+			clearInterval(untiler);
+			try {
+				let result = fun();
+				res(result);
+			}
+			catch (err) {
+				rej(err);
+			}
+		}
+	}
+	else {
+		fun
+		.then(result => res(result))
+		.catch(err => rej(err))
+		.finally(() => {
+			clearInterval(untiler);
+		});
+	}
+});
+
+globalThis.newID = (len=16) => {
+	var id = [];
+	for (let i = 0; i < len; i ++) {
+		let d = Math.floor(Math.random() * 36).toString(36);
+		id.push(d);
+	}
+	return id.join('');
+};
+
+globalThis.calculateHash = async (content, algorithm='SHA-256') => {
+	const encoder = new TextEncoder();
+	const data = encoder.encode(content);
+
+	var buffer = await crypto.subtle.digest(algorithm, data);
+
+	const hashArray = Array.from(new Uint8Array(buffer));
+	const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+	return hashHex;
+};
+
+/* Log Utils */
+
 globalThis.logger = {};
 logger.log = (tag, ...logs) => {
 	console.log(`%c[${tag}]`, "color: blue; font-weight: bolder; padding: 2px 5px;", ...logs);
@@ -23,28 +81,9 @@ logger.blank = (tag, ...logs) => {
 	console.log(`%c[${tag}]`, "background-color: black; color: white; font-weight: bolder; padding: 2px 5px; border-radius: 5px; border: 1px solid white;", ...logs);
 };
 
-globalThis.wait = delay => new Promise(res => setTimeout(res, delay));
-globalThis.waitUntil = fun => new Promise((res, rej) => {
-	var untiler = setInterval(() => {
-		logger.log('Ext', 'Reactive and waiting...');
-	}, 10 * 1000);
-	fun()
-	.then(result => res(result))
-	.catch(err => rej(err))
-	.finally(() => {
-		clearInterval(untiler);
-	});
-});
+/* Type Tools */
 
-globalThis.newID = (len=16) => {
-	var id = [];
-	for (let i = 0; i < len; i ++) {
-		let d = Math.floor(Math.random() * 36).toString(36);
-		id.push(d);
-	}
-	return id.join('');
-};
-
+globalThis.AsyncFunction = (async function() {}).__proto__;
 globalThis.isArray = obj => obj !== null && obj !== undefined && !!obj.__proto__ && obj.__proto__.constructor === Array;
 globalThis.isString = obj => obj !== null && obj !== undefined && !!obj.__proto__ && obj.__proto__.constructor === String;
 globalThis.isNumber = obj => obj !== null && obj !== undefined && !!obj.__proto__ && obj.__proto__.constructor === Number;

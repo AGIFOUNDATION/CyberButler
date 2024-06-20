@@ -60,8 +60,9 @@ PromptLib.askPageSystem = `#	Requirements
 
 -	All responses must be in "{{lang}}".
 -	Base all responses on the provided text content;
--	All replies must be in accordance with the provided text content. If you encounter questions that cannot be answered based on the text content, clearly state that you do not know, and do not make assumptions;
--	Where possible, provide quotes from the text content, including the original text of the sentence and which paragraph it is in.
+-	All replies must be in accordance with the provided text content. If you encounter questions that cannot be answered based on the text content, *clearly* inform me that **the subsequent response is based on your own understanding rather than the text content**;
+-	Where possible, provide quotes from the text content, including the original text of the sentence and which paragraph it is in;
+-	Please consider how to best reply to my question, clarify your response process, and then follow the process you have set, thinking step by step, replying step by step.
 
 #	Text Content
 

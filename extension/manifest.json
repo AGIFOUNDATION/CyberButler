@@ -64,7 +64,7 @@
 	"commands": {
 		"_execute_action": {
 			"suggested_key": {
-				"default": "Ctrl+Shift+A"
+				"default": "Ctrl+Y"
 			}
 		}
 	}

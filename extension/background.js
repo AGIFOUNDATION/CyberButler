@@ -589,7 +589,6 @@ EventHandler.PageStateChanged = async (data, source, sid) => {
 	var info = await getTabInfo(sid);
 	if (!!data && !!data.pageInfo) {
 		info.title = data.pageInfo.title || info.title;
-		info.description = data.pageInfo.description || info.description;
 		info.isArticle = isBoolean(data.pageInfo.isArticle) ? data.pageInfo.isArticle : info.isArticle;
 		await setTabInfo(sid, info);
 	}
@@ -683,10 +682,9 @@ EventHandler.UpdatePageNeedAIInfo = async (data, source, sid) => {
 };
 EventHandler.SavePageSummary = async (data, source, sid) => {
 	var tabInfo = await getTabInfo(sid);
-	tabInfo.description = data;
-
 	var pageInfo = await getPageInfo(tabInfo.url);
-	pageInfo.description = data;
+	pageInfo.description = data.summary;
+	pageInfo.hash = data.hash;
 
 	await Promise.all([
 		setTabInfo(sid, tabInfo),
@@ -697,7 +695,8 @@ EventHandler.LoadPageSummary = async (data, source, sid) => {
 	var tab = await chrome.tabs.get(sid);
 	if (!!tab && !isPageForbidden(tab.url)) {
 		let pageInfo = await getPageInfo(tab.url);
-		data.description = pageInfo.description;
+		data.description = pageInfo.description || '';
+		data.hash = pageInfo.hash || '';
 	}
 
 	dispatchEvent({

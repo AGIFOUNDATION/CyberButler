@@ -47,6 +47,9 @@ var sendMessage = (event, data, target, tid, sender="FrontEnd") => {
 		}
 
 		logger.info('Runtime', 'Runtime Reconnect: ' + runtimeID);
+		if (!chrome.runtime?.id && !!globalThis.Notification) {
+			Notification.show(messages.cypriteName, messages.refreshHint, 'rightTop', 'fetal', 10 * 1000);
+		}
 		port = chrome.runtime.connect(runtimeID, {name: "cyberbutler_contentscript"});
 		port.onDisconnect.addListener(onPortDisconnect);
 		port.onMessage.addListener(onPortMessage);
@@ -81,7 +84,7 @@ chrome.runtime.onConnect.addListener(() => {
 
 /* Utils */
 
-var pageInfo = null;
+var pageInfo = null, pageHash = null;
 const findContainer = () => {
 	/* Search for the main tag that records the content of the body text */
 	var tagInfo = {}, contentTag, maxWeight = 0;
@@ -420,18 +423,20 @@ const getPageContent = (container, keepLink=false) => {
 
 	return content;
 };
-const getPageInfo = () => {
+const getPageInfo = async () => {
 	var info = {};
 	var container = findContainer();
 	logger.strong('Ext', container);
 	info.isArticle = checkIsArticle(container);
 	if (info.isArticle) {
 		info.title = getPageTitle(container);
-		info.content = getPageContent(container);
+		info.content = getPageContent(container, true);
+		info.hash = await calculateHash(info.content);
 	}
 	else {
 		info.title = document.title.trim();
-		info.content = "";
+		info.content = '';
+		info.hash = '';
 	}
 	info.description = getPageDescription(info.isArticle, container);
 	logger.em('Ext', info);
@@ -456,13 +461,23 @@ const waitForMountUtil = (util) => new Promise(res => {
 	sendMessage("MountUtil", util, 'BackEnd');
 });
 
-var pageSummary = null, showChatter = false, chatTrigger = null;
+var pageSummary = null;
+var showChatter = false, chatTrigger = null;
 var AIContainer = null, AIPanel = null, AIAsker = null, AIHistory = null;
 const ChatHistory = [];
 const summarizePage = async () => {
-	if (!pageInfo) getPageInfo();
-	var article = pageInfo.content;
+	await getPageInfo();
+	var article = pageInfo.content, hash = pageInfo.hash;
+	if (!article) {
+		article = getPageContent(document.body, true);
+		hash = await calculateHash(article);
+	}
 	article = 'TITLE: ' + pageInfo.title + '\n\n' + article;
+
+	if (pageInfo.hash === pageHash && !!pageInfo.hash && !!pageSummary) {
+		afterPageSummary(pageSummary);
+		return;
+	}
 
 	var messages = I18NMessages[myLang] || I18NMessages.en;
 	var notify = Notification.show(messages.cypriteName, messages.summarizingPage, 'rightTop', 'message', 24 * 3600 * 1000);
@@ -472,7 +487,8 @@ const summarizePage = async () => {
 
 	if (!!summary) {
 		pageSummary = summary;
-		sendMessage("SavePageSummary", summary, 'BackEnd');
+		pageHash = hash;
+		sendMessage("SavePageSummary", {summary, hash}, 'BackEnd');
 		notify = Notification.show(messages.cypriteName, messages.summarizeSuccess, 'rightTop', 'success', 10 * 1000);
 		let onClick = evt => {
 			if (evt.target.tagName !== 'BUTTON') return;
@@ -707,7 +723,7 @@ const addChatItem = (content, type) => {
 };
 
 const translatePage = async () => {
-	if (!pageInfo) getPageInfo();
+	if (!pageInfo) await getPageInfo();
 	var article = pageInfo.content;
 	article = 'TITLE: ' + pageInfo.title + '\n\n' + article;
 	console.log(article);
@@ -756,12 +772,12 @@ EventHandler.notify = (data, source) => {
 	if (!isString(data) && !isNumber(data) && !isBoolean(data)) data = JSON.stringify(data);
 	logger.log(`Notify | ${sourceName}`, data);
 };
-EventHandler.getPageInfo = (data, source) => {
+EventHandler.getPageInfo = async (data, source) => {
 	if (source !== 'BackEnd') return;
 
 	logger.log('Page', 'Analyze Page Info: ' + document.readyState);
 	if (!pageInfo) {
-		getPageInfo();
+		await getPageInfo();
 	}
 
 	sendMessage('GotPageInfo', pageInfo, 'BackEnd');
@@ -775,11 +791,12 @@ EventHandler.utilMounted = (util) => {
 	delete state.reses;
 	list.forEach(res => res());
 };
-EventHandler.requestCypriteNotify = async (data, source, sid) => {
-	if (!data || !data.forceShow) {
+EventHandler.requestCypriteNotify = async (data) => {
+	var forceShow = !!data && !!data.forceShow;
+	if (!forceShow) {
 		// Determine whether to display the AI component: Check the situation of this page, this URL, and this HOST
 		let needAI = await checkPageNeedAI(location.href, location.pathname, location.hostname);
-		logger.em('Page', "Need AI: " + needAI);
+		logger.log('Page', "Need AI: " + needAI);
 		if (!needAI) return;
 	}
 
@@ -788,30 +805,28 @@ EventHandler.requestCypriteNotify = async (data, source, sid) => {
 
 	var messages = I18NMessages[myLang] || I18NMessages.en;
 	if (!!CypriteNotify.RequestOperation) return;
-	// if (!!CypriteNotify.RequestOperation) CypriteNotify.RequestOperation._hide();
 	var notify = Notification.show(messages.cypriteName, messages.newArticleMentionMessage, 'rightTop', 'message', 20 * 1000);
 	var userAction = false;
 	const onClick = async evt => {
 		if (evt.target.tagName !== 'BUTTON') return;
 		var name = evt.target.name;
 		if (name === 'summarize') {
+			userAction = true;
+
 			if (!pageSummary) {
 				pageSummary = await loadPageSummary();
+				if (!!pageSummary) {
+					pageHash = pageSummary.hash;
+					pageSummary = pageSummary.description;
+				}
 			}
-			if (!!pageSummary && (!data || !data.forceSummary)) {
-				notify._hide();
-				afterPageSummary(pageSummary);
-			}
-			else {
-				notify._hide();
-				await summarizePage();
-			}
-			userAction = true;
+			notify._hide();
+			await summarizePage();
 		}
 		else if (name === 'translate') {
+			userAction = true;
 			notify._hide();
 			await translatePage();
-			userAction = true;
 		}
 		else {
 			notify._hide();
@@ -819,7 +834,7 @@ EventHandler.requestCypriteNotify = async (data, source, sid) => {
 	};
 	notify.addEventListener('click', onClick);
 	notify.onclose = async () => {
-		await updatePageNeedAIInfo(location.href, location.pathname, location.hostname, userAction);
+		if (!forceShow) await updatePageNeedAIInfo(location.href, location.pathname, location.hostname, userAction);
 		notify.removeEventListener('click', onClick);
 		notify.onclose = null;
 		CypriteNotify.RequestOperation = null;
@@ -830,7 +845,10 @@ EventHandler.pageSummaryLoaded = (data) => {
 	var res = NeedAIChecker[data.cid];
 	if (!res) return;
 	delete NeedAIChecker[data.cid];
-	res(data.description);
+	res({
+		description: data.description,
+		hash: data.hash,
+	});
 };
 EventHandler.pageNeedAIChecked = (data) => {
 	var res = NeedAIChecker[data.cid];
@@ -840,6 +858,7 @@ EventHandler.pageNeedAIChecked = (data) => {
 	var pathNeed = (data.path.need + 1) / (data.path.visited + 1);
 	var hostNeed = (data.host.need + 1) / (data.host.visited + 1);
 	var needed = (pageNeed + pathNeed + hostNeed) > 1.0;
+	console.log(pageNeed, pathNeed, hostNeed, needed);
 	res(needed);
 };
 EventHandler.pageNeedAIUpdated = (data) => {
@@ -857,10 +876,10 @@ EventHandler.askAIandWait = (data) => {
 
 /* Tab */
 
-document.onreadystatechange = () => {
+document.onreadystatechange = async () => {
 	logger.log('DOC', 'Ready State Changed: ' + document.readyState);
 	pageInfo = null;
-	getPageInfo();
+	await getPageInfo();
 	if (document.readyState === 'complete') {
 		sendMessage("PageStateChanged", {
 			state: 'loaded',
@@ -877,7 +896,7 @@ document.addEventListener('visibilitychange', () => {
 		sendMessage("VisibilityChanged", 'show', "BackEnd");
 	}
 });
-window.addEventListener('beforeUnload', () => {
+window.addEventListener('beforeunload', () => {
 	sendMessage("VisibilityChanged", 'close', "BackEnd");
 });
 window.addEventListener('idle', () => {
@@ -922,7 +941,7 @@ const observer = new MutationObserver((list) => {
 			if (item.classList.contains('panel_mask')) {
 				return false;
 			}
-			if (item.className.indexOf('notification') >= 0) {
+			if (!!item.className.indexOf && item.className.indexOf('notification') >= 0) {
 				if (evt.target === document.body) {
 					return false;
 				}
@@ -940,10 +959,10 @@ const observer = new MutationObserver((list) => {
 	if (!!timerMutationObserver) {
 		clearTimeout(timerMutationObserver);
 	}
-	timerMutationObserver = setTimeout(() => {
+	timerMutationObserver = setTimeout(async () => {
 		logger.log('DOC', 'Mutation Observered');
 		pageInfo = null;
-		getPageInfo();
+		await getPageInfo();
 		sendMessage("PageStateChanged", {
 			state: 'update',
 			url: location.href,
@@ -963,4 +982,8 @@ sendMessage("PageStateChanged", {
 	url: location.href
 }, "BackEnd");
 
-loadPageSummary();
+loadPageSummary().then(data => {
+	if (!data) return;
+	pageSummary = data.description || pageSummary;
+	pageHash = data.hash || pageHash;
+});
