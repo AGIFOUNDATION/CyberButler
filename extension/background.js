@@ -733,7 +733,16 @@ EventHandler.FindSimilarArticle = async (vector) => {
 		list.push(info);
 	}
 	list.sort((a, b) => b.dist - a.dist);
+	var titles = [];
+	list = list.filter(item => {
+		if (titles.includes(item.title)) return false;
+		titles.push(item.title);
+		return true;
+	});
 	return list;
+};
+EventHandler.GetConversation = async (title) => {
+	return AIHistory[title];
 };
 
 /* AI */

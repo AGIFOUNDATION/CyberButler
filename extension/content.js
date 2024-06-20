@@ -482,7 +482,11 @@ const summarizePage = async () => {
 	var messages = I18NMessages[myLang] || I18NMessages.en;
 	var notify = Notification.show(messages.cypriteName, messages.summarizingPage, 'rightTop', 'message', 24 * 3600 * 1000);
 
-	var {summary, embedding} = await askAIandWait('summarizeArticle', {title: pageInfo.title, article});
+	var embedding, summary = await askAIandWait('summarizeArticle', {title: pageInfo.title, article});
+	if (!!summary) {
+		embedding = summary.embedding;
+		summary = summary.summary;
+	}
 	notify._hide();
 
 	if (!!summary) {
@@ -521,7 +525,10 @@ const afterPageSummary = (summary) => {
 	});
 };
 const showPageSummary = async (summary) => {
-	var relatives = await findSimilarArticle(pageVector);
+	var [relatives, conversation] = await Promise.all([
+		findSimilarArticle(pageVector),
+		restoreConversation(),
+	]);
 	var messages = I18NMessages[myLang] || I18NMessages.en;
 
 	showChatter = false;
@@ -608,6 +615,8 @@ const showPageSummary = async (summary) => {
 	AIAsker = inputArea;
 	AIHistory = historyList;
 
+	restoreHistory(conversation);
+
 	resizeHistoryArea(true);
 };
 const onChatterTrigger = () => {
@@ -637,18 +646,29 @@ const onSendToCyprite = async () => {
 	var {title, content} = pageInfo;
 	if (!content) content = getPageContent(document.body, true);
 	var result = await askAIandWait('askArticle', { title, content, question });
+	if (!result) result = messages.AIFailed;
 	addChatItem(result, 'cyprite');
 	AIAsker.innerText = '';
 	AIAsker.setAttribute('contentEditable', 'true');
 	await wait();
 	AIAsker.focus();
 };
+const restoreHistory = conversation => {
+	if (!conversation) return;
+	conversation.forEach(item => {
+		if (item[0] === 'human') {
+			addChatItem(item[1], 'human');
+		}
+		else if (item[0] === 'ai') {
+			addChatItem(item[1], 'cyprite');
+		}
+	});
+};
 const onContentPaste = evt => {
 	evt.preventDefault();
 
 	var html = evt.clipboardData.getData('text/html');
 	var text = evt.clipboardData.getData('text/plain') || evt.clipboardData.getData('text');
-	console.log(evt, html, text);
 
 	var content;
 	if (!!html) {
@@ -736,7 +756,7 @@ const addChatItem = (content, type) => {
 	}
 
 	var operatorBar = newEle('div', 'cyprite', 'operator_bar');
-	operatorBar.innerHTML = '<i class="far fa-copy" button="true" action="copyContent"></i>';
+	operatorBar.innerHTML = '<img button="true" action="copyContent" src="' + chrome.runtime.getURL('/images/copy.svg') + '">';
 	item.appendChild(operatorBar);
 
 	AIHistory.__inner.appendChild(item);
@@ -767,11 +787,16 @@ const findSimilarArticle = async (vector) => {
 	}
 
 	// Filter
-	const Limit = 1 / (2 ** 0.5), Count = 10;
+	const Limit = 1 / (2 ** 0.5), Count = 10, Titles = [];
 	result = result.filter(item => item.dist >= Limit);
 	if (result.length > Count) result.splice(Count);
 
+	var log = [];
 	result = result.map(item => {
+		log.push({
+			title: item.title,
+			dist: item.dist,
+		});
 		return {
 			url: item.url,
 			title: item.title,
@@ -779,7 +804,14 @@ const findSimilarArticle = async (vector) => {
 			hash: item.hash,
 		};
 	});
+	logger.info('Page', 'Similar Articles:');
+	console.table(log);
 	return result;
+};
+const restoreConversation = async () => {
+	if (!pageInfo) return;
+	if (!pageInfo.title) return;
+	return await askSWandWait('GetConversation', pageInfo.title);
 };
 const checkPageNeedAI = async (page, path, host) => {
 	page = page.replace(/^[\w\-\d_]*?:\/\//i, '');
