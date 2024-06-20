@@ -1,3 +1,9 @@
+globalThis.AI = globalThis.AI || {};
+globalThis.AI.Gemini = {};
+
+const DefaultChatModel = 'gemini-1.5-flash';
+const DefaultEmbeddingModel = 'text-embedding-004';
+
 const assembleConversation = conversation => {
 	var sp = '';
 	var prompt = [];
@@ -39,7 +45,29 @@ const assembleConversation = conversation => {
 	return prompt;
 };
 
-globalThis.callGemini = async (conversation, model='gemini-1.5-flash', options={}) => {
+AI.Gemini.list = async () => {
+	var url = 'https://generativelanguage.googleapis.com/v1beta/models?key=' + myInfo.apiKey;
+	var request = {
+		method: "GET",
+		headers: {
+			"content-type": "application/json",
+		},
+	};
+
+	var response, time = Date.now();
+	try {
+		response = await waitUntil(fetch(url, request));
+	}
+	catch (err) {
+		throw err;
+	}
+	time = Date.now() - time;
+	logger.info('Gemini', 'List: ' + (time / 1000) + 's');
+
+	response = await response.json();
+	return response;
+};
+AI.Gemini.chat = async (conversation, model=DefaultChatModel, options={}) => {
 	var prompt = assembleConversation(conversation);
 	prompt.generationConfig = {
 		temperature: options.temperature || 1.0,
@@ -77,15 +105,17 @@ globalThis.callGemini = async (conversation, model='gemini-1.5-flash', options={
 		body: JSON.stringify(prompt),
 	};
 
-	var response;
+	var response, time = Date.now();
 	try {
 		response = await waitUntil(fetch(url, request));
 	}
 	catch (err) {
 		throw err;
 	}
-	response = await response.json();
+	time = Date.now() - time;
+	logger.info('Gemini', 'Chat: ' + (time / 1000) + 's');
 
+	response = await response.json();
 	var reply = response.candidates;
 	if (!!reply) reply = reply[0];
 	if (!reply) {
@@ -104,4 +134,40 @@ globalThis.callGemini = async (conversation, model='gemini-1.5-flash', options={
 	}
 
 	return reply;
+};
+AI.Gemini.embed = async (title, content, model=DefaultEmbeddingModel, options={}) => {
+	var request = {
+		title,
+		content: {
+			parts: [
+				{
+					text: content
+				}
+			]
+		},
+		taskType: options.taskType || "RETRIEVAL_DOCUMENT",
+		// outputDimensionality: 16,
+	};
+
+	var url = "https://generativelanguage.googleapis.com/v1beta/models/" + model + ':embedContent?key=' + myInfo.apiKey;
+	request = {
+		method: "POST",
+		headers: {
+			"content-type": "application/json",
+		},
+		body: JSON.stringify(request),
+	};
+
+	var response, time = Date.now();
+	try {
+		response = await waitUntil(fetch(url, request));
+	}
+	catch (err) {
+		throw err;
+	}
+	time = Date.now() - time;
+	logger.info('Gemini', 'Embed: ' + (time / 1000) + 's');
+
+	response = await response.json();
+	return response.embedding?.values;
 };

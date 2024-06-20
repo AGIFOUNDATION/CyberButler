@@ -1,12 +1,15 @@
 import "./gemini.js";
 
 const ResMap = new Map();
-var callAIModel = callGemini; // For the integration of various different AI models.
+const EmbeddingLimit = 2024;
+
+var chatToAIModel = AI.Gemini.chat; // For the integration of various different AI models.
+var embedAIModel = AI.Gemini.embed;
 
 globalThis.callAIandWait = (action, data) => new Promise((res, rej) => {
 	var taskId = newID();
 
-	// 前端处理
+	// Call AI from Extension
 	if (myInfo.useLocalKV) {
 		if (!myInfo.apiKey) {
 			chrome.notifications.create({
@@ -28,13 +31,13 @@ globalThis.callAIandWait = (action, data) => new Promise((res, rej) => {
 		ResMap.set(taskId, [res, rej]);
 		handler(taskId, data);
 	}
-	// 从后端获取数据
+	// Call AI from Server
 	else {
 		ResMap.set(taskId, [res, rej]);
 	}
 });
 globalThis.callAI = (action, data) => {
-	// 前端处理
+	// Call AI from Extension
 	if (myInfo.useLocalKV) {
 		if (!myInfo.apiKey) {
 			chrome.notifications.create({
@@ -53,7 +56,7 @@ globalThis.callAI = (action, data) => {
 		}
 		handler(taskId, data);
 	}
-	// 从后端获取数据
+	// Call AI from Server
 	else {
 	}
 };
@@ -75,7 +78,7 @@ EdgedAI.sayHello = async (tid) => {
 	});
 	var reply, errMsg;
 	try {
-		reply = await callAIModel([['human', prompt]]);
+		reply = await chatToAIModel([['human', prompt]]);
 	}
 	catch (err) {
 		console.error(err);
@@ -88,7 +91,30 @@ EdgedAI.summarizeArticle = async (tid, article) => {
 	var prompt = PromptLib.assemble(PromptLib.summarizeArticle, { article, lang: LangName[myInfo.lang] });
 	var reply, errMsg;
 	try {
-		reply = await callAIModel([['human', prompt]]);
+		reply = await chatToAIModel([['human', prompt]]);
+	}
+	catch (err) {
+		console.error(err);
+		errMsg = err.message || err.msg || err.data || (!!err.toString ? err.toString() : err || 'Gemini Error');
+	}
+
+	replyRequest(tid, reply, errMsg);
+};
+EdgedAI.embeddingArticle = async (tid, data) => {
+	var reply, errMsg;
+	var content = data.article;
+	if (!!content) {
+		if (content.length > EmbeddingLimit) {
+			content = data.summary;
+		}
+	}
+	else {
+		content = data.summary;
+	}
+	if (content.length > EmbeddingLimit) content = content.substring(0, EmbeddingLimit); // Model Embedding Content Limit
+
+	try {
+		reply = await embedAIModel(data.title, content);
 	}
 	catch (err) {
 		console.error(err);
@@ -100,7 +126,7 @@ EdgedAI.summarizeArticle = async (tid, article) => {
 EdgedAI.askArticle = async (tid, conversation) => {
 	var reply, errMsg;
 	try {
-		reply = await callAIModel(conversation, 'gemini-1.5-pro');
+		reply = await chatToAIModel(conversation, 'gemini-1.5-pro');
 	}
 	catch (err) {
 		console.error(err);

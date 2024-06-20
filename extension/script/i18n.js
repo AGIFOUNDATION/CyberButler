@@ -12,6 +12,7 @@ globalThis.I18NMessages = {
 		sendMessageToCyprite: 'Send',
 		yourTalkPrompt: "You",
 		contentCopied: "Content has been copied",
+		relatedArticles: "Related Articles",
 	},
 	zh: {
 		cypriteName: "机灵",
@@ -26,5 +27,6 @@ globalThis.I18NMessages = {
 		sendMessageToCyprite: '提问',
 		yourTalkPrompt: "你",
 		contentCopied: "内容已复制",
+		relatedArticles: "相关文章",
 	},
 };

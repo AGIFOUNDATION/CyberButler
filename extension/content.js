@@ -84,7 +84,7 @@ chrome.runtime.onConnect.addListener(() => {
 
 /* Utils */
 
-var pageInfo = null, pageHash = null;
+var pageInfo = null, pageHash = null, pageVector;
 const findContainer = () => {
 	/* Search for the main tag that records the content of the body text */
 	var tagInfo = {}, contentTag, maxWeight = 0;
@@ -431,7 +431,7 @@ const getPageInfo = async () => {
 	if (info.isArticle) {
 		info.title = getPageTitle(container);
 		info.content = getPageContent(container, true);
-		info.hash = await calculateHash(info.content);
+		info.hash = await askSWandWait("CalculateHash", info.content);
 	}
 	else {
 		info.title = document.title.trim();
@@ -463,18 +463,18 @@ const waitForMountUtil = (util) => new Promise(res => {
 
 var pageSummary = null;
 var showChatter = false, chatTrigger = null;
-var AIContainer = null, AIPanel = null, AIAsker = null, AIHistory = null;
+var AIContainer = null, AIPanel = null, AIAsker = null, AIHistory = null, AIRelated = null;
 const ChatHistory = [];
 const summarizePage = async () => {
 	await getPageInfo();
 	var article = pageInfo.content, hash = pageInfo.hash;
 	if (!article) {
 		article = getPageContent(document.body, true);
-		hash = await calculateHash(article);
+		hash = await askSWandWait("CalculateHash", article);
 	}
 	article = 'TITLE: ' + pageInfo.title + '\n\n' + article;
 
-	if (pageInfo.hash === pageHash && !!pageInfo.hash && !!pageSummary) {
+	if (hash === pageHash && !!pageHash && !!pageSummary) {
 		afterPageSummary(pageSummary);
 		return;
 	}
@@ -482,13 +482,14 @@ const summarizePage = async () => {
 	var messages = I18NMessages[myLang] || I18NMessages.en;
 	var notify = Notification.show(messages.cypriteName, messages.summarizingPage, 'rightTop', 'message', 24 * 3600 * 1000);
 
-	var summary = await askAIandWait('summarizeArticle', article);
+	var {summary, embedding} = await askAIandWait('summarizeArticle', {title: pageInfo.title, article});
 	notify._hide();
 
 	if (!!summary) {
 		pageSummary = summary;
 		pageHash = hash;
-		sendMessage("SavePageSummary", {summary, hash}, 'BackEnd');
+		pageVector = embedding;
+		sendMessage("SavePageSummary", {title: pageInfo.title, summary, hash, embedding}, 'BackEnd');
 		notify = Notification.show(messages.cypriteName, messages.summarizeSuccess, 'rightTop', 'success', 10 * 1000);
 		let onClick = evt => {
 			if (evt.target.tagName !== 'BUTTON') return;
@@ -507,15 +508,6 @@ const summarizePage = async () => {
 		Notification.show(messages.cypriteName, messages.summarizeFailed, 'rightTop', 'fail', 5 * 1000);
 	}
 };
-const loadPageSummary = () => new Promise(res => {
-	var cid = newID();
-	while (!!NeedAIChecker[cid]) {
-		cid = newID();
-	}
-	NeedAIChecker[cid] = res;
-
-	sendMessage("LoadPageSummary", {cid}, 'BackEnd');
-});
 const afterPageSummary = (summary) => {
 	var messages = I18NMessages[myLang] || I18NMessages.en;
 	var notify = Notification.show(messages.cypriteName, messages.summarizeSuccess, 'rightTop', 'success', 10 * 1000);
@@ -529,13 +521,30 @@ const afterPageSummary = (summary) => {
 	});
 };
 const showPageSummary = async (summary) => {
+	var relatives = await findSimilarArticle(pageVector);
+	var messages = I18NMessages[myLang] || I18NMessages.en;
+
 	showChatter = false;
 	if (!!AIContainer) {
+		AIRelated.innerHTML = '';
+
+		let related = newEle('div', 'cyprite', 'related_articles_area');
+		related.innerHTML = '<h1>' + messages.relatedArticles + '</h1>';
+		related.appendChild(AIRelated);
+
+		relatives.forEach(item => {
+			var frame = newEle('li', 'cyprite', 'related_articles_item');
+			var link = newEle('a', 'cyprite', 'related_articles_link');
+			link.innerText = item.title;
+			link.href = item.url;
+			link.target = '_blank';
+			frame.appendChild(link);
+			AIRelated.appendChild(frame);
+		});
+
 		AIContainer.style.display = 'block';
 		return;
 	}
-
-	var messages = I18NMessages[myLang] || I18NMessages.en;
 
 	await waitForMountUtil('panel');
 
@@ -549,6 +558,20 @@ const showPageSummary = async (summary) => {
 	var leftPanel = newEle('div', 'cyprite', "panel_left");
 	var rightPanel = newEle('div', 'cyprite', "panel_right");
 	var container = newEle('div', 'cyprite', 'content_container', 'scrollable');
+	container.innerHTML = marked.parse(summary);
+	var related = newEle('h2', 'cyprite', 'related_articles_area');
+	related.innerText = messages.relatedArticles;
+	AIRelated = newEle('ul', 'cyprite', 'related_articles_list');
+	relatives.forEach(item => {
+		var frame = newEle('li', 'cyprite', 'related_articles_item');
+		var link = newEle('a', 'cyprite', 'related_articles_link');
+		link.innerText = item.title;
+		link.href = item.url;
+		link.target = '_blank';
+		frame.appendChild(link);
+		AIRelated.appendChild(frame);
+	});
+
 	var inputContainer = newEle('div', 'cyprite', 'input_container');
 	var inputArea = newEle('div', 'cyprite', 'input_area', 'cyprite_sender', 'scrollable');
 	inputArea.setAttribute('contentEditable', 'true');
@@ -564,14 +587,14 @@ const showPageSummary = async (summary) => {
 	closeMe.innerHTML = '<img src="' + chrome.runtime.getURL('/images/circle-xmark.svg') + '">';
 	closeMe.addEventListener('click', onCloseMe);
 
-	container.innerHTML = marked.parse(summary);
-
 	historyList.appendChild(historyList.__inner);
 	rightPanel.appendChild(historyList);
 	inputContainer.appendChild(inputArea);
 	rightPanel.appendChild(inputContainer);
 	rightPanel.appendChild(sender);
 	leftPanel.appendChild(container);
+	container.appendChild(related);
+	container.appendChild(AIRelated);
 	panel.appendChild(chatTrigger);
 	panel.appendChild(leftPanel);
 	panel.appendChild(rightPanel);
@@ -729,26 +752,60 @@ const translatePage = async () => {
 	console.log(article);
 };
 
+const findSimilarArticle = async (vector) => {
+	if (!vector) return;
+
+	var result = await askSWandWait('FindSimilarArticle', vector);
+
+	// Remove self
+	if (!!pageHash) {
+		result = result.filter(item => item.hash !== pageHash);
+	}
+	else {
+		let url = location.href;
+		result = result.filter(item => (item.url.indexOf(url) < 0) && (url.indexOf(item.url) < 0));
+	}
+
+	// Filter
+	const Limit = 1 / (2 ** 0.5), Count = 10;
+	result = result.filter(item => item.dist >= Limit);
+	if (result.length > Count) result.splice(Count);
+
+	result = result.map(item => {
+		return {
+			url: item.url,
+			title: item.title,
+			dist: item.dist,
+			hash: item.hash,
+		};
+	});
+	return result;
+};
+const checkPageNeedAI = async (page, path, host) => {
+	page = page.replace(/^[\w\-\d_]*?:\/\//i, '');
+	var data = await askSWandWait('CheckPageNeedAI', {page, path, host});
+	var pageNeed = (data.page.need + 1) / (data.page.visited + 1);
+	var pathNeed = (data.path.need + 1) / (data.path.visited + 1);
+	var hostNeed = (data.host.need + 1) / (data.host.visited + 1);
+	var needed = (pageNeed + pathNeed + hostNeed) > 1.0;
+	logger.info('Page', pageNeed, pathNeed, hostNeed, needed);
+	return needed;
+};
+const updatePageNeedAIInfo = async (page, path, host, need) => {
+	page = page.replace(/^[\w\-\d_]*?:\/\//i, '');
+	await askSWandWait('UpdatePageNeedAIInfo', {page, path, host, need});
+};
+
+
 const NeedAIChecker = {};
-const checkPageNeedAI = (page, path, host) => new Promise(res => {
-	var cid = newID();
-	while (!!NeedAIChecker[cid]) {
-		cid = newID();
+const askSWandWait = (action, data) => new Promise(res => {
+	var id = newID();
+	while (!!NeedAIChecker[id]) {
+		id = newID();
 	}
-	NeedAIChecker[cid] = res;
+	NeedAIChecker[id] = res;
 
-	page = page.replace(/^[\w\-\d_]*?:\/\//i, '');
-	sendMessage("CheckPageNeedAI", {cid, page, path, host}, 'BackEnd');
-});
-const updatePageNeedAIInfo = (page, path, host, need) => new Promise(res => {
-	var cid = newID();
-	while (!!NeedAIChecker[cid]) {
-		cid = newID();
-	}
-	NeedAIChecker[cid] = res;
-
-	page = page.replace(/^[\w\-\d_]*?:\/\//i, '');
-	sendMessage("UpdatePageNeedAIInfo", {cid, page, path, host, need}, 'BackEnd');
+	sendMessage('AskSWAndWait', {id, action, data}, 'BackEnd');
 });
 const askAIandWait = (action, data) => new Promise(res => {
 	var id = newID();
@@ -814,8 +871,9 @@ EventHandler.requestCypriteNotify = async (data) => {
 			userAction = true;
 
 			if (!pageSummary) {
-				pageSummary = await loadPageSummary();
+				pageSummary = await askSWandWait('LoadPageSummary');
 				if (!!pageSummary) {
+					pageVector = pageSummary.embedding;
 					pageHash = pageSummary.hash;
 					pageSummary = pageSummary.description;
 				}
@@ -841,33 +899,7 @@ EventHandler.requestCypriteNotify = async (data) => {
 	};
 	CypriteNotify.RequestOperation = notify;
 };
-EventHandler.pageSummaryLoaded = (data) => {
-	var res = NeedAIChecker[data.cid];
-	if (!res) return;
-	delete NeedAIChecker[data.cid];
-	res({
-		description: data.description,
-		hash: data.hash,
-	});
-};
-EventHandler.pageNeedAIChecked = (data) => {
-	var res = NeedAIChecker[data.cid];
-	if (!res) return;
-	delete NeedAIChecker[data.cid];
-	var pageNeed = (data.page.need + 1) / (data.page.visited + 1);
-	var pathNeed = (data.path.need + 1) / (data.path.visited + 1);
-	var hostNeed = (data.host.need + 1) / (data.host.visited + 1);
-	var needed = (pageNeed + pathNeed + hostNeed) > 1.0;
-	console.log(pageNeed, pathNeed, hostNeed, needed);
-	res(needed);
-};
-EventHandler.pageNeedAIUpdated = (data) => {
-	var res = NeedAIChecker[data.cid];
-	if (!res) return;
-	delete NeedAIChecker[data.cid];
-	res();
-};
-EventHandler.askAIandWait = (data) => {
+EventHandler.replyAskAndWait = (data) => {
 	var res = NeedAIChecker[data.id];
 	if (!res) return;
 	delete NeedAIChecker[data.id];
@@ -897,6 +929,10 @@ document.addEventListener('visibilitychange', () => {
 	}
 });
 window.addEventListener('beforeunload', () => {
+	pageInfo = null;
+	pageSummary = '';
+	pageHash = '';
+	pageVector = null;
 	sendMessage("VisibilityChanged", 'close', "BackEnd");
 });
 window.addEventListener('idle', () => {
@@ -904,6 +940,7 @@ window.addEventListener('idle', () => {
 });
 window.addEventListener('load', () => {
 	logger.log('WIN', 'Loaded');
+	initArticleInfo();
 });
 window.addEventListener('message', ({data}) => {
 	var extension = data.extension, type = data.type;
@@ -962,6 +999,9 @@ const observer = new MutationObserver((list) => {
 	timerMutationObserver = setTimeout(async () => {
 		logger.log('DOC', 'Mutation Observered');
 		pageInfo = null;
+		pageSummary = '';
+		pageHash = '';
+		pageVector = null;
 		await getPageInfo();
 		sendMessage("PageStateChanged", {
 			state: 'update',
@@ -977,13 +1017,15 @@ observer.observe(document.body, {
 
 /* Init */
 
+const initArticleInfo = async () => {
+	var data = await askSWandWait('LoadPageSummary');
+	if (!data) return;
+	pageSummary = data.description || pageSummary;
+	pageHash = data.hash || pageHash;
+	pageVector = data.embedding || pageVector;
+};
+
 sendMessage("PageStateChanged", {
 	state: 'open',
 	url: location.href
 }, "BackEnd");
-
-loadPageSummary().then(data => {
-	if (!data) return;
-	pageSummary = data.description || pageSummary;
-	pageHash = data.hash || pageHash;
-});

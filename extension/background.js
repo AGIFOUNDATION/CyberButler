@@ -638,30 +638,68 @@ EventHandler.AskAIAndWait = async (data, source, sid) => {
 			result.result = msg;
 			logger.log('AI', 'Task ' + data.action + ' Finished');
 		}
-		catch {
+		catch (err) {
 			result.result = '';
-			logger.error('AI', 'Task ' + data.action + ' Failed');
+			logger.error('AI', 'Task ' + data.action + ' Failed:', err);
 		}
 	}
 	dispatchEvent({
-		event: "askAIandWait",
+		event: "replyAskAndWait",
 		data: result,
 		target: source,
 		tid: sid
 	});
 };
-EventHandler.CheckPageNeedAI = async (data, source, sid) => {
-	var info = await getPageNeedAIInfo(data);
-	info.cid = data.cid;
-
+EventHandler.AskSWAndWait = async (data, source, sid) => {
+	var result = {id: data.id};
+	if (!!data.action) {
+		let handler = EventHandler[data.action];
+		try {
+			let msg = await handler(data.data, source, sid);
+			result.result = msg;
+			logger.log('SW', 'Task ' + data.action + ' Finished');
+		}
+		catch (err) {
+			result.result = '';
+			logger.error('SW', 'Task ' + data.action + ' Failed:', err);
+		}
+	}
 	dispatchEvent({
-		event: "pageNeedAIChecked",
-		data: info,
+		event: "replyAskAndWait",
+		data: result,
 		target: source,
 		tid: sid
 	});
 };
-EventHandler.UpdatePageNeedAIInfo = async (data, source, sid) => {
+EventHandler.SavePageSummary = async (data, source, sid) => {
+	var tabInfo = await getTabInfo(sid);
+	var pageInfo = await getPageInfo(tabInfo.url);
+	pageInfo.title = data.title || pageInfo.title;
+	pageInfo.description = data.summary || pageInfo.description;
+	pageInfo.hash = data.hash || pageInfo.hash;
+	pageInfo.embedding = data.embedding || pageInfo.embedding;
+
+	await Promise.all([
+		setTabInfo(sid, tabInfo),
+		setPageInfo(tabInfo.url, pageInfo),
+	]);
+};
+
+EventHandler.CalculateHash = async (data) => {
+	// This function is not safe in browser.
+	var content = data.content, algorithm;
+	if (!content) {
+		content = data;
+	}
+	else {
+		algorithm = data.algorithm;
+	}
+	return calculateHash(content, algorithm);
+};
+EventHandler.CheckPageNeedAI = async (data) => {
+	return await getPageNeedAIInfo(data);
+};
+EventHandler.UpdatePageNeedAIInfo = async (data) => {
 	var info = await getPageNeedAIInfo(data);
 	info.page.visited ++;
 	info.path.visited ++;
@@ -672,39 +710,30 @@ EventHandler.UpdatePageNeedAIInfo = async (data, source, sid) => {
 		info.host.need ++;
 	}
 	await updatePageNeedAIInfo(data, info);
-
-	dispatchEvent({
-		event: "pageNeedAIUpdated",
-		data: {cid: data.cid},
-		target: source,
-		tid: sid
-	});
-};
-EventHandler.SavePageSummary = async (data, source, sid) => {
-	var tabInfo = await getTabInfo(sid);
-	var pageInfo = await getPageInfo(tabInfo.url);
-	pageInfo.description = data.summary;
-	pageInfo.hash = data.hash;
-
-	await Promise.all([
-		setTabInfo(sid, tabInfo),
-		setPageInfo(tabInfo.url, pageInfo),
-	]);
 };
 EventHandler.LoadPageSummary = async (data, source, sid) => {
 	var tab = await chrome.tabs.get(sid);
 	if (!!tab && !isPageForbidden(tab.url)) {
-		let pageInfo = await getPageInfo(tab.url);
-		data.description = pageInfo.description || '';
-		data.hash = pageInfo.hash || '';
+		return await getPageInfo(tab.url);
 	}
-
-	dispatchEvent({
-		event: "pageSummaryLoaded",
-		data,
-		target: source,
-		tid: sid
-	});
+	else {
+		return null;
+	}
+};
+EventHandler.FindSimilarArticle = async (vector) => {
+	var all = await DBs.pageInfo.all('pageInfo');
+	var list = [];
+	for (let url in all) {
+		let info = all[url];
+		if (!info || !info.embedding) continue;
+		let dist = innerProductOfVectors(info.embedding, vector);
+		if (dist <= 0) continue;
+		info.dist = dist;
+		info.url = url;
+		list.push(info);
+	}
+	list.sort((a, b) => b.dist - a.dist);
+	return list;
 };
 
 /* AI */
@@ -734,19 +763,28 @@ AIHandler.sayHello = async () => {
 		showSystemNotification(err);
 	}
 };
-AIHandler.summarizeArticle = async (article) => {
+AIHandler.summarizeArticle = async (data) => {
 	myInfo.useLocalKV = true; // test
 
-	var reply;
+	var summary, embedding;
 	try {
-		// reply = "Hello";
-		reply = await callAIandWait('summarizeArticle', article);
+		summary = await callAIandWait('summarizeArticle', data.article);
 	}
 	catch (err) {
-		reply = null;
+		showSystemNotification(err);
+		return null;
+	}
+
+	data.summary = summary;
+	try {
+		embedding = await callAIandWait('embeddingArticle', data);
+	}
+	catch (err) {
+		embedding = null;
 		showSystemNotification(err);
 	}
-	return reply;
+
+	return {summary, embedding};
 };
 AIHandler.askArticle = async (data, source, sid) => {
 	var list = Tab2Article[sid];
@@ -807,6 +845,22 @@ const updatePageNeedAIInfo = async (data, info) => {
 		DBs.pageInfo.set('notifyChecker', data.path, info.path),
 		DBs.pageInfo.set('notifyChecker', data.host, info.host),
 	]);
+};
+const hamiltonOfVectors = (v1, v2) => {
+	var len = Math.min(v1.length, v2.length);
+	var total = 0;
+	for (let i = 0; i < len; i ++) {
+		total = Math.max(total, Math.abs(v1[i] - v2[i]));
+	}
+	return total;
+};
+const innerProductOfVectors = (v1, v2) => {
+	var len = Math.min(v1.length, v2.length);
+	var total = 0;
+	for (let i = 0; i < len; i ++) {
+		total += v1[i] * v2[i];
+	}
+	return total;
 };
 const initInjectScript = async () => {
 	const USID = "CypriteInjection";
