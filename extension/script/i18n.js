@@ -14,6 +14,7 @@ globalThis.I18NMessages = {
 		yourTalkPrompt: "You",
 		contentCopied: "Content has been copied",
 		relatedArticles: "Related Articles",
+		noRelatedArticle: "No related article",
 	},
 	zh: {
 		cypriteName: "机灵",
@@ -30,5 +31,6 @@ globalThis.I18NMessages = {
 		yourTalkPrompt: "你",
 		contentCopied: "内容已复制",
 		relatedArticles: "相关文章",
+		noRelatedArticle: "无相关文章",
 	},
 };

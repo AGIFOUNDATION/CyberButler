@@ -41,19 +41,21 @@ globalThis.myInfo = {
 
 const DBs = {};
 const initDB = async () => {
-	var db = new CachedDB("PageInfos", 1);
-	db.onUpdate(() => {
-		db.open('tabInfo', 'tid');
-		db.open('pageInfo', 'url');
-		db.open('notifyChecker', 'url');
+	const dbPageInfos = new CachedDB("PageInfos", 1);
+	dbPageInfos.onUpdate(() => {
+		dbPageInfos.open('tabInfo', 'tid');
+		dbPageInfos.open('pageInfo', 'url');
+		dbPageInfos.open('notifyChecker', 'url');
+		dbPageInfos.open('pageConversation', 'url');
 		logger.info('DB', 'Updated');
 	});
-	db.onConnect(() => {
-		globalThis.dbPageInfos = db;
+	dbPageInfos.onConnect(() => {
+		globalThis.dbPageInfos = dbPageInfos; // test
 		logger.info('DB', 'Connected');
 	});
-	await db.connect();
-	DBs.pageInfo = db;
+
+	await dbPageInfos.connect();
+	DBs.pageInfo = dbPageInfos;
 };
 
 /* Management */
@@ -118,9 +120,6 @@ const isPageForbidden = (url) => {
 };
 const onPageActivityChanged = async (tid, state) => {
 	if (!tid) return;
-	if (state === 'close') {
-		removeAIChatHistory(tid);
-	}
 
 	var info = await getTabInfo(tid);
 	if (info.active) {
@@ -227,7 +226,30 @@ const savePageActivities = async (url, duration, title, closed) => {
 
 /* Infos */
 
+const parseURL = url => {
+	// For VUE SPA
+	if (url.match(/\/#\//)) {
+		url = url.replace(/\/#\//, '/');
+		let match = url.match(/[\w\d\-_]+=[\w\d\-_\.\/]+/gi);
+		url = url.replace(/[#\?][\w\W]*$/, '');
+		if (!!match) {
+			match = match.map(item => {
+				item = item.split('=');
+				return item;
+			});
+			match.sort((a, b) => a[0] > b[0] ? 1 : (a[0] < b[0] ? -1 : 0));
+			match = match.map(item => item.join('/')).join('/');
+			url = url + '/' + match;
+			url = url.replace(/\/\/+/g, '/');
+		}
+	}
+	else {
+		url = url.replace(/[#\?][\w\W]*$/, '');
+	}
+	return url;
+};
 const getPageInfo = async url => {
+	url = parseURL(url);
 	var info = TabInfo[url];
 	if (!info) {
 		info = await DBs.pageInfo.get('pageInfo', url);
@@ -242,6 +264,7 @@ const getPageInfo = async url => {
 	return info;
 };
 const setPageInfo = async (url, info) => {
+	url = parseURL(url);
 	if (!!DBs.tmrPageInfos) {
 		clearTimeout(DBs.tmrPageInfos);
 	}
@@ -252,6 +275,7 @@ const setPageInfo = async (url, info) => {
 	}, 200);
 };
 const delPageInfo = async (url) => {
+	url = parseURL(url);
 	if (!!DBs.tmrPageInfos) {
 		clearTimeout(DBs.tmrPageInfos);
 	}
@@ -319,6 +343,7 @@ chrome.tabs.onActivated.addListener(tab => {
 chrome.tabs.onRemoved.addListener(tabId => {
 	if (LastActiveTab === tabId) LastActiveTab = null;
 	onPageActivityChanged(tabId, "close");
+	removeAIChatHistory(tid);
 });
 chrome.idle.onStateChanged.addListener((state) => {
 	logger.info('Ext', 'Idle State Changed: ' + state);
@@ -439,8 +464,12 @@ const prepareWS = (wsUrl) => new Promise((res, rej) => {
 
 		webSocket = socket;
 		sendMessage = async (event, data, sender, sid) => {
-			if (!webSocket) {
+			if (!webSocket || !webSocket.send) {
 				await prepareWS(wsUrl);
+				if (!webSocket.send) {
+					logger.warn('WS', "WebSocket is invalid.");
+					return;
+				}
 			}
 
 			data = {event, data, sender, sid};
@@ -742,14 +771,43 @@ EventHandler.FindSimilarArticle = async (vector) => {
 	});
 	return list;
 };
-EventHandler.GetConversation = async (title) => {
-	return AIHistory[title];
+EventHandler.GetConversation = async (url) => {
+	url = parseURL(url);
+	var conversation = AIHistory[url];
+	if (!!conversation) return conversation;
+	conversation = await DBs.pageInfo.get('pageConversation', url);
+	if (!conversation) return null;
+	return conversation.conversation;
 };
 
 /* AI */
 
 const AIHandler = {};
 const AIHistory = {};
+const CacheLimit = 1000 * 60 * 60 * 24;
+
+const removeAIChatHistory = async (tid) => {
+	var list = Tab2Article[tid], tasks = [];
+	if (!!list) {
+		delete Tab2Article[tid];
+		for (let url of list) {
+			delete AIHistory[url];
+			tasks.push(DBs.pageInfo.del('pageConversation', url));
+		}
+		await Promise.all(tasks);
+	}
+
+	tasks = [];
+	const current = Date.now();
+	list = await DBs.pageInfo.all('pageConversation');
+	for (let url of all) {
+		let item = all[url];
+		if (current - item.timestamp >= CacheLimit) {
+			tasks.push(DBs.pageInfo.del('pageConversation', url));
+		}
+	}
+	await Promise.all(tasks);
+};
 
 AIHandler.sayHello = async () => {
 	var currentDate = timestmp2str('YYYY/MM/DD');
@@ -797,25 +855,35 @@ AIHandler.summarizeArticle = async (data) => {
 	return {summary, embedding};
 };
 AIHandler.askArticle = async (data, source, sid) => {
-	var list = Tab2Article[sid];
+	var list = Tab2Article[sid], url = parseURL(data.url);
 	if (!list) {
 		list = [];
 		Tab2Article[sid] = list;
 	}
-	list.push(data.title);
+	list.push(url);
 
-	list = AIHistory[data.title];
+	list = AIHistory[url];
 	if (!list) {
-		list = [];
-		let prompt = PromptLib.assemble(PromptLib.askPageSystem, { content: data.content, lang: LangName[myInfo.lang] });
-		list.push(['system', prompt]);
-		AIHistory[data.title] = list;
+		list = await DBs.pageInfo.get('pageConversation', url);
+		if (!list) {
+			list = [];
+			let prompt = PromptLib.assemble(PromptLib.askPageSystem, { content: data.content, lang: LangName[myInfo.lang] });
+			list.push(['system', prompt]);
+		}
+		else {
+			list = list.conversation;
+		}
+		AIHistory[url] = list;
 	}
 	list.push(['human', data.question]);
 
 	try {
 		let result = await callAIandWait('askArticle', list);
 		list.push(['ai', result]);
+		await DBs.pageInfo.set("pageConversation", url, {
+			conversation: list,
+			timestamp: Date.now()
+		});
 		return result;
 	}
 	catch (err) {
@@ -827,12 +895,6 @@ AIHandler.askArticle = async (data, source, sid) => {
 /* Utils */
 
 const Tab2Article = {};
-const removeAIChatHistory = (tid) => {
-	var list = Tab2Article[tid];
-	if (!list) return;
-	delete Tab2Article[tid];
-	list.forEach(item => delete AIHistory[item]);
-};
 const getPageNeedAIInfo = async data => {
 	var info = await Promise.all([
 		DBs.pageInfo.get('notifyChecker', data.page),

@@ -539,15 +539,20 @@ const showPageSummary = async (summary) => {
 		related.innerHTML = '<h1>' + messages.relatedArticles + '</h1>';
 		related.appendChild(AIRelated);
 
-		relatives.forEach(item => {
-			var frame = newEle('li', 'cyprite', 'related_articles_item');
-			var link = newEle('a', 'cyprite', 'related_articles_link');
-			link.innerText = item.title;
-			link.href = item.url;
-			link.target = '_blank';
-			frame.appendChild(link);
-			AIRelated.appendChild(frame);
-		});
+		if (!relatives || !relatives.length) {
+			AIRelated.innerHTML = '<li>' + messages.noRelatedArticle + '</li>';
+		}
+		else {
+			relatives.forEach(item => {
+				var frame = newEle('li', 'cyprite', 'related_articles_item');
+				var link = newEle('a', 'cyprite', 'related_articles_link');
+				link.innerText = item.title;
+				link.href = item.url;
+				link.target = '_blank';
+				frame.appendChild(link);
+				AIRelated.appendChild(frame);
+			});
+		}
 
 		AIContainer.style.display = 'block';
 		return;
@@ -569,15 +574,20 @@ const showPageSummary = async (summary) => {
 	var related = newEle('h2', 'cyprite', 'related_articles_area');
 	related.innerText = messages.relatedArticles;
 	AIRelated = newEle('ul', 'cyprite', 'related_articles_list');
-	relatives.forEach(item => {
-		var frame = newEle('li', 'cyprite', 'related_articles_item');
-		var link = newEle('a', 'cyprite', 'related_articles_link');
-		link.innerText = item.title;
-		link.href = item.url;
-		link.target = '_blank';
-		frame.appendChild(link);
-		AIRelated.appendChild(frame);
-	});
+	if (!relatives || !relatives.length) {
+		AIRelated.innerHTML = '<li>' + messages.noRelatedArticle + '</li>';
+	}
+	else {
+		relatives.forEach(item => {
+			var frame = newEle('li', 'cyprite', 'related_articles_item');
+			var link = newEle('a', 'cyprite', 'related_articles_link');
+			link.innerText = item.title;
+			link.href = item.url;
+			link.target = '_blank';
+			frame.appendChild(link);
+			AIRelated.appendChild(frame);
+		});
+	}
 
 	var inputContainer = newEle('div', 'cyprite', 'input_container');
 	var inputArea = newEle('div', 'cyprite', 'input_area', 'cyprite_sender', 'scrollable');
@@ -645,7 +655,7 @@ const onSendToCyprite = async () => {
 	AIAsker.setAttribute('contentEditable', 'false');
 	var {title, content} = pageInfo;
 	if (!content) content = getPageContent(document.body, true);
-	var result = await askAIandWait('askArticle', { title, content, question });
+	var result = await askAIandWait('askArticle', { url: location.href, title, content, question });
 	if (!result) result = messages.AIFailed;
 	addChatItem(result, 'cyprite');
 	AIAsker.innerText = '';
@@ -811,7 +821,7 @@ const findSimilarArticle = async (vector) => {
 const restoreConversation = async () => {
 	if (!pageInfo) return;
 	if (!pageInfo.title) return;
-	return await askSWandWait('GetConversation', pageInfo.title);
+	return await askSWandWait('GetConversation', location.href);
 };
 const checkPageNeedAI = async (page, path, host) => {
 	page = page.replace(/^[\w\-\d_]*?:\/\//i, '');
@@ -884,7 +894,7 @@ EventHandler.requestCypriteNotify = async (data) => {
 	var forceShow = !!data && !!data.forceShow;
 	if (!forceShow) {
 		// Determine whether to display the AI component: Check the situation of this page, this URL, and this HOST
-		let needAI = await checkPageNeedAI(location.href, location.pathname, location.hostname);
+		let needAI = await checkPageNeedAI(location.href, location.host + location.pathname, location.hostname);
 		logger.log('Page', "Need AI: " + needAI);
 		if (!needAI) return;
 	}
@@ -924,7 +934,7 @@ EventHandler.requestCypriteNotify = async (data) => {
 	};
 	notify.addEventListener('click', onClick);
 	notify.onclose = async () => {
-		if (!forceShow) await updatePageNeedAIInfo(location.href, location.pathname, location.hostname, userAction);
+		if (!forceShow) await updatePageNeedAIInfo(location.href, location.host + location.pathname, location.hostname, userAction);
 		notify.removeEventListener('click', onClick);
 		notify.onclose = null;
 		CypriteNotify.RequestOperation = null;
