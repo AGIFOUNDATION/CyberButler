@@ -534,11 +534,6 @@ const showPageSummary = async (summary) => {
 	showChatter = false;
 	if (!!AIContainer) {
 		AIRelated.innerHTML = '';
-
-		let related = newEle('div', 'cyprite', 'related_articles_area');
-		related.innerHTML = '<h1>' + messages.relatedArticles + '</h1>';
-		related.appendChild(AIRelated);
-
 		if (!relatives || !relatives.length) {
 			AIRelated.innerHTML = '<li>' + messages.noRelatedArticle + '</li>';
 		}
@@ -785,32 +780,28 @@ const translatePage = async () => {
 const findSimilarArticle = async (vector) => {
 	if (!vector) return;
 
-	var result = await askSWandWait('FindSimilarArticle', vector);
+	var result = await askSWandWait('FindSimilarArticle', {url: location.href, vector});
 
-	// Remove self
+	// Remove same article
 	if (!!pageHash) {
 		result = result.filter(item => item.hash !== pageHash);
 	}
-	else {
-		let url = location.href;
-		result = result.filter(item => (item.url.indexOf(url) < 0) && (url.indexOf(item.url) < 0));
-	}
 
 	// Filter
-	const Limit = 1 / (2 ** 0.5), Count = 10, Titles = [];
-	result = result.filter(item => item.dist >= Limit);
+	const Limit = 1 / (3 ** 0.5), Count = 10, Titles = [];
+	result = result.filter(item => item.similar >= Limit);
 	if (result.length > Count) result.splice(Count);
 
 	var log = [];
 	result = result.map(item => {
 		log.push({
 			title: item.title,
-			dist: item.dist,
+			similar: item.similar,
 		});
 		return {
 			url: item.url,
 			title: item.title,
-			dist: item.dist,
+			similar: item.similar,
 			hash: item.hash,
 		};
 	});

@@ -226,12 +226,6 @@
 	filter: invert(0.6) sepia(1.0) hue-rotate(160deg) brightness(1.9) drop-shadow(1px 1px 2px black);
 	pointer-events: none;
 }
-.panel_container ul, .panel_container ul > li {
-	list-style: disc;
-}
-.panel_container ol, .panel_container ol > li {
-	list-style: decimal;
-}
 .panel_container .related_articles_list {
 	padding-bottom: 30px;
 }
@@ -275,6 +269,12 @@
 	background-image: linear-gradient(to right, rgb(from var(--emphasize-color) r g b / 0%) 0%, var(--emphasize-color) 10%, var(--emphasize-color) 90%, rgb(from var(--emphasize-color) r g b / 0%) 100%);
 	transform: scaleY(0.3);
 }
+.panel_container ul, .panel_container ul > li {
+	list-style: disc;
+}
+.panel_container ol, .panel_container ol > li {
+	list-style: decimal;
+}
 .panel_container ul, .panel_container ol {
 	padding-left: 2em;
 }
@@ -295,6 +295,14 @@
 	border-left: 5px solid var(--back-color);
 	box-shadow: 1px 1px 5px var(--back-color);
 }
+.panel_container code {
+	padding: 1px 5px;
+	background-color: rgb(from var(--front-color) r g b / 30%);
+}
+.panel_container table th {
+	background-color: rgb(from var(--front-color) r g b / 30%);
+}
+
 .panel_container .chat_history_area .chat_item .chat_content p,
 .panel_container .chat_history_area .chat_item .chat_content ul,
 .panel_container .chat_history_area .chat_item .chat_content ol,

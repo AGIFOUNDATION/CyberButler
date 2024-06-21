@@ -228,8 +228,8 @@ const savePageActivities = async (url, duration, title, closed) => {
 
 const parseURL = url => {
 	// For VUE SPA
-	if (url.match(/\/#\//)) {
-		url = url.replace(/\/#\//, '/');
+	if (url.match(/\/#[\w\W]*[\?\/]/)) {
+		url = url.replace(/\/#/, '/');
 		let match = url.match(/[\w\d\-_]+=[\w\d\-_\.\/]+/gi);
 		url = url.replace(/[#\?][\w\W]*$/, '');
 		if (!!match) {
@@ -264,6 +264,7 @@ const getPageInfo = async url => {
 	return info;
 };
 const setPageInfo = async (url, info) => {
+	info.url = url;
 	url = parseURL(url);
 	if (!!DBs.tmrPageInfos) {
 		clearTimeout(DBs.tmrPageInfos);
@@ -749,20 +750,55 @@ EventHandler.LoadPageSummary = async (data, source, sid) => {
 		return null;
 	}
 };
-EventHandler.FindSimilarArticle = async (vector) => {
+EventHandler.FindSimilarArticle = async (data) => {
+	var vector = data.vector, tabURL = parseURL(data.url);
+	var aveVector = normalizeVector(vector);
+
 	var all = await DBs.pageInfo.all('pageInfo');
 	var list = [];
+	var log = [];
 	for (let url in all) {
+		if (url === tabURL) continue;
 		let info = all[url];
 		if (!info || !info.embedding) continue;
-		let dist = innerProductOfVectors(info.embedding, vector);
-		console.log(info.title, dist, manhattanOfVectors(info.embedding, vector));
-		if (dist <= 0) continue;
-		info.dist = dist;
-		info.url = url;
+
+		let similar = 0, weight = 0;
+		vector.forEach(embedA => {
+			var weightA = embedA.weight;
+			var vectorA = embedA.vector;
+			var simi = 0, wgt = 0;
+			info.embedding.forEach(embedB => {
+				var weightB = embedB.weight;
+				var vectorB = embedB.vector;
+				var d = innerProductOfVectors(vectorA, vectorB);
+				if (d > simi) {
+					simi = d;
+					wgt = weightB;
+				}
+			});
+			wgt *= weightA;
+			similar += simi * wgt;
+			weight += wgt;
+		});
+		similar /= weight;
+
+		let aveV = normalizeVector(info.embedding);
+		let aveSimilar = innerProductOfVectors(aveVector, aveV);
+
+		log.push({
+			title: info.title,
+			similar,
+			aveSimilar
+		});
+		if (similar <= 0) continue;
+		info.similar = similar;
 		list.push(info);
 	}
-	list.sort((a, b) => b.dist - a.dist);
+	list.sort((a, b) => b.similar - a.similar);
+	log.sort((a, b) => b.similar - a.similar);
+	logger.log('SIMI', data.url);
+	console.table(log);
+
 	var titles = [];
 	list = list.filter(item => {
 		if (titles.includes(item.title)) return false;
@@ -836,20 +872,14 @@ AIHandler.summarizeArticle = async (data) => {
 
 	var summary, embedding;
 	try {
-		summary = await callAIandWait('summarizeArticle', data.article);
+		[summary, embedding] = await Promise.all([
+			callAIandWait('summarizeArticle', data.article),
+			callAIandWait('embeddingArticle', data),
+		]);
 	}
 	catch (err) {
 		showSystemNotification(err);
 		return null;
-	}
-
-	data.summary = summary;
-	try {
-		embedding = await callAIandWait('embeddingArticle', data);
-	}
-	catch (err) {
-		embedding = null;
-		showSystemNotification(err);
 	}
 
 	return {summary, embedding};
@@ -917,6 +947,30 @@ const updatePageNeedAIInfo = async (data, info) => {
 		DBs.pageInfo.set('notifyChecker', data.path, info.path),
 		DBs.pageInfo.set('notifyChecker', data.host, info.host),
 	]);
+};
+const normalizeVector = embedding => {
+	var vector = [], size = 0;
+	embedding.forEach(v => {
+		size = Math.max(size, v.vector.length);
+	});
+	for (let i = 0; i < size; i ++) {
+		vector[i] = 0;
+	}
+	embedding.forEach(v => {
+		v.vector.forEach((n, i) => {
+			vector[i] += n * v.weight;
+		});
+	});
+	var norm = 0;
+	for (let i = 0; i < size; i ++) {
+		norm += vector[i] ** 2;
+	}
+	norm = norm ** 0.5;
+	if (norm === 0) return vector;
+	for (let i = 0; i < size; i ++) {
+		vector[i] /= norm;
+	}
+	return vector;
 };
 const manhattanOfVectors = (v1, v2) => {
 	var len = Math.min(v1.length, v2.length);

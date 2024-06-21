@@ -135,32 +135,35 @@ AI.Gemini.chat = async (conversation, model=DefaultChatModel, options={}) => {
 
 	return reply;
 };
-AI.Gemini.embed = async (title, content, model=DefaultEmbeddingModel, options={}) => {
-	var request = {
-		title,
-		content: {
-			parts: [
-				{
-					text: content
-				}
-			]
-		},
-		taskType: options.taskType || "RETRIEVAL_DOCUMENT",
-		// outputDimensionality: 16,
-	};
+AI.Gemini.embed = async (contents, model=DefaultEmbeddingModel, options={}) => {
+	model = 'models/' + model;
 
-	var url = "https://generativelanguage.googleapis.com/v1beta/models/" + model + ':embedContent?key=' + myInfo.apiKey;
-	request = {
+	var requests = [], weights = [];
+	contents.forEach(item => {
+		weights.push(item.content.length);
+		requests.push({
+			model,
+			taskType: options.taskType || "RETRIEVAL_DOCUMENT",
+			title: item.title,
+			content: {
+				parts: [{text: item.content}]
+			},
+			// outputDimensionality: 16,
+		});
+	});
+	requests = {requests};
+	requests = {
 		method: "POST",
 		headers: {
 			"content-type": "application/json",
 		},
-		body: JSON.stringify(request),
+		body: JSON.stringify(requests),
 	};
+	var url = "https://generativelanguage.googleapis.com/v1beta/" + model + ':batchEmbedContents?key=' + myInfo.apiKey;
 
 	var response, time = Date.now();
 	try {
-		response = await waitUntil(fetch(url, request));
+		response = await waitUntil(fetch(url, requests));
 	}
 	catch (err) {
 		throw err;
@@ -169,5 +172,11 @@ AI.Gemini.embed = async (title, content, model=DefaultEmbeddingModel, options={}
 	logger.info('Gemini', 'Embed: ' + (time / 1000) + 's');
 
 	response = await response.json();
-	return response.embedding?.values;
+	response = response.embeddings.map((embed, i) => {
+		return {
+			weight: weights[i],
+			vector: embed.values
+		};
+	});
+	return response;
 };
