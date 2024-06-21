@@ -243,11 +243,8 @@ const checkIsArticle = (container) => {
 	html = !!html ? html.length : 0;
 	var innerDensity = html === 0 ? 0 : content / html;
 
-	logger.em    ('Article', 'Size   :', content, total, html);
-	logger.strong('Article', 'Density:', contentDensity, pageDensity, innerDensity);
 	var weight = contentDensity * 1.2 + pageDensity * 0.8 + (innerDensity / pageDensity / 0.9);
 	weight *= content / (400 + content);
-	logger.blank ('Article', 'Check  :', content > 500, contentDensity > 0.8, pageDensity > 0.3, innerDensity > pageDensity * 0.9, weight);
 	return weight > 1.5;
 };
 const getPageTitle = (container) => {
@@ -394,7 +391,7 @@ const getPageContent = (container, keepLink=false) => {
 		temp = content;
 		if (keepLink) {
 			content = content.replace(/<a(\s+[\w\W]*?)?>([\w\W]*?)<\/a>/gi, (m, prop, inner) => {
-				var match = prop.match(/href=('|")([\w\W]*?)\1/);
+				var match = (prop || '').match(/href=('|")([\w\W]*?)\1/);
 				if (!match) return inner;
 				match = match[2];
 				return '[' + inner + '](' + match + ')';
@@ -442,7 +439,7 @@ const getPageInfo = async () => {
 	info.description = getPageDescription(info.isArticle, container);
 	logger.em('Ext', info);
 
-	pageInfo = info;
+	return info;
 };
 
 var notificationMounted = false, notificationMountingRes = [];
@@ -467,7 +464,7 @@ var showChatter = false, chatTrigger = null;
 var AIContainer = null, AIPanel = null, AIAsker = null, AIHistory = null, AIRelated = null;
 const ChatHistory = [];
 const summarizePage = async () => {
-	await getPageInfo();
+	pageInfo = await getPageInfo();
 	var article = pageInfo.content, hash = pageInfo.hash;
 	if (!article) {
 		article = getPageContent(document.body, true);
@@ -660,25 +657,20 @@ const onSendToCyprite = async () => {
 	var related = null;
 	if (!!vector) {
 		if (!conversationVector) {
-			conversationVector = [...pageVector];
+			if (!!pageVector) {
+				conversationVector = [];
+				pageVector.forEach(item => {
+					conversationVector.push({
+						weight: Math.floor(item.weight ** 0.3),
+						vector: item.vector
+					});
+				});
+			}
 		}
 		if (!!conversationVector) {
 			conversationVector.push(...vector);
-			related = await askSWandWait('FindSimilarArticle', {url: location.href, conversationVector});
+			related = await askSWandWait('FindSimilarArticle', {url: location.href, vector: conversationVector});
 			related = filterSimilarArticle(related, 5);
-			pageRelatedArticles.forEach(item => {
-				var has = related.some(art => art.url === item.url);
-				if (has) return;
-				related.push(item);
-			});
-			related.sort((a, b) => b.similar - a.similar);
-			related.splice(5);
-			console.table(related.map(item => {
-				return {
-					title: item.title,
-					similar: item.similar
-				}
-			}));
 		}
 	}
 
@@ -806,13 +798,12 @@ const addChatItem = (content, type) => {
 };
 
 const translatePage = async () => {
-	if (!pageInfo) await getPageInfo();
+	if (!pageInfo) pageInfo = await getPageInfo();
 	var article = pageInfo.content;
 	article = 'TITLE: ' + pageInfo.title + '\n\n' + article;
 	console.log(article);
 };
 
-var pageRelatedArticles = null;
 const findSimilarArticle = async (vector) => {
 	if (!vector) return;
 
@@ -825,7 +816,6 @@ const findSimilarArticle = async (vector) => {
 
 	// Filter
 	result = filterSimilarArticle(result, 10);
-	pageRelatedArticles = result;
 	return result;
 };
 const filterSimilarArticle = (articles, count) => {
@@ -909,7 +899,7 @@ EventHandler.getPageInfo = async (data, source) => {
 
 	logger.log('Page', 'Analyze Page Info: ' + document.readyState);
 	if (!pageInfo) {
-		await getPageInfo();
+		pageInfo = await getPageInfo();
 	}
 
 	sendMessage('GotPageInfo', pageInfo, 'BackEnd');
@@ -986,7 +976,7 @@ EventHandler.replyAskAndWait = (data) => {
 document.onreadystatechange = async () => {
 	logger.log('DOC', 'Ready State Changed: ' + document.readyState);
 	pageInfo = null;
-	await getPageInfo();
+	pageInfo = await getPageInfo();
 	if (document.readyState === 'complete') {
 		sendMessage("PageStateChanged", {
 			state: 'loaded',
@@ -1072,12 +1062,17 @@ const observer = new MutationObserver((list) => {
 		clearTimeout(timerMutationObserver);
 	}
 	timerMutationObserver = setTimeout(async () => {
+		var info = await getPageInfo();
+		if (!pageInfo) {
+			pageInfo = info;
+		}
+		else {
+			if (pageInfo.hash === info.hash && !!pageInfo.hash) {
+				return;
+			}
+			pageInfo = info;
+		}
 		logger.log('DOC', 'Mutation Observered');
-		pageInfo = null;
-		pageSummary = '';
-		pageHash = '';
-		pageVector = null;
-		await getPageInfo();
 		sendMessage("PageStateChanged", {
 			state: 'update',
 			url: location.href,

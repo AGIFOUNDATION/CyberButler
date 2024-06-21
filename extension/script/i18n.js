@@ -2,7 +2,7 @@ globalThis.I18NMessages = {
 	en: {
 		cypriteName: "Cyprite",
 		refreshHint: "Cyprite seems to have wandered off; you may refresh the page to reconnect.",
-		newArticleMentionMessage: '<div class="article_operation_title">I\'ve noticed you\'re reading an article. Is there anything I can do for you?</div><div class="article_operations"><button>Summarize</button><button>Translate</button><button>No, Thanks</button></div>',
+		newArticleMentionMessage: '<div class="article_operation_title">I\'ve noticed you\'re reading an article. Is there anything I can do for you?</div><div class="article_operations"><button name="summarize">Summarize</button><button name="translate">Translate</button><button name="close">No, Thanks</button></div>',
 		summarizingPage: 'The article is currently being summarizing, please wait a moment...',
 		summarizeSuccess: '<div class="article_operation_title">The article has been summarized, click to view:</div><div class="article_operations"><button name="viewnow">View Now</button><button name="close">View Later</button></div>',
 		summarizeFailed: 'The article summary has failed, you may try again later!',

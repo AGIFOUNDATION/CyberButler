@@ -74,6 +74,21 @@ const configureCyberButler = async () => {
 		chrome.tabs.create({url});
 	}
 };
+const checkAvailability = async () => {
+	var available = true;
+	if (!!myInfo.useLocalKV) {
+		available = !!myInfo.apiKey;
+	}
+	else {
+		wsHost = await getWSConfig();
+		available = !!wsHost
+	}
+	if (!available) {
+		configureCyberButler();
+		return false;
+	}
+	return true;
+};
 chrome.runtime.onInstalled.addListener(async () => {
 	const csList = chrome.runtime.getManifest().content_scripts;
 	for (const cs of csList) {
@@ -95,11 +110,6 @@ chrome.runtime.onInstalled.addListener(async () => {
 			} catch {}
 		}
 	}
-
-	chrome.storage.local.set({installed: true});
-	var wsHost = await getWSConfig();
-	if (!!wsHost) return;
-	configureCyberButler();
 });
 const showSystemNotification = (message) => {
 	logger.info('MSG', message);
@@ -168,7 +178,6 @@ const onPageActivityChanged = async (tid, state) => {
 			info.active = true;
 			info.url = url;
 
-			info.requested = false; // test
 			if (shouldRequest && info.isArticle && !info.requested) {
 				info.requested = true;
 				dispatchEvent({
@@ -418,17 +427,20 @@ const getWSConfig = async () => {
 	}
 
 	myInfo.apiKey = localInfo.apiKey || '';
+	myInfo.useLocalKV = !localInfo.wsHost;
 	return localInfo.wsHost;
 };
 const initWS = async () => {
 	var wsHost = await getWSConfig();
-	if (!wsHost) {
+	var available = await checkAvailability();
+	if (!available) return;
+
+	if (myInfo.useLocalKV) {
 		logger.info('WS', 'Use Edged Knowledge Vault');
 
 		let installed = await chrome.storage.local.get('installed');
 		installed = installed.installed || false;
 		if (!installed) return;
-		myInfo.useLocalKV = !wsHost;
 		AIHandler.sayHello();
 	}
 	else {
@@ -483,7 +495,6 @@ const prepareWS = (wsUrl) => new Promise((res, rej) => {
 		var installed = await chrome.storage.local.get('installed');
 		installed = installed.installed || false;
 		if (!installed) return;
-		myInfo.useLocalKV = false;
 		AIHandler.sayHello();
 	};
 	socket.onmessage = evt => {
@@ -542,30 +553,27 @@ const dispatchEvent = async (msg) => {
 EventHandler.OpenPopup = async (data, source) => {
 	if (source !== 'PopupEnd') return;
 
-	var wsHost = await getWSConfig();
-	if (!wsHost) {
-		callPopup("ClosePopup");
+	var available = await checkAvailability();
+	if (!available) return;
+
+	var [tab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
+	// Call Popup Cyprite
+	if (isPageForbidden(tab.url)) {
+		console.log('Call Popup Cyprite');
 		configureCyberButler();
 	}
+	// Call Page Cyprite
 	else {
-		let [tab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
-		// Call Popup Cyprite
-		if (isPageForbidden(tab.url)) {
-			console.log('Call Popup Cyprite');
-		}
-		// Call Page Cyprite
-		else {
-			callPopup("ClosePopup");
-			let info = await getTabInfo(tab.id);
-			info.requested = true;
-			dispatchEvent({
-				event: "requestCypriteNotify",
-				data: {forceShow: true},
-				target: "FrontEnd",
-				tid: tab.id
-			});
-			await setTabInfo(tab.id, info);
-		}
+		callPopup("ClosePopup");
+		let info = await getTabInfo(tab.id);
+		info.requested = true;
+		dispatchEvent({
+			event: "requestCypriteNotify",
+			data: {forceShow: true},
+			target: "FrontEnd",
+			tid: tab.id
+		});
+		await setTabInfo(tab.id, info);
 	}
 };
 EventHandler.SetConfig = async (data, source, sid) => {
@@ -576,8 +584,9 @@ EventHandler.SetConfig = async (data, source, sid) => {
 	myInfo.info = data.myInfo || myInfo.info;
 	myInfo.lang = data.myLang || myInfo.lang;
 	myInfo.apiKey = data.apiKey || myInfo.apiKey;
+	myInfo.useLocalKV = !data.wsHost;
 
-	if (!data.wsHost) {
+	if (myInfo.useLocalKV) {
 		sendMessage = DefaultSendMessage;
 		chrome.tabs.sendMessage(sid, {
 			event: "connectWSHost",
@@ -588,7 +597,6 @@ EventHandler.SetConfig = async (data, source, sid) => {
 			target: source,
 			sender: 'BackEnd',
 		});
-		myInfo.useLocalKV = true;
 		AIHandler.sayHello();
 		return;
 	}
@@ -869,6 +877,9 @@ AIHandler.sayHello = async () => {
 };
 AIHandler.summarizeArticle = async (data) => {
 	myInfo.useLocalKV = true; // test
+
+	var available = await checkAvailability();
+	if (!available) return;
 
 	var summary, embedding;
 	try {

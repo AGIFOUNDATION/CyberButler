@@ -43,7 +43,7 @@
 .panel_container .content_container {
 	color: var(--front-color);
 }
-.panel_container .content_containe div, .panel_container .content_containe p {
+.panel_container .content_container div, .panel_container .content_container p {
 	margin-top: 1rem;
 	margin-bottom: 1rem;
 }
@@ -276,6 +276,8 @@
 	list-style: decimal;
 }
 .panel_container ul, .panel_container ol {
+	margin-top: 0.5em;
+	margin-bottom: 0.5em;
 	padding-left: 2em;
 }
 .panel_container li {
@@ -296,8 +298,9 @@
 	box-shadow: 1px 1px 5px var(--back-color);
 }
 .panel_container code {
-	padding: 1px 5px;
-	background-color: rgb(from var(--front-color) r g b / 30%);
+	padding: 2px 5px;
+	background-color: rgb(from var(--front-color) r g b / 20%);
+	border-radius: 4px;
 }
 .panel_container table th {
 	background-color: rgb(from var(--front-color) r g b / 30%);
