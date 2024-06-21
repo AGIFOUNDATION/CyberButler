@@ -751,7 +751,7 @@ EventHandler.LoadPageSummary = async (data, source, sid) => {
 	}
 };
 EventHandler.FindSimilarArticle = async (data) => {
-	var vector = data.vector, tabURL = parseURL(data.url);
+	var vector = data.vector, tabURL = parseURL(data.url || '');
 	var aveVector = normalizeVector(vector);
 
 	var all = await DBs.pageInfo.all('pageInfo');
@@ -883,6 +883,20 @@ AIHandler.summarizeArticle = async (data) => {
 	}
 
 	return {summary, embedding};
+};
+AIHandler.embeddingContent = async (data) => {
+	myInfo.useLocalKV = true; // test
+
+	var embedding;
+	try {
+		embedding = await callAIandWait('embeddingArticle', data);
+	}
+	catch (err) {
+		showSystemNotification(err);
+		return null;
+	}
+
+	return embedding;
 };
 AIHandler.askArticle = async (data, source, sid) => {
 	var list = Tab2Article[sid], url = parseURL(data.url);

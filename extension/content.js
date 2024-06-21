@@ -17,6 +17,7 @@ const TagClassWeight = {
 	page: 0.2,
 	container: 0.1,
 };
+
 var myLang = DefaultLang;
 chrome.storage.sync.onChanged.addListener(evt => {
 	var lang = evt.lang;
@@ -461,7 +462,7 @@ const waitForMountUtil = (util) => new Promise(res => {
 	sendMessage("MountUtil", util, 'BackEnd');
 });
 
-var pageSummary = null;
+var pageSummary = null, conversationVector = null;
 var showChatter = false, chatTrigger = null;
 var AIContainer = null, AIPanel = null, AIAsker = null, AIHistory = null, AIRelated = null;
 const ChatHistory = [];
@@ -648,11 +649,45 @@ const onSendToCyprite = async () => {
 	addChatItem(question, 'human');
 	AIAsker.innerText = messages.waitForAI;
 	AIAsker.setAttribute('contentEditable', 'false');
+
+	var vector;
+	try {
+		vector = await askAIandWait('embeddingContent', {title: "Request", article: question});
+	}
+	catch {
+		vector = null;
+	}
+	var related = null;
+	if (!!vector) {
+		if (!conversationVector) {
+			conversationVector = [...pageVector];
+		}
+		if (!!conversationVector) {
+			conversationVector.push(...vector);
+			related = await askSWandWait('FindSimilarArticle', {url: location.href, conversationVector});
+			related = filterSimilarArticle(related, 5);
+			pageRelatedArticles.forEach(item => {
+				var has = related.some(art => art.url === item.url);
+				if (has) return;
+				related.push(item);
+			});
+			related.sort((a, b) => b.similar - a.similar);
+			related.splice(5);
+			console.table(related.map(item => {
+				return {
+					title: item.title,
+					similar: item.similar
+				}
+			}));
+		}
+	}
+
 	var {title, content} = pageInfo;
 	if (!content) content = getPageContent(document.body, true);
-	var result = await askAIandWait('askArticle', { url: location.href, title, content, question });
+	var result = await askAIandWait('askArticle', { url: location.href, title, content, question, related });
 	if (!result) result = messages.AIFailed;
 	addChatItem(result, 'cyprite');
+
 	AIAsker.innerText = '';
 	AIAsker.setAttribute('contentEditable', 'true');
 	await wait();
@@ -777,6 +812,7 @@ const translatePage = async () => {
 	console.log(article);
 };
 
+var pageRelatedArticles = null;
 const findSimilarArticle = async (vector) => {
 	if (!vector) return;
 
@@ -788,12 +824,18 @@ const findSimilarArticle = async (vector) => {
 	}
 
 	// Filter
-	const Limit = 1 / (3 ** 0.5), Count = 10, Titles = [];
-	result = result.filter(item => item.similar >= Limit);
-	if (result.length > Count) result.splice(Count);
+	result = filterSimilarArticle(result, 10);
+	pageRelatedArticles = result;
+	return result;
+};
+const filterSimilarArticle = (articles, count) => {
+	// Filter
+	const Limit = 1 / (3 ** 0.5);
+	articles = articles.filter(item => item.similar >= Limit);
+	if (articles.length > count) articles.splice(count);
 
 	var log = [];
-	result = result.map(item => {
+	articles = articles.map(item => {
 		log.push({
 			title: item.title,
 			similar: item.similar,
@@ -805,9 +847,9 @@ const findSimilarArticle = async (vector) => {
 			hash: item.hash,
 		};
 	});
-	logger.info('Page', 'Similar Articles:');
+	logger.info('Content', 'Similar Articles:');
 	console.table(log);
-	return result;
+	return articles;
 };
 const restoreConversation = async () => {
 	if (!pageInfo) return;
