@@ -392,13 +392,29 @@ chrome.runtime.onConnect.addListener(port => {
 		TabPorts.delete(tid);
 	});
 });
-const callPopup = (event, data) => {
-	chrome.runtime.sendMessage({
-		event, data,
-		target: "PopupEnd",
-		sender: "BackEnd"
-	});
-};
+chrome.action.onClicked.addListener(async () => {
+	var available = await checkAvailability();
+	if (!available) return;
+
+	var [tab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
+	// Call Popup Cyprite
+	if (isPageForbidden(tab.url)) {
+		console.log('Call Popup Cyprite');
+		configureCyberButler();
+	}
+	// Call Page Cyprite
+	else {
+		let info = await getTabInfo(tab.id);
+		info.requested = true;
+		dispatchEvent({
+			event: "requestCypriteNotify",
+			data: {forceShow: true},
+			target: "FrontEnd",
+			tid: tab.id
+		});
+		await setTabInfo(tab.id, info);
+	}
+});
 
 /* WebSocket */
 
@@ -550,32 +566,6 @@ const dispatchEvent = async (msg) => {
 	}
 };
 
-EventHandler.OpenPopup = async (data, source) => {
-	if (source !== 'PopupEnd') return;
-
-	var available = await checkAvailability();
-	if (!available) return;
-
-	var [tab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
-	// Call Popup Cyprite
-	if (isPageForbidden(tab.url)) {
-		console.log('Call Popup Cyprite');
-		configureCyberButler();
-	}
-	// Call Page Cyprite
-	else {
-		callPopup("ClosePopup");
-		let info = await getTabInfo(tab.id);
-		info.requested = true;
-		dispatchEvent({
-			event: "requestCypriteNotify",
-			data: {forceShow: true},
-			target: "FrontEnd",
-			tid: tab.id
-		});
-		await setTabInfo(tab.id, info);
-	}
-};
 EventHandler.SetConfig = async (data, source, sid) => {
 	if (source !== 'ConfigPage') return;
 	logger.log('WS', 'Set Host: ' + data.wsHost);
@@ -763,27 +753,24 @@ EventHandler.FindSimilarArticle = async (data) => {
 
 	var all = await DBs.pageInfo.all('pageInfo');
 	var list = [];
-	var log = [];
 	for (let url in all) {
 		if (url === tabURL) continue;
 		let info = all[url];
 		if (!info || !info.embedding) continue;
 
-		var similar = productOfVectorGroups(vector, info.embedding);
-		var antiSimilar = productOfVectorGroups(info.embedding, vector);
-		log.push({
-			title: info.title,
-			similar,
-			antiSimilar
-		});
+		var similar = calculateSimilarityRate(info.embedding, vector) * calculateNearestScore(info.embedding, vector);
 		if (similar <= 0) continue;
 		info.similar = similar;
 		list.push(info);
 	}
 	list.sort((a, b) => b.similar - a.similar);
-	log.sort((a, b) => b.similar - a.similar);
 	logger.log('SIMI', data.url);
-	console.table(log);
+	console.table(list.map(item => {
+		return {
+			title: item.title,
+			similar: item.similar,
+		}
+	}));
 
 	var titles = [];
 	list = list.filter(item => {
@@ -967,32 +954,65 @@ const innerProductOfVectors = (v1, v2) => {
 	}
 	return total;
 };
-const productOfVectorGroups = (g1, g2) => {
+const calculateSimilarityRate = (g1, g2) => {
+	const range = 0.5 ** 0.5;
+
 	var totalW1 = 0, totalW2 = 0;
-	g1.forEach(item => totalW1 += item.weight);
-	g2.forEach(item => totalW2 += item.weight);
+	g1.forEach(v => totalW1 += v.weight);
+	g2.forEach(v => totalW2 += v.weight);
 
 	var similar = 0;
 	g2.forEach(v2 => {
 		var w2 = v2.weight;
 		v2 = v2.vector;
 
-		var value = 0, weight = 0;
-		g1.forEach(v1=> {
+		var simi = 0, total = 0;
+		g1.forEach(v1 => {
 			var w1 = v1.weight;
 			v1 = v1.vector;
 
 			var prod = innerProductOfVectors(v1, v2);
-			if (prod > value) {
-				value = prod;
-				weight = w1;
+			if (prod > range) {
+				let w = (prod - range) / (1 - range) * w1;
+				simi += prod * w;
+				total += w;
 			}
 		});
-		weight *= w2;
-		value *= weight;
-		similar += value;
+
+		if (total > 0) similar += simi * w2 / total;
 	});
-	return similar / totalW1 / totalW2;
+
+	return similar / totalW2;
+};
+const calculateNearestScore = (g1, g2) => {
+	var prods = [];
+	g2.forEach((v2, i) => {
+		var w2 = v2.weight;
+		v2 = v2.vector;
+
+		g1.forEach((v1, j) => {
+			var w1 = v1.weight;
+			v1 = v1.vector;
+
+			var prod = innerProductOfVectors(v1, v2);
+			prods.push([prod, w1 * w2, prod * w1 * w2, i, j]);
+		});
+	});
+	prods.sort((a, b) => b[0] - a[0]);
+	var selects = [], len = Math.min(g1.length, g2.length);
+	for (let i = 0; i < len; i ++) {
+		let item = prods[0];
+		selects.push(item);
+		prods = prods.filter(m => {
+			if (m[3] === item[3]) return false;
+			if (m[4] === item[4]) return false;
+			return true;
+		});
+	}
+	var similar = 0;
+	selects.forEach(item => similar += item[2]);
+
+	return similar;
 };
 const initInjectScript = async () => {
 	const USID = "CypriteInjection";

@@ -459,6 +459,7 @@ const waitForMountUtil = (util) => new Promise(res => {
 	sendMessage("MountUtil", util, 'BackEnd');
 });
 
+const ArticleVectorCompressionRate = 0.4;
 var pageSummary = null, conversationVector = null;
 var showChatter = false, chatTrigger = null;
 var AIContainer = null, AIPanel = null, AIAsker = null, AIHistory = null, AIRelated = null;
@@ -599,7 +600,7 @@ const showPageSummary = async (summary) => {
 
 	resizeHistoryArea(true);
 };
-const onChatterTrigger = () => {
+const onChatterTrigger = async () => {
 	if (!chatTrigger) return;
 
 	var messages = I18NMessages[myLang] || I18NMessages.en;
@@ -607,10 +608,11 @@ const onChatterTrigger = () => {
 	if (showChatter) {
 		chatTrigger.innerText = messages.hideChatPanel;
 		AIPanel.setAttribute('chat', 'true');
-		wait(100).then(() => {
-			AIAsker.focus();
-			resizeHistoryArea(true);
-		});
+		await wait(100);
+		AIAsker.focus();
+		resizeHistoryArea(true);
+		await wait(60);
+		AIHistory.scrollTop = AIHistory.scrollHeight - AIHistory.clientHeight;
 	}
 	else {
 		chatTrigger.innerText = messages.showChatPanel;
@@ -636,10 +638,12 @@ const onSendToCyprite = async () => {
 		if (!conversationVector) {
 			if (!!pageVector) {
 				conversationVector = [];
+				conversationVector.push(normalVector(pageVector));
 				pageVector.forEach(item => {
+					// ArticleVectorCompressionRate
 					conversationVector.push({
-						weight: Math.floor(item.weight ** 0.3),
-						vector: item.vector
+						weight: Math.floor(item.weight ** ArticleVectorCompressionRate) + 1,
+						vector: [...item.vector],
 					});
 				});
 			}
@@ -647,6 +651,7 @@ const onSendToCyprite = async () => {
 		if (!!conversationVector) {
 			conversationVector.push(...vector);
 			related = await askSWandWait('FindSimilarArticle', {url: location.href, vector: conversationVector});
+			console.log(conversationVector);
 			related = filterSimilarArticle(related, 5);
 		}
 	}
@@ -837,6 +842,31 @@ const checkPageNeedAI = async (page, path, host) => {
 const updatePageNeedAIInfo = async (page, path, host, need) => {
 	page = page.replace(/^[\w\-\d_]*?:\/\//i, '');
 	await askSWandWait('UpdatePageNeedAIInfo', {page, path, host, need});
+};
+const normalVector = vectors => {
+	var weight = 0, vector = [], len = 0;
+	vectors.forEach(item => {
+		len = Math.max(item.vector.length, len);
+	});
+	for (let i = 0; i < len; i ++) vector.push(0);
+
+	vectors.forEach(item => {
+		weight += item.weight;
+		item.vector.forEach((v, i) => {
+			vector[i] += v * item.weight;
+		});
+	});
+	vector = vector.map(v => v / weight);
+
+	len = 0;
+	vector.forEach(v => len += v ** 2);
+	len = len ** 0.5;
+	vector = vector.map(v => v / len);
+
+	// ArticleVectorCompressionRate
+	weight = Math.floor(weight ** ArticleVectorCompressionRate) + 1;
+
+	return { weight, vector };
 };
 
 
