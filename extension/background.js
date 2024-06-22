@@ -760,7 +760,6 @@ EventHandler.LoadPageSummary = async (data, source, sid) => {
 };
 EventHandler.FindSimilarArticle = async (data) => {
 	var vector = data.vector, tabURL = parseURL(data.url || '');
-	var aveVector = normalizeVector(vector);
 
 	var all = await DBs.pageInfo.all('pageInfo');
 	var list = [];
@@ -770,33 +769,12 @@ EventHandler.FindSimilarArticle = async (data) => {
 		let info = all[url];
 		if (!info || !info.embedding) continue;
 
-		let similar = 0, weight = 0;
-		vector.forEach(embedA => {
-			var weightA = embedA.weight;
-			var vectorA = embedA.vector;
-			var simi = 0, wgt = 0;
-			info.embedding.forEach(embedB => {
-				var weightB = embedB.weight;
-				var vectorB = embedB.vector;
-				var d = innerProductOfVectors(vectorA, vectorB);
-				if (d > simi) {
-					simi = d;
-					wgt = weightB;
-				}
-			});
-			wgt *= weightA;
-			similar += simi * wgt;
-			weight += wgt;
-		});
-		similar /= weight;
-
-		let aveV = normalizeVector(info.embedding);
-		let aveSimilar = innerProductOfVectors(aveVector, aveV);
-
+		var similar = productOfVectorGroups(vector, info.embedding);
+		var antiSimilar = productOfVectorGroups(info.embedding, vector);
 		log.push({
 			title: info.title,
 			similar,
-			aveSimilar
+			antiSimilar
 		});
 		if (similar <= 0) continue;
 		info.similar = similar;
@@ -973,30 +951,6 @@ const updatePageNeedAIInfo = async (data, info) => {
 		DBs.pageInfo.set('notifyChecker', data.host, info.host),
 	]);
 };
-const normalizeVector = embedding => {
-	var vector = [], size = 0;
-	embedding.forEach(v => {
-		size = Math.max(size, v.vector.length);
-	});
-	for (let i = 0; i < size; i ++) {
-		vector[i] = 0;
-	}
-	embedding.forEach(v => {
-		v.vector.forEach((n, i) => {
-			vector[i] += n * v.weight;
-		});
-	});
-	var norm = 0;
-	for (let i = 0; i < size; i ++) {
-		norm += vector[i] ** 2;
-	}
-	norm = norm ** 0.5;
-	if (norm === 0) return vector;
-	for (let i = 0; i < size; i ++) {
-		vector[i] /= norm;
-	}
-	return vector;
-};
 const manhattanOfVectors = (v1, v2) => {
 	var len = Math.min(v1.length, v2.length);
 	var total = 0;
@@ -1012,6 +966,33 @@ const innerProductOfVectors = (v1, v2) => {
 		total += v1[i] * v2[i];
 	}
 	return total;
+};
+const productOfVectorGroups = (g1, g2) => {
+	var totalW1 = 0, totalW2 = 0;
+	g1.forEach(item => totalW1 += item.weight);
+	g2.forEach(item => totalW2 += item.weight);
+
+	var similar = 0;
+	g2.forEach(v2 => {
+		var w2 = v2.weight;
+		v2 = v2.vector;
+
+		var value = 0, weight = 0;
+		g1.forEach(v1=> {
+			var w1 = v1.weight;
+			v1 = v1.vector;
+
+			var prod = innerProductOfVectors(v1, v2);
+			if (prod > value) {
+				value = prod;
+				weight = w1;
+			}
+		});
+		weight *= w2;
+		value *= weight;
+		similar += value;
+	});
+	return similar / totalW1 / totalW2;
 };
 const initInjectScript = async () => {
 	const USID = "CypriteInjection";

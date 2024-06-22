@@ -473,7 +473,7 @@ const summarizePage = async () => {
 	article = 'TITLE: ' + pageInfo.title + '\n\n' + article;
 
 	if (hash === pageHash && !!pageHash && !!pageSummary) {
-		afterPageSummary(pageSummary);
+		showPageSummary(pageSummary);
 		return;
 	}
 
@@ -497,18 +497,6 @@ const summarizePage = async () => {
 	else {
 		Notification.show(messages.cypriteName, messages.summarizeFailed, 'rightTop', 'fail', 5 * 1000);
 	}
-};
-const afterPageSummary = (summary) => {
-	var messages = I18NMessages[myLang] || I18NMessages.en;
-	var notify = Notification.show(messages.cypriteName, messages.summarizeSuccess, 'rightTop', 'success', 10 * 1000);
-	notify.addEventListener('click', evt => {
-		if (evt.target.tagName !== 'BUTTON') return;
-		var name = evt.target.name;
-		if (name === 'viewnow') {
-			showPageSummary(summary);
-		}
-		notify._hide();
-	});
 };
 const showPageSummary = async (summary) => {
 	var [relatives, conversation] = await Promise.all([
@@ -542,6 +530,7 @@ const showPageSummary = async (summary) => {
 	await waitForMountUtil('panel');
 
 	var background = newEle('div', 'cyprite', 'panel_mask');
+	background.addEventListener('click', onCloseMeByMask);
 	var frame = newEle('div', 'cyprite', "panel_frame");
 	var panel = newEle('div', 'cyprite', "panel_container");
 	panel.setAttribute('chat', 'false');
@@ -731,6 +720,10 @@ const onCopyContent = async target => {
 	var messages = I18NMessages[myLang] || I18NMessages.en;
 	Notification.show(messages.cypriteName, messages.contentCopied, 'middleTop', 'success', 2 * 1000);
 };
+const onCloseMeByMask = ({target}) => {
+	if (!target.classList.contains('panel_mask')) return;
+	onCloseMe();
+};
 const onCloseMe = () => {
 	AIContainer.style.display = 'none';
 };
@@ -807,9 +800,6 @@ const findSimilarArticle = async (vector) => {
 	return result;
 };
 const filterSimilarArticle = (articles, count) => {
-	// Filter
-	const Limit = 1 / (3 ** 0.5);
-	articles = articles.filter(item => item.similar >= Limit);
 	if (articles.length > count) articles.splice(count);
 
 	var log = [];
