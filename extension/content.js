@@ -492,19 +492,7 @@ const summarizePage = async () => {
 		pageHash = hash;
 		pageVector = embedding;
 		sendMessage("SavePageSummary", {title: pageInfo.title, summary, hash, embedding}, 'BackEnd');
-		notify = Notification.show(messages.cypriteName, messages.summarizeSuccess, 'rightTop', 'success', 10 * 1000);
-		let onClick = evt => {
-			if (evt.target.tagName !== 'BUTTON') return;
-			var name = evt.target.name;
-			if (name === 'viewnow') {
-				showPageSummary(summary);
-			}
-			notify._hide();
-		};
-		notify.onclose = () => {
-			notify.removeEventListener('click', onClick);
-		};
-		notify.addEventListener('click', onClick);
+		showPageSummary(summary);
 	}
 	else {
 		Notification.show(messages.cypriteName, messages.summarizeFailed, 'rightTop', 'fail', 5 * 1000);
