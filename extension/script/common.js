@@ -60,16 +60,16 @@ globalThis.calculateHash = async (content, algorithm='SHA-256') => {
 
 globalThis.logger = {};
 logger.log = (tag, ...logs) => {
-	console.log(`%c[${tag}]`, "color: blue; font-weight: bolder; padding: 2px 5px;", ...logs);
+	console.log(`%c[${tag}]`, "color: blue; font-weight: bolder; padding: 2px 5px; border-radius: 5px; background-color: rgb(250, 250, 250);", ...logs);
 };
 logger.info = (tag, ...logs) => {
-	console.info(`%c[${tag}]`, "color: green; font-weight: bolder; padding: 2px 5px;", ...logs);
+	console.info(`%c[${tag}]`, "color: green; font-weight: bolder; padding: 2px 5px; border-radius: 5px; background-color: rgb(250, 250, 250);", ...logs);
 };
 logger.warn = (tag, ...logs) => {
-	console.log(`%c[${tag}]`, "color: magenta; font-weight: bolder; padding: 2px 5px;", ...logs);
+	console.log(`%c[${tag}]`, "color: magenta; font-weight: bolder; padding: 2px 5px; border-radius: 5px; background-color: rgb(250, 250, 250);", ...logs);
 };
 logger.error = (tag, ...logs) => {
-	console.log(`%c[${tag}]`, "color: red; font-weight: bolder; padding: 2px 5px;", ...logs);
+	console.log(`%c[${tag}]`, "color: red; font-weight: bolder; padding: 2px 5px; border-radius: 5px; background-color: rgb(250, 250, 250);", ...logs);
 };
 logger.em = (tag, ...logs) => {
 	console.log(`%c[${tag}]`, "background-color: blue; color: white; font-weight: bolder; padding: 2px 5px; border-radius: 5px; border: 1px solid white;", ...logs);

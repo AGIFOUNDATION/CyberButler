@@ -473,7 +473,7 @@ const summarizePage = async () => {
 	}
 	article = 'TITLE: ' + pageInfo.title + '\n\n' + article;
 
-	if (hash === pageHash && !!pageHash && !!pageSummary) {
+	if (!!pageSummary && !!pageHash && hash === pageHash) {
 		showPageSummary(pageSummary);
 		return;
 	}
@@ -508,23 +508,10 @@ const showPageSummary = async (summary) => {
 
 	showChatter = false;
 	if (!!AIContainer) {
-		AIRelated.innerHTML = '';
-		if (!relatives || !relatives.length) {
-			AIRelated.innerHTML = '<li>' + messages.noRelatedArticle + '</li>';
-		}
-		else {
-			relatives.forEach(item => {
-				var frame = newEle('li', 'cyprite', 'related_articles_item');
-				var link = newEle('a', 'cyprite', 'related_articles_link');
-				link.innerText = item.title;
-				link.href = item.url;
-				link.target = '_blank';
-				frame.appendChild(link);
-				AIRelated.appendChild(frame);
-			});
-		}
-
+		addSummaryAndRelated(messages, AIContainer.querySelector('.content_container'), summary, relatives);
+		restoreHistory(conversation);
 		AIContainer.style.display = 'block';
+		resizeHistoryArea(true);
 		return;
 	}
 
@@ -535,30 +522,15 @@ const showPageSummary = async (summary) => {
 	var frame = newEle('div', 'cyprite', "panel_frame");
 	var panel = newEle('div', 'cyprite', "panel_container");
 	panel.setAttribute('chat', 'false');
+	var avatar = newEle('div', 'cyprite', 'panel_logo');
+	avatar.innerHTML = '<img src="' + chrome.runtime.getURL('/images/cyprite.png') + '">';
 	chatTrigger = newEle('div', 'cyprite', 'panel_chat_switch');
 	chatTrigger.addEventListener('click', onChatterTrigger);
 	chatTrigger.innerText = messages.showChatPanel;
 	var leftPanel = newEle('div', 'cyprite', "panel_left");
 	var rightPanel = newEle('div', 'cyprite', "panel_right");
 	var container = newEle('div', 'cyprite', 'content_container', 'scrollable');
-	container.innerHTML = marked.parse(summary);
-	var related = newEle('h2', 'cyprite', 'related_articles_area');
-	related.innerText = messages.relatedArticles;
-	AIRelated = newEle('ul', 'cyprite', 'related_articles_list');
-	if (!relatives || !relatives.length) {
-		AIRelated.innerHTML = '<li>' + messages.noRelatedArticle + '</li>';
-	}
-	else {
-		relatives.forEach(item => {
-			var frame = newEle('li', 'cyprite', 'related_articles_item');
-			var link = newEle('a', 'cyprite', 'related_articles_link');
-			link.innerText = item.title;
-			link.href = item.url;
-			link.target = '_blank';
-			frame.appendChild(link);
-			AIRelated.appendChild(frame);
-		});
-	}
+	addSummaryAndRelated(messages, container, summary, relatives);
 
 	var inputContainer = newEle('div', 'cyprite', 'input_container');
 	var inputArea = newEle('div', 'cyprite', 'input_area', 'cyprite_sender', 'scrollable');
@@ -581,8 +553,7 @@ const showPageSummary = async (summary) => {
 	rightPanel.appendChild(inputContainer);
 	rightPanel.appendChild(sender);
 	leftPanel.appendChild(container);
-	container.appendChild(related);
-	container.appendChild(AIRelated);
+	panel.appendChild(avatar);
 	panel.appendChild(chatTrigger);
 	panel.appendChild(leftPanel);
 	panel.appendChild(rightPanel);
@@ -599,6 +570,29 @@ const showPageSummary = async (summary) => {
 	restoreHistory(conversation);
 
 	resizeHistoryArea(true);
+};
+const addSummaryAndRelated = (messages, container, summary, relatedList) => {
+	container.innerHTML = marked.parse(summary);
+
+	var related = newEle('h2', 'cyprite', 'related_articles_area');
+	related.innerText = messages.relatedArticles;
+	var list = newEle('ul', 'cyprite', 'related_articles_list');
+	if (!relatedList || !relatedList.length) {
+		list.innerHTML = '<li>' + messages.noRelatedArticle + '</li>';
+	}
+	else {
+		relatedList.forEach(item => {
+			var frame = newEle('li', 'cyprite', 'related_articles_item');
+			var link = newEle('a', 'cyprite', 'related_articles_link');
+			link.innerText = item.title;
+			link.href = item.url;
+			link.target = '_blank';
+			frame.appendChild(link);
+			list.appendChild(frame);
+		});
+	}
+	container.appendChild(related);
+	container.appendChild(list);
 };
 const onChatterTrigger = async () => {
 	if (!chatTrigger) return;
@@ -666,17 +660,6 @@ const onSendToCyprite = async () => {
 	AIAsker.setAttribute('contentEditable', 'true');
 	await wait();
 	AIAsker.focus();
-};
-const restoreHistory = conversation => {
-	if (!conversation) return;
-	conversation.forEach(item => {
-		if (item[0] === 'human') {
-			addChatItem(item[1], 'human');
-		}
-		else if (item[0] === 'ai') {
-			addChatItem(item[1], 'cyprite');
-		}
-	});
 };
 const onContentPaste = evt => {
 	evt.preventDefault();
@@ -780,6 +763,18 @@ const addChatItem = (content, type) => {
 	AIHistory.__inner.appendChild(item);
 	wait(60).then(() => {
 		AIHistory.scrollTop = AIHistory.scrollHeight - AIHistory.clientHeight;
+	});
+};
+const restoreHistory = conversation => {
+	AIHistory.__inner.innerHTML = '';
+	if (!conversation) return;
+	conversation.forEach(item => {
+		if (item[0] === 'human') {
+			addChatItem(item[1], 'human');
+		}
+		else if (item[0] === 'ai') {
+			addChatItem(item[1], 'cyprite');
+		}
 	});
 };
 
@@ -932,6 +927,14 @@ EventHandler.requestCypriteNotify = async (data) => {
 
 	// Mount Notification
 	await waitForMountUtil('notification');
+
+	if (!!forceShow && !!pageSummary && !!pageHash && !!pageInfo) {
+		let info = await getPageInfo();
+		if (info.hash === pageHash) {
+			showPageSummary(pageSummary);
+			return;
+		}
+	}
 
 	var messages = I18NMessages[myLang] || I18NMessages.en;
 	if (!!CypriteNotify.RequestOperation) return;

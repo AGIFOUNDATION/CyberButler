@@ -75,14 +75,16 @@ const configureCyberButler = async () => {
 	}
 };
 const checkAvailability = async () => {
+	logger.log('CHECK', '>>>>', myInfo.useLocalKV, myInfo.apiKey);
 	var available = true;
 	if (!!myInfo.useLocalKV) {
 		available = !!myInfo.apiKey;
 	}
 	else {
 		wsHost = await getWSConfig();
-		available = !!wsHost
+		available = !!wsHost;
 	}
+	logger.log('CHECK', 'xxxx', available);
 	if (!available) {
 		configureCyberButler();
 		return false;
@@ -393,17 +395,22 @@ chrome.runtime.onConnect.addListener(port => {
 	});
 });
 chrome.action.onClicked.addListener(async () => {
+	logger.log('TAB', 'stage 1');
 	var available = await checkAvailability();
 	if (!available) return;
 
+	logger.log('TAB', 'stage 2');
 	var [tab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
+	logger.log('TAB', tab?.url);
 	// Call Popup Cyprite
-	if (isPageForbidden(tab.url)) {
+	if (isPageForbidden(tab?.url)) {
+		logger.log('TAB', 'stage 3');
 		console.log('Call Popup Cyprite');
 		configureCyberButler();
 	}
 	// Call Page Cyprite
 	else {
+		logger.log('TAB', 'stage 4');
 		let info = await getTabInfo(tab.id);
 		info.requested = true;
 		dispatchEvent({

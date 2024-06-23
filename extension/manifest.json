@@ -42,7 +42,7 @@
 	],
 	"web_accessible_resources": [
 		{
-			"resources": ["/images/xmark.svg", "/images/circle-xmark.svg", "/images/copy.svg"],
+			"resources": ["/images/xmark.svg", "/images/circle-xmark.svg", "/images/copy.svg", "/images/cyprite.png"],
 			"matches": ["<all_urls>"]
 		}
 	],
