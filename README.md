@@ -33,9 +33,9 @@ Additionally, in the future, we will integrate with more AI platforms.
 
 This plugin will determine the type of page you are currently browsing and automatically remind you of the operations that can be performed.
 
-You can also click on the plugin's Action button, or use the shortcut key (Ctrl + Shift + A) to manually invoke it.
+You can also click on the plugin's Action button, or use the shortcut key (Ctrl + Y) to manually invoke it.
 
-For article-style web pages, this plugin can summarize the content for you and interact with you based on the web page content.
+For article-style web pages, this plugin can summarize the content for you and interact with you based on the web page content. Users can ask questions about the current page content to Cyprite, and Cyprite will try to answer the user's questions, with the conversation history automatically saved for 24 hours.
 
 Additionally, the plugin will remember all the web pages you have interacted with and load the historical pages when communicating with you, providing comprehensive interaction based on all these pages—of course, you can also choose to manually add or remove these pages to limit the interaction to the areas you are more interested in.
 
