@@ -48,4 +48,4 @@ When using a local knowledge base, the plugin will load local information throug
 3.	Automatically analyze user preferences and automatically obtain information that users might be interested in.
 4.	Provide comprehensive responses based on the user's recent browsing history across different pages.
 5.	Calculate page embedding vectors for subsequent multi-page association.
-6.	Automatically generate text;
+6.	Automatically generate text.
