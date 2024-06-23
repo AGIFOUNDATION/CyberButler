@@ -250,6 +250,13 @@
 	font-weight: bolder;
 	color: var(--emphasize-color);
 }
+.panel_container .content_container > h1:first-child,
+.panel_container .content_container > h2:first-child,
+.panel_container .content_container > h3:first-child,
+.panel_container .content_container > h4:first-child,
+.panel_container .content_container > h5:first-child {
+	margin-top: 10px;
+}
 .panel_container h1 {
 	margin-top: 2.5em;
 	margin-bottom: 2em;

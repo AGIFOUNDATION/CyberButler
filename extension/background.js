@@ -75,7 +75,6 @@ const configureCyberButler = async () => {
 	}
 };
 const checkAvailability = async () => {
-	logger.log('CHECK', '>>>>', myInfo.useLocalKV, myInfo.apiKey);
 	var available = true;
 	if (!!myInfo.useLocalKV) {
 		available = !!myInfo.apiKey;
@@ -84,7 +83,6 @@ const checkAvailability = async () => {
 		wsHost = await getWSConfig();
 		available = !!wsHost;
 	}
-	logger.log('CHECK', 'xxxx', available);
 	if (!available) {
 		configureCyberButler();
 		return false;
@@ -355,7 +353,7 @@ chrome.tabs.onActivated.addListener(tab => {
 chrome.tabs.onRemoved.addListener(tabId => {
 	if (LastActiveTab === tabId) LastActiveTab = null;
 	onPageActivityChanged(tabId, "close");
-	removeAIChatHistory(tid);
+	removeAIChatHistory(tabId);
 });
 chrome.idle.onStateChanged.addListener((state) => {
 	logger.info('Ext', 'Idle State Changed: ' + state);
@@ -395,22 +393,17 @@ chrome.runtime.onConnect.addListener(port => {
 	});
 });
 chrome.action.onClicked.addListener(async () => {
-	logger.log('TAB', 'stage 1');
 	var available = await checkAvailability();
 	if (!available) return;
 
-	logger.log('TAB', 'stage 2');
 	var [tab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
-	logger.log('TAB', tab?.url);
 	// Call Popup Cyprite
 	if (isPageForbidden(tab?.url)) {
-		logger.log('TAB', 'stage 3');
-		console.log('Call Popup Cyprite');
+		console.log('Open Setting Page');
 		configureCyberButler();
 	}
 	// Call Page Cyprite
 	else {
-		logger.log('TAB', 'stage 4');
 		let info = await getTabInfo(tab.id);
 		info.requested = true;
 		dispatchEvent({
@@ -803,26 +796,38 @@ const AIHistory = {};
 const CacheLimit = 1000 * 60 * 60 * 24;
 
 const removeAIChatHistory = async (tid) => {
-	var list = Tab2Article[tid], tasks = [];
-	if (!!list) {
-		delete Tab2Article[tid];
-		for (let url of list) {
-			delete AIHistory[url];
-			tasks.push(DBs.pageInfo.del('pageConversation', url));
+	var list, tasks = [];
+
+	if (!!tid) {
+		list = Tab2Article[tid];
+		if (!!list) {
+			delete Tab2Article[tid];
+			for (let url of list) {
+				delete AIHistory[url];
+				tasks.push(DBs.pageInfo.del('pageConversation', url));
+			}
+			if (!!tasks.length) {
+				await Promise.all(tasks);
+				logger.log('Chat', 'Remove Inside Tab History:', list);
+			}
 		}
-		await Promise.all(tasks);
 	}
 
 	tasks = [];
 	const current = Date.now();
 	list = await DBs.pageInfo.all('pageConversation');
-	for (let url of all) {
-		let item = all[url];
+	var removes = [];
+	for (let url in list) {
+		let item = list[url];
 		if (current - item.timestamp >= CacheLimit) {
+			removes.push(url);
 			tasks.push(DBs.pageInfo.del('pageConversation', url));
 		}
 	}
-	await Promise.all(tasks);
+	if (!!tasks.length) {
+		await Promise.all(tasks);
+		logger.log('Chat', 'Remove Expired History:', removes);
+	}
 };
 
 AIHandler.sayHello = async () => {
@@ -911,12 +916,14 @@ AIHandler.askArticle = async (data, source, sid) => {
 			conversation: list,
 			timestamp: Date.now()
 		});
-		return result;
 	}
 	catch (err) {
 		console.error(err);
-		return '';
+		result = '';
 	}
+	
+	removeAIChatHistory();
+	return result;
 };
 
 /* Utils */
