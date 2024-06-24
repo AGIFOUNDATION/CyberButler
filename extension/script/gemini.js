@@ -1,7 +1,7 @@
 globalThis.AI = globalThis.AI || {};
 globalThis.AI.Gemini = {};
 
-const DefaultChatModel = 'gemini-1.5-flash';
+const DefaultChatModel = AI2Model.gemini[0];
 const DefaultEmbeddingModel = 'text-embedding-004';
 
 const assembleConversation = conversation => {
@@ -46,7 +46,7 @@ const assembleConversation = conversation => {
 };
 
 AI.Gemini.list = async () => {
-	var url = 'https://generativelanguage.googleapis.com/v1beta/models?key=' + myInfo.apiKey;
+	var url = 'https://generativelanguage.googleapis.com/v1beta/models?key=' + myInfo.apiKey.gemini;
 	var request = {
 		method: "GET",
 		headers: {
@@ -96,7 +96,7 @@ AI.Gemini.chat = async (conversation, model=DefaultChatModel, options={}) => {
 		}
 	];
 
-	var url = "https://generativelanguage.googleapis.com/v1beta/models/" + model + ':generateContent?key=' + myInfo.apiKey;
+	var url = "https://generativelanguage.googleapis.com/v1beta/models/" + model + ':generateContent?key=' + myInfo.apiKey.gemini;
 	var request = {
 		method: "POST",
 		headers: {
@@ -159,7 +159,7 @@ AI.Gemini.embed = async (contents, model=DefaultEmbeddingModel, options={}) => {
 		},
 		body: JSON.stringify(requests),
 	};
-	var url = "https://generativelanguage.googleapis.com/v1beta/" + model + ':batchEmbedContents?key=' + myInfo.apiKey;
+	var url = "https://generativelanguage.googleapis.com/v1beta/" + model + ':batchEmbedContents?key=' + myInfo.apiKey.gemini;
 
 	var response, time = Date.now();
 	try {

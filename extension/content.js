@@ -519,6 +519,7 @@ const summarizePage = async () => {
 	}
 	else {
 		Notification.show(messages.cypriteName, messages.summarizeFailed, 'rightTop', 'fail', 5 * 1000);
+		showPageSummary('');
 	}
 };
 

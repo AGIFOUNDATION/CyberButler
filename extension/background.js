@@ -78,17 +78,16 @@ const configureCyberButler = async () => {
 const checkAvailability = async () => {
 	var available = true;
 	if (!!myInfo.useLocalKV) {
-		available = !!myInfo.apiKey;
+		available = myInfo.edgeAvailable;
 	}
 	else {
 		let wsHost = await getWSConfig();
 		available = !!wsHost;
 	}
-	if (!available) {
-		configureCyberButler();
-		return false;
-	}
-	return true;
+
+	if (!available) configureCyberButler();
+
+	return available;
 };
 const showSystemNotification = (message) => {
 	logger.info('MSG', message);
@@ -122,8 +121,9 @@ chrome.runtime.onInstalled.addListener(async () => {
 	}
 });
 chrome.storage.local.onChanged.addListener(evt => {
-	if (!evt.AImodel.newValue) return;
-	myInfo.model = evt.AImodel.newValue;
+	if (!!evt.AImodel?.newValue) {
+		myInfo.model = evt.AImodel.newValue;
+	}
 });
 
 /* Page Manager */
@@ -426,12 +426,25 @@ const DefaultSendMessage = (event, data, sender, sid) => {};
 var webSocket;
 var sendMessage = DefaultSendMessage;
 
+const updateAIModelList = () => {
+	var available = false;
+	ModelList.splice(0);
+
+	for (let ai in myInfo.apiKey) {
+		let key = myInfo.apiKey[ai];
+		if (!key) continue;
+		available = true;
+		ModelList.push(...AI2Model[ai]);
+	}
+	myInfo.edgeAvailable = available;
+};
 const getWSConfig = async () => {
 	var [localInfo, remoteInfo] = await Promise.all([
 		chrome.storage.local.get(['wsHost', 'apiKey', 'AImodel']),
 		chrome.storage.sync.get(['name', 'info', 'lang']),
 	]);
 
+	var tasks = [];
 	myInfo.name = remoteInfo.name || myInfo.name;
 	myInfo.info = remoteInfo.info || myInfo.info;
 	myInfo.lang = remoteInfo.lang;
@@ -443,12 +456,22 @@ const getWSConfig = async () => {
 		if (!i18nList.includes(myInfo.lang)) myInfo.lang = DefaultLang;
 	}
 	if (myInfo.lang !== remoteInfo) {
-		chrome.storage.sync.set({lang: myInfo.lang});
+		tasks.push(chrome.storage.sync.set({lang: myInfo.lang}));
 	}
 	myInfo.model = localInfo.AImodel || myInfo.model || ModelList[0];
 
-	myInfo.apiKey = localInfo.apiKey || '';
+	myInfo.apiKey = localInfo.apiKey || {};
+	if (isString(myInfo.apiKey)) {
+		let apiKey = {};
+		if (!!myInfo.apiKey) apiKey.gemini = myInfo.apiKey;
+		myInfo.apiKey = apiKey;
+		tasks.push(chrome.storage.local.set({apiKey: myInfo.apiKey}));
+	}
 	myInfo.useLocalKV = !localInfo.wsHost;
+	updateAIModelList();
+
+	if (tasks.length > 0) await Promise.all(tasks);
+
 	return localInfo.wsHost;
 };
 const initWS = async () => {
@@ -575,11 +598,12 @@ EventHandler.SetConfig = async (data, source, sid) => {
 	if (source !== 'ConfigPage') return;
 	logger.log('WS', 'Set Host: ' + data.wsHost);
 
-	myInfo.name = data.myName || myInfo.name;
-	myInfo.info = data.myInfo || myInfo.info;
-	myInfo.lang = data.myLang || myInfo.lang;
-	myInfo.apiKey = data.apiKey || myInfo.apiKey;
+	myInfo.name = data.myName || '';
+	myInfo.info = data.myInfo || '';
+	myInfo.lang = data.myLang || DefaultLang;
+	myInfo.apiKey = data.apiKey;
 	myInfo.useLocalKV = !data.wsHost;
+	updateAIModelList();
 
 	if (myInfo.useLocalKV) {
 		sendMessage = DefaultSendMessage;

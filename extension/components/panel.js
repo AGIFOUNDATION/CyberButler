@@ -21,12 +21,6 @@ const generateAIPanel = async (messages) => {
 	avatar.innerHTML = '<img src="' + chrome.runtime.getURL('/images/cyprite.png') + '">';
 	panel.appendChild(avatar);
 	var modelList = newEle('div', 'cyprite', "panel_model_chooser");
-	ModelList.forEach(model => {
-		var item = newEle('div', 'cyprite', 'panel_model_item');
-		item.innerText = model;
-		item.setAttribute('name', model);
-		modelList.appendChild(item);
-	});
 	modelList.addEventListener('click', onChooseModel);
 	avatar.appendChild(modelList);
 
@@ -103,6 +97,28 @@ const generateTabPanel = (messages) => {
 	tabPanel.appendChild(btnClearHistory);
 
 	return tabPanel;
+};
+const updateModelList = async () => {
+	var apiKey = await chrome.storage.local.get('apiKey');
+	if (!apiKey) return;
+	apiKey = apiKey.apiKey;
+	if (!apiKey) return;
+
+	ModelList.splice(0);
+
+	for (let ai in apiKey) {
+		let key = apiKey[ai];
+		if (!key) continue;
+		available = true;
+		ModelList.push(...AI2Model[ai]);
+	}
+
+	ModelList.forEach(model => {
+		var item = newEle('div', 'cyprite', 'panel_model_item');
+		item.innerText = model;
+		item.setAttribute('name', model);
+		AIModelList.appendChild(item);
+	});
 };
 const addSummaryAndRelated = (messages, container, summary, relatedList) => {
 	container.innerHTML = marked.parse(summary);
@@ -189,6 +205,7 @@ const showPageSummary = async (summary) => {
 
 	if (!AIContainer) await generateAIPanel(messages);
 
+	updateModelList();
 	addSummaryAndRelated(messages, AIContainer.querySelector('.content_container'), summary, relatives);
 	relativeArticles = relatives;
 	showSummaryPanel();

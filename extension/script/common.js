@@ -1,8 +1,24 @@
 globalThis.DefaultLang = 'en';
-globalThis.ModelList = [
-	"gemini-1.5-flash",
-	"gemini-1.5-pro"
-];
+
+globalThis.ModelList = [];
+globalThis.Model2AI = {
+	"gemini-1.5-flash": "Gemini",
+	"gemini-1.5-pro": "Gemini",
+	"claude-3-5-sonnet-20240620": "Claude",
+	"claude-3-opus-20240229": "Claude",
+	"claude-3-haiku-20240307": "Claude",
+};
+globalThis.AI2Model = {
+	"gemini": [
+		"gemini-1.5-flash",
+		"gemini-1.5-pro",
+	],
+	"claude": [
+		"claude-3-5-sonnet-20240620",
+		"claude-3-opus-20240229",
+		"claude-3-haiku-20240307",
+	],
+};
 
 globalThis.wait = delay => new Promise(res => setTimeout(res, delay));
 globalThis.waitUntil = fun => new Promise((res, rej) => {

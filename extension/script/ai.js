@@ -1,9 +1,9 @@
 import "./gemini.js";
+import "./claude.js";
 
 const ResMap = new Map();
 const EmbeddingLimit = 2024;
 
-var chatToAIModel = AI.Gemini.chat; // For the integration of various different AI models.
 var embedAIModel = AI.Gemini.embed;
 
 globalThis.callAIandWait = (action, data) => new Promise((res, rej) => {
@@ -12,7 +12,7 @@ globalThis.callAIandWait = (action, data) => new Promise((res, rej) => {
 	myInfo.useLocalKV = true; // Test
 	// Call AI from Extension
 	if (myInfo.useLocalKV) {
-		if (!myInfo.apiKey) {
+		if (!myInfo.edgeAvailable) {
 			chrome.notifications.create({
 				title: "CyberButler: Cyprite",
 				message: Hints[myInfo.lang].noAPIKey,
@@ -40,7 +40,7 @@ globalThis.callAIandWait = (action, data) => new Promise((res, rej) => {
 globalThis.callAI = (action, data) => {
 	// Call AI from Extension
 	if (myInfo.useLocalKV) {
-		if (!myInfo.apiKey) {
+		if (!myInfo.edgeAvailable) {
 			chrome.notifications.create({
 				title: "CyberButler: Cyprite",
 				message: Hints[myInfo.lang].noAPIKey,
@@ -195,26 +195,44 @@ EdgedAI.sayHello = async (tid) => {
 		info: myInfo.info,
 		time: timestmp2str(Date.now(), "YY年MM月DD日 :WDE: hh:mm"),
 	});
+
+	var aiName = Model2AI[myInfo.model];
+	var chatToAI = AI[aiName];
+	if (!!chatToAI) chatToAI = chatToAI.chat;
+	if (!chatToAI) {
+		replyRequest(tid, reply, 'No AI for Model ' + myInfo.model);
+		return;
+	}
+
 	var reply, errMsg;
 	try {
-		reply = await chatToAIModel([['human', prompt]], myInfo.model);
+		reply = await chatToAI([['human', prompt]], myInfo.model);
 	}
 	catch (err) {
 		console.error(err);
-		errMsg = err.message || err.msg || err.data || (!!err.toString ? err.toString() : err || 'Gemini Error');
+		errMsg = err.message || err.msg || err.data || (!!err.toString ? err.toString() : err || aiName + ' Error');
 	}
 
 	replyRequest(tid, reply, errMsg);
 };
 EdgedAI.summarizeArticle = async (tid, article) => {
 	var prompt = PromptLib.assemble(PromptLib.summarizeArticle, { article, lang: LangName[myInfo.lang] });
+
+	var aiName = Model2AI[myInfo.model];
+	var chatToAI = AI[aiName];
+	if (!!chatToAI) chatToAI = chatToAI.chat;
+	if (!chatToAI) {
+		replyRequest(tid, reply, 'No AI for Model ' + myInfo.model);
+		return;
+	}
+
 	var reply, errMsg;
 	try {
-		reply = await chatToAIModel([['human', prompt]], myInfo.model);
+		reply = await chatToAI([['human', prompt]], myInfo.model);
 	}
 	catch (err) {
 		console.error(err);
-		errMsg = err.message || err.msg || err.data || (!!err.toString ? err.toString() : err || 'Gemini Error');
+		errMsg = err.message || err.msg || err.data || (!!err.toString ? err.toString() : err || aiName + ' Error');
 	}
 
 	replyRequest(tid, reply, errMsg);
@@ -250,13 +268,21 @@ EdgedAI.embeddingArticle = async (tid, data) => {
 	replyRequest(tid, reply, errMsg);
 };
 EdgedAI.askArticle = async (tid, conversation) => {
+	var aiName = Model2AI[myInfo.model];
+	var chatToAI = AI[aiName];
+	if (!!chatToAI) chatToAI = chatToAI.chat;
+	if (!chatToAI) {
+		replyRequest(tid, reply, 'No AI for Model ' + myInfo.model);
+		return;
+	}
+
 	var reply, errMsg;
 	try {
-		reply = await chatToAIModel(conversation, myInfo.model);
+		reply = await chatToAI(conversation, myInfo.model);
 	}
 	catch (err) {
 		console.error(err);
-		errMsg = err.message || err.msg || err.data || (!!err.toString ? err.toString() : err || 'Gemini Error');
+		errMsg = err.message || err.msg || err.data || (!!err.toString ? err.toString() : err || aiName + ' Error');
 	}
 
 	replyRequest(tid, reply, errMsg);

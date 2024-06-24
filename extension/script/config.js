@@ -19,7 +19,7 @@ var myName = '';
 var myInfo = '';
 var myLang = 'en';
 var wsHost = '';
-var apiKey = '';
+var apiKey = {};
 
 const sendMessage = (event, data, target="BackEnd", tid) => {
 	chrome.runtime.sendMessage({
@@ -36,7 +36,7 @@ window.onload = async () => {
 	var iptInfo = document.querySelector('textarea.myInfo');
 	var iptLang = document.querySelector('select.myLang');
 	var iptVault = document.querySelector('input.myVault');
-	var iptKey = document.querySelector('input.myKey');
+	var iptKeys = document.querySelectorAll('input.myKey');
 
 	// Read config
 	var [localInfo, remoteInfo] = await Promise.all([
@@ -47,20 +47,26 @@ window.onload = async () => {
 	myInfo = remoteInfo.info || myInfo;
 	myLang = remoteInfo.lang || myLang;
 	wsHost = localInfo.wsHost || '';
-	apiKey = localInfo.apiKey || '';
+	apiKey = localInfo.apiKey || {};
 
 	iptName.value = myName;
 	iptInfo.value = myInfo;
 	iptLang.value = myLang;
 	iptVault.value = wsHost;
-	iptKey.value = apiKey;
+	[...iptKeys].forEach(item => {
+		var name = item.getAttribute('name');
+		item.value = apiKey[name] || '';
+	});
 
 	submitter.addEventListener('click', async () => {
 		myName = iptName.value || myName;
 		myInfo = iptInfo.value || myInfo;
 		myLang = iptLang.value || myLang;
 		wsHost = iptVault.value || '';
-		apiKey = iptKey.value || '';
+		[...iptKeys].forEach(item => {
+			var name = item.getAttribute('name');
+			apiKey[name] = item.value;
+		});
 
 		// Save config
 		chrome.storage.sync.set({
