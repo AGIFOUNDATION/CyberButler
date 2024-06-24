@@ -538,11 +538,6 @@ const filterSimilarArticle = (articles, count) => {
 	console.table(log);
 	return articles;
 };
-const restoreConversation = async () => {
-	if (!pageInfo) return;
-	if (!pageInfo.title) return;
-	return await askSWandWait('GetConversation', location.href);
-};
 const checkPageNeedAI = async (page, path, host) => {
 	page = page.replace(/^[\w\-\d_]*?:\/\//i, '');
 	var data = await askSWandWait('CheckPageNeedAI', {page, path, host});

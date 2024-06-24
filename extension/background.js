@@ -788,6 +788,17 @@ EventHandler.GetConversation = async (url) => {
 	if (!conversation) return null;
 	return conversation.conversation;
 };
+EventHandler.ClearSummaryConversation = async (url) => {
+	url = parseURL(url);
+	delete AIHistory[url];
+	try {
+		await DBs.pageInfo.del('pageConversation', url);
+		return true;
+	}
+	catch {
+		return false;
+	}
+};
 
 /* AI */
 

@@ -88,9 +88,7 @@ const generateTabPanel = (messages) => {
 	btnClearHistory = newEle('div', 'cyprite', 'panel_button');
 	btnClearHistory.setAttribute('group', 'summary');
 	btnClearHistory.innerText = messages.btnClearHistory;
-	btnClearHistory.addEventListener('click', () => {
-		console.log('Clear Conversation');
-	});
+	btnClearHistory.addEventListener('click', onClearSummaryConversation);
 	tabPanel.appendChild(btnClearHistory);
 
 	return tabPanel;
@@ -219,6 +217,9 @@ const onCloseMeByMask = ({target}) => {
 	if (!target.classList.contains('panel_mask')) return;
 	onCloseMe();
 };
+const onCloseMe = () => {
+	AIContainer.style.display = 'none';
+};
 const onSummaryChatTrigger = async () => {
 	if (!chatTrigger) return;
 
@@ -256,6 +257,18 @@ const onContentPaste = evt => {
 	if (!content) return;
 
 	document.execCommand('insertText', false, content);
+};
+const onCopyContent = async target => {
+	while (!target.classList.contains('chat_item')) {
+		target = target.parentElement;
+		if (target === document.body) return;
+	}
+	target = target.querySelector('.chat_content');
+
+	var content = getPageContent(target, true);
+	await navigator.clipboard.writeText(content);
+	var messages = I18NMessages[myLang] || I18NMessages.en;
+	Notification.show(messages.cypriteName, messages.contentCopied, 'middleTop', 'success', 2 * 1000);
 };
 const onAfterInput = evt => {
 	resizeHistoryArea();
@@ -310,6 +323,10 @@ const onSendToCyprite = async () => {
 	await wait();
 	AIAsker.focus();
 };
+const onClearSummaryConversation = async () => {
+	askSWandWait('ClearSummaryConversation', location.href);
+	AIHistory.__inner.innerHTML = '';
+};
 const onClickChatItem = ({target}) => {
 	while (target.getAttribute('button') !== 'true') {
 		target = target.parentNode;
@@ -322,21 +339,6 @@ const onClickChatItem = ({target}) => {
 		onCopyContent(target);
 	}
 };
-const onCloseMe = () => {
-	AIContainer.style.display = 'none';
-};
-const onCopyContent = async target => {
-	while (!target.classList.contains('chat_item')) {
-		target = target.parentElement;
-		if (target === document.body) return;
-	}
-	target = target.querySelector('.chat_content');
-
-	var content = getPageContent(target, true);
-	await navigator.clipboard.writeText(content);
-	var messages = I18NMessages[myLang] || I18NMessages.en;
-	Notification.show(messages.cypriteName, messages.contentCopied, 'middleTop', 'success', 2 * 1000);
-};
 const restoreHistory = conversation => {
 	AIHistory.__inner.innerHTML = '';
 	if (!conversation) return;
@@ -348,4 +350,9 @@ const restoreHistory = conversation => {
 			addChatItem(item[1], 'cyprite');
 		}
 	});
+};
+const restoreConversation = async () => {
+	if (!pageInfo) return;
+	if (!pageInfo.title) return;
+	return await askSWandWait('GetConversation', location.href);
 };
