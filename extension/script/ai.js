@@ -9,6 +9,7 @@ var embedAIModel = AI.Gemini.embed;
 globalThis.callAIandWait = (action, data) => new Promise((res, rej) => {
 	var taskId = newID();
 
+	myInfo.useLocalKV = true; // Test
 	// Call AI from Extension
 	if (myInfo.useLocalKV) {
 		if (!myInfo.apiKey) {
