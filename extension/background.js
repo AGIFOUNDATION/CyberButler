@@ -35,6 +35,7 @@ globalThis.myInfo = {
 	lang: DefaultLang,
 	name: '主人',
 	info: '(Not set yet)',
+	model: ModelList[0]
 };
 
 /* DB */
@@ -89,6 +90,15 @@ const checkAvailability = async () => {
 	}
 	return true;
 };
+const showSystemNotification = (message) => {
+	logger.info('MSG', message);
+	chrome.notifications.create({
+		title: Hints[myInfo.lang].talkHint,
+		message,
+		type: "basic",
+		iconUrl: "/images/cyprite.png",
+	});
+};
 chrome.runtime.onInstalled.addListener(async () => {
 	const csList = chrome.runtime.getManifest().content_scripts;
 	for (const cs of csList) {
@@ -111,15 +121,10 @@ chrome.runtime.onInstalled.addListener(async () => {
 		}
 	}
 });
-const showSystemNotification = (message) => {
-	logger.info('MSG', message);
-	chrome.notifications.create({
-		title: Hints[myInfo.lang].talkHint,
-		message,
-		type: "basic",
-		iconUrl: "/images/cyprite.png",
-	});
-};
+chrome.storage.local.onChanged.addListener(evt => {
+	if (!evt.AImodel.newValue) return;
+	myInfo.model = evt.AImodel.newValue;
+});
 
 /* Page Manager */
 
@@ -399,7 +404,6 @@ chrome.action.onClicked.addListener(async () => {
 	var [tab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
 	// Call Popup Cyprite
 	if (isPageForbidden(tab?.url)) {
-		console.log('Open Setting Page');
 		configureCyberButler();
 	}
 	// Call Page Cyprite
@@ -424,7 +428,7 @@ var sendMessage = DefaultSendMessage;
 
 const getWSConfig = async () => {
 	var [localInfo, remoteInfo] = await Promise.all([
-		chrome.storage.local.get(['wsHost', 'apiKey']),
+		chrome.storage.local.get(['wsHost', 'apiKey', 'AImodel']),
 		chrome.storage.sync.get(['name', 'info', 'lang']),
 	]);
 
@@ -441,6 +445,7 @@ const getWSConfig = async () => {
 	if (myInfo.lang !== remoteInfo) {
 		chrome.storage.sync.set({lang: myInfo.lang});
 	}
+	myInfo.model = localInfo.AImodel || myInfo.model || ModelList[0];
 
 	myInfo.apiKey = localInfo.apiKey || '';
 	myInfo.useLocalKV = !localInfo.wsHost;
@@ -840,8 +845,6 @@ AIHandler.sayHello = async () => {
 	if (!!lastHello && lastHello === currentDate) return;
 	chrome.storage.session.set({lastHello: currentDate});
 
-	myInfo.useLocalKV = true; // test
-
 	var reply;
 	try {
 		reply = "Hello";
@@ -853,8 +856,6 @@ AIHandler.sayHello = async () => {
 	}
 };
 AIHandler.summarizeArticle = async (data) => {
-	myInfo.useLocalKV = true; // test
-
 	var available = await checkAvailability();
 	if (!available) return;
 
@@ -873,8 +874,6 @@ AIHandler.summarizeArticle = async (data) => {
 	return {summary, embedding};
 };
 AIHandler.embeddingContent = async (data) => {
-	myInfo.useLocalKV = true; // test
-
 	var embedding;
 	try {
 		embedding = await callAIandWait('embeddingArticle', data);

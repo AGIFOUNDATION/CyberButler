@@ -1,4 +1,8 @@
 globalThis.DefaultLang = 'en';
+globalThis.ModelList = [
+	"gemini-1.5-flash",
+	"gemini-1.5-pro"
+];
 
 globalThis.wait = delay => new Promise(res => setTimeout(res, delay));
 globalThis.waitUntil = fun => new Promise((res, rej) => {

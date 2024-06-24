@@ -196,7 +196,7 @@ EdgedAI.sayHello = async (tid) => {
 	});
 	var reply, errMsg;
 	try {
-		reply = await chatToAIModel([['human', prompt]]);
+		reply = await chatToAIModel([['human', prompt]], myInfo.model);
 	}
 	catch (err) {
 		console.error(err);
@@ -209,7 +209,7 @@ EdgedAI.summarizeArticle = async (tid, article) => {
 	var prompt = PromptLib.assemble(PromptLib.summarizeArticle, { article, lang: LangName[myInfo.lang] });
 	var reply, errMsg;
 	try {
-		reply = await chatToAIModel([['human', prompt]]);
+		reply = await chatToAIModel([['human', prompt]], myInfo.model);
 	}
 	catch (err) {
 		console.error(err);
@@ -251,7 +251,7 @@ EdgedAI.embeddingArticle = async (tid, data) => {
 EdgedAI.askArticle = async (tid, conversation) => {
 	var reply, errMsg;
 	try {
-		reply = await chatToAIModel(conversation, 'gemini-1.5-pro');
+		reply = await chatToAIModel(conversation, myInfo.model);
 	}
 	catch (err) {
 		console.error(err);

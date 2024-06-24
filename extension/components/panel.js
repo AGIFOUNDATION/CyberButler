@@ -2,7 +2,7 @@ const ChatHistory = [];
 
 var showChatter = false, chatTrigger = null;
 var btnClearHistory = null, relativeArticles = [];
-var AIContainer = null, AIPanel = null, AIAsker = null, AIHistory = null, AIRelated = null;
+var AIContainer = null, AIPanel = null, AIAsker = null, AIHistory = null, AIRelated = null, AIModelList = null;
 
 /* UI */
 
@@ -20,6 +20,16 @@ const generateAIPanel = async (messages) => {
 	var avatar = newEle('div', 'cyprite', 'panel_logo');
 	avatar.innerHTML = '<img src="' + chrome.runtime.getURL('/images/cyprite.png') + '">';
 	panel.appendChild(avatar);
+	var modelList = newEle('div', 'cyprite', "panel_model_chooser");
+	ModelList.forEach(model => {
+		var item = newEle('div', 'cyprite', 'panel_model_item');
+		item.innerText = model;
+		item.setAttribute('name', model);
+		modelList.appendChild(item);
+	});
+	modelList.addEventListener('click', onChooseModel);
+	avatar.appendChild(modelList);
+
 	var closeMe = newEle('div', 'cyprite', 'panel_closer');
 	closeMe.innerHTML = '<img src="' + chrome.runtime.getURL('/images/circle-xmark.svg') + '">';
 	closeMe.addEventListener('click', onCloseMe);
@@ -58,6 +68,7 @@ const generateAIPanel = async (messages) => {
 	AIPanel = panel;
 	AIAsker = inputArea;
 	AIHistory = historyList;
+	AIModelList = modelList;
 };
 const generateTabPanel = (messages) => {
 	var tabPanel = newEle('div', 'cyprite', 'panel_tabs_area');
@@ -220,6 +231,14 @@ const onCloseMeByMask = ({target}) => {
 const onCloseMe = () => {
 	AIContainer.style.display = 'none';
 };
+const onChooseModel = async ({target}) => {
+	if (!target.classList.contains("panel_model_item")) return;
+	var model = target.getAttribute('name');
+	await chrome.storage.local.set({'AImodel': model});
+
+	var messages = I18NMessages[myLang] || I18NMessages.en;
+	Notification.show(messages.cypriteName, messages.changeModelSuccess, 'middleTop', 'success', 2 * 1000);
+};
 const onSummaryChatTrigger = async () => {
 	if (!chatTrigger) return;
 
@@ -294,7 +313,6 @@ const onSendToCyprite = async () => {
 	if (!!vector) {
 		if (!conversationVector && !!pageVector) {
 			conversationVector = [];
-			conversationVector.push(normalVector(pageVector));
 			pageVector.forEach(item => {
 				conversationVector.push({
 					weight: item.weight,
@@ -396,8 +414,6 @@ const normalVector = vectors => {
 	vector.forEach(v => len += v ** 2);
 	len = len ** 0.5;
 	vector = vector.map(v => v / len);
-
-	weight = Math.round(weight / 1000000);
 
 	return { weight, vector };
 };

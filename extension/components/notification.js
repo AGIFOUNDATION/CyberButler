@@ -129,7 +129,7 @@ const topPositionUpdater = async list => {
 	});
 	list.forEach(item => {
 		totalHeight -= item.height + 5;
-		item.ele._inner.style.top = totalHeight;
+		item.ele._inner.style.top = totalHeight + 'px';
 	});
 };
 const bottomPositionUpdater = async list => {
@@ -139,7 +139,7 @@ const bottomPositionUpdater = async list => {
 	});
 	list.forEach(item => {
 		totalHeight -= item.height + 5;
-		item.ele._inner.style.bottom = totalHeight;
+		item.ele._inner.style.bottom = totalHeight + 'px';
 	});
 };
 const centerPositionUpdater = async list => {
@@ -150,7 +150,7 @@ const centerPositionUpdater = async list => {
 	totalHeight /= 2;
 	list.forEach(item => {
 		totalHeight -= item.height + 5;
-		item.ele._inner.style.top = totalHeight;
+		item.ele._inner.style.top = totalHeight + 'px';
 	});
 };
 

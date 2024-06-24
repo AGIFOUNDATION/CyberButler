@@ -43,9 +43,7 @@ When using a local knowledge base, the plugin will load local information throug
 
 ##	Abilities
 
-1.	Summarize web page content and list the outline of the page content, conversation based on page content;
-2.	Translate text (in progress);
-3.	Automatically analyze user preferences and automatically obtain information that users might be interested in.
-4.	Provide comprehensive responses based on the user's recent browsing history across different pages.
-5.	Calculate page embedding vectors for subsequent multi-page association.
-6.	Automatically generate text.
+1.	Summarize web page content and list the outline of the page content, conversation based on page content and related web pates;
+2.	Calculate page embedding vectors for subsequent multi-page association.
+3.	Translate text (in progress);
+4.	Multi AI Models.

@@ -18,6 +18,7 @@ globalThis.I18NMessages = {
 		contentCopied: "Content has been copied",
 		relatedArticles: "Related Articles",
 		noRelatedArticle: "No related article",
+		changeModelSuccess: "AI Model has been successfully switched",
 	},
 	zh: {
 		cypriteName: "机灵",
@@ -38,5 +39,6 @@ globalThis.I18NMessages = {
 		contentCopied: "内容已复制",
 		relatedArticles: "相关文章",
 		noRelatedArticle: "无相关文章",
+		changeModelSuccess: "AI模型已成功切换",
 	},
 };

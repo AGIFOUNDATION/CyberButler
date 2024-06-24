@@ -85,6 +85,7 @@
 .panel_container .panel_logo {
 	box-sizing: border-box;
 	position: absolute;
+	z-index: 1;
 	top: -35px;
 	left: -15px;
 	width: 80px;
@@ -93,9 +94,33 @@
 	border-radius: 8px;
 	background-color: rgb(from var(--back-color) r g b / 80%);
 	box-shadow: 1px 1px 5px rgb(from var(--front-color) r g b / 40%);
+	cursor: pointer;
 }
 .panel_container .panel_logo img {
 	width: 100%;
+	pointer-events: none;
+}
+.panel_container .panel_logo .panel_model_chooser {
+	box-sizing: border-box;
+	display: none;
+	position: absolute;
+	z-index: 1;
+	top: 70px;
+	left: 0px;
+	padding: 10px;
+	padding-bottom: 0px;
+	border-radius: 8px;
+	background-color: rgb(from var(--back-color) r g b / 80%);
+	box-shadow: 1px 1px 5px rgb(from var(--front-color) r g b / 40%);
+}
+.panel_container .panel_logo:hover .panel_model_chooser {
+	display: block;
+}
+.panel_container .panel_logo .panel_model_chooser .panel_model_item {
+	margin-top: 5px;
+	margin-bottom: 5px;
+	white-space: nowrap;
+	cursor: pointer;
 }
 .panel_container .panel_left, .panel_container .panel_right {
 	box-sizing: border-box;
@@ -265,6 +290,7 @@
 	display: block;
 }
 .panel_container .chat_history_area .chat_item .operator_bar img {
+	box-sizing: border-box;
 	width: 23px;
 	margin-left: 10px;
 	padding: 5px;
