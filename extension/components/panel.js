@@ -1,81 +1,99 @@
 const ChatHistory = [];
 
 var showChatter = false, chatTrigger = null;
+var btnClearHistory = null;
 var AIContainer = null, AIPanel = null, AIAsker = null, AIHistory = null, AIRelated = null;
 
 /* UI */
 
-const showPageSummary = async (summary) => {
-	var [relatives, conversation] = await Promise.all([
-		findSimilarArticle(pageVector),
-		restoreConversation(),
-	]);
-	var messages = I18NMessages[myLang] || I18NMessages.en;
-
-	showChatter = false;
-	if (!!AIContainer) {
-		addSummaryAndRelated(messages, AIContainer.querySelector('.content_container'), summary, relatives);
-		restoreHistory(conversation);
-		AIContainer.style.display = 'block';
-		resizeHistoryArea(true);
-		return;
-	}
-
+const generateAIPanel = async (messages) => {
 	await waitForMountUtil('panel');
 
 	var background = newEle('div', 'cyprite', 'panel_mask');
 	background.addEventListener('click', onCloseMeByMask);
 	var frame = newEle('div', 'cyprite', "panel_frame");
+	background.appendChild(frame);
 	var panel = newEle('div', 'cyprite', "panel_container");
 	panel.setAttribute('chat', 'false');
+	frame.appendChild(panel);
+
 	var avatar = newEle('div', 'cyprite', 'panel_logo');
 	avatar.innerHTML = '<img src="' + chrome.runtime.getURL('/images/cyprite.png') + '">';
-	chatTrigger = newEle('div', 'cyprite', 'panel_chat_switch');
-	chatTrigger.innerText = messages.showChatPanel;
-	chatTrigger.addEventListener('click', onChatterTrigger);
+	panel.appendChild(avatar);
+	var closeMe = newEle('div', 'cyprite', 'panel_closer');
+	closeMe.innerHTML = '<img src="' + chrome.runtime.getURL('/images/circle-xmark.svg') + '">';
+	closeMe.addEventListener('click', onCloseMe);
+	panel.appendChild(closeMe);
+
+	var tabPanel = generateTabPanel(messages);
+	panel.appendChild(tabPanel);
 	var leftPanel = newEle('div', 'cyprite', "panel_left");
+	panel.appendChild(leftPanel);
 	var rightPanel = newEle('div', 'cyprite', "panel_right");
+	panel.appendChild(rightPanel);
+
 	var container = newEle('div', 'cyprite', 'content_container', 'scrollable');
-	addSummaryAndRelated(messages, container, summary, relatives);
+	leftPanel.appendChild(container);
 
 	var inputContainer = newEle('div', 'cyprite', 'input_container');
+	rightPanel.appendChild(inputContainer);
 	var inputArea = newEle('div', 'cyprite', 'input_area', 'cyprite_sender', 'scrollable');
 	inputArea.setAttribute('contentEditable', 'true');
 	inputArea.addEventListener('paste', onContentPaste);
 	inputArea.addEventListener('keyup', onAfterInput);
+	inputContainer.appendChild(inputArea);
 	var sender = newEle('div', 'cyprite', 'input_sender');
 	sender.innerText = messages.sendMessageToCyprite;
 	sender.addEventListener('click', onSendToCyprite);
+	rightPanel.appendChild(sender);
 	var historyList = newEle('div', 'cyprite', "chat_history_area", "scrollable");
+	rightPanel.appendChild(historyList);
 	historyList.__inner = newEle('div', 'cyprite', "chat_history_list");
 	historyList.__inner.addEventListener('mouseup', onClickChatItem);
-	var closeMe = newEle('div', 'cyprite', 'panel_closer');
-	closeMe.innerHTML = '<img src="' + chrome.runtime.getURL('/images/circle-xmark.svg') + '">';
-	closeMe.addEventListener('click', onCloseMe);
-
 	historyList.appendChild(historyList.__inner);
-	rightPanel.appendChild(historyList);
-	inputContainer.appendChild(inputArea);
-	rightPanel.appendChild(inputContainer);
-	rightPanel.appendChild(sender);
-	leftPanel.appendChild(container);
-	panel.appendChild(avatar);
-	panel.appendChild(chatTrigger);
-	panel.appendChild(leftPanel);
-	panel.appendChild(rightPanel);
-	panel.appendChild(closeMe);
-	frame.appendChild(panel);
-	background.appendChild(frame);
+
 	document.body.appendChild(background);
 
 	AIContainer = background;
 	AIPanel = panel;
 	AIAsker = inputArea;
 	AIHistory = historyList;
+};
+const generateTabPanel = (messages) => {
+	var tabPanel = newEle('div', 'cyprite', 'panel_tabs_area');
 
-	restoreHistory(conversation);
+	var btnSummary = newEle('div', 'cyprite', 'panel_tab');
+	btnSummary.setAttribute('action', 'showSummary');
+	btnSummary.innerText = messages.showSummaryPanel;
+	btnSummary.addEventListener('click', showSummaryPanel);
+	tabPanel.appendChild(btnSummary);
 
-	resizeHistoryArea(true);
+	var btnTranslate = newEle('div', 'cyprite', 'panel_tab', 'invalid');
+	btnTranslate.setAttribute('action', 'showTranslate');
+	btnTranslate.innerText = messages.showTranslatePanel;
+	btnTranslate.addEventListener('click', showTranslatePanel);
+	tabPanel.appendChild(btnTranslate);
+
+	var btnComprehensive = newEle('div', 'cyprite', 'panel_tab', 'invalid');
+	btnComprehensive.setAttribute('action', 'showComprehensive');
+	btnComprehensive.innerText = messages.showComprehensivePanel;
+	btnComprehensive.addEventListener('click', showComprehensivePanel);
+	tabPanel.appendChild(btnComprehensive);
+
+	chatTrigger = newEle('div', 'cyprite', 'panel_button', "always_show");
+	chatTrigger.innerText = messages.showChatPanel;
+	chatTrigger.addEventListener('click', onSummaryChatTrigger);
+	tabPanel.appendChild(chatTrigger);
+
+	btnClearHistory = newEle('div', 'cyprite', 'panel_button');
+	btnClearHistory.setAttribute('group', 'summary');
+	btnClearHistory.innerText = messages.btnClearHistory;
+	btnClearHistory.addEventListener('click', () => {
+		console.log('Clear Conversation');
+	});
+	tabPanel.appendChild(btnClearHistory);
+
+	return tabPanel;
 };
 const addSummaryAndRelated = (messages, container, summary, relatedList) => {
 	container.innerHTML = marked.parse(summary);
@@ -153,16 +171,61 @@ const resizeHistoryArea = (immediately=false) => {
 
 /* Events */
 
+const showPageSummary = async (summary) => {
+	var [relatives, conversation] = await Promise.all([
+		findSimilarArticle(pageVector),
+		restoreConversation(),
+	]);
+	var messages = I18NMessages[myLang] || I18NMessages.en;
+
+	showChatter = false;
+	if (!AIContainer) await generateAIPanel(messages);
+
+	addSummaryAndRelated(messages, AIContainer.querySelector('.content_container'), summary, relatives);
+	showSummaryPanel();
+
+	restoreHistory(conversation);
+	resizeHistoryArea(true);
+	AIContainer.style.display = 'block';
+};
+const showSummaryPanel = () => {
+	for (let tab of AIPanel.querySelectorAll('.panel_tabs_area .panel_tab')) tab.classList.remove('active');
+	AIPanel.querySelector('.panel_tabs_area .panel_tab[action="showSummary"]').classList.add('active');
+
+	for (let tab of AIPanel.querySelectorAll('.panel_tabs_area .panel_button')) tab.classList.remove('active');
+	for (let tab of AIPanel.querySelectorAll('.panel_tabs_area .panel_button[group="summary"]')) tab.classList.add('active');
+
+	console.log('Show Summary');
+};
+const showTranslatePanel = () => {
+	for (let tab of AIPanel.querySelectorAll('.panel_tabs_area .panel_tab')) tab.classList.remove('active');
+	AIPanel.querySelector('.panel_tabs_area .panel_tab[action="showTranslate"]').classList.add('active');
+
+	for (let tab of AIPanel.querySelectorAll('.panel_tabs_area .panel_button')) tab.classList.remove('active');
+	for (let tab of AIPanel.querySelectorAll('.panel_tabs_area .panel_button[group="translate"]')) tab.classList.add('active');
+
+	console.log('Show Translate');
+};
+const showComprehensivePanel = () => {
+	for (let tab of AIPanel.querySelectorAll('.panel_tabs_area .panel_tab')) tab.classList.remove('active');
+	AIPanel.querySelector('.panel_tabs_area .panel_tab[action="showComprehensive"]').classList.add('active');
+
+	for (let tab of AIPanel.querySelectorAll('.panel_tabs_area .panel_button')) tab.classList.remove('active');
+	for (let tab of AIPanel.querySelectorAll('.panel_tabs_area .panel_button[group="comprehensive"]')) tab.classList.add('active');
+
+	console.log('Show Comprehensive');
+};
 const onCloseMeByMask = ({target}) => {
 	if (!target.classList.contains('panel_mask')) return;
 	onCloseMe();
 };
-const onChatterTrigger = async () => {
+const onSummaryChatTrigger = async () => {
 	if (!chatTrigger) return;
 
 	var messages = I18NMessages[myLang] || I18NMessages.en;
 	showChatter = !showChatter;
 	if (showChatter) {
+		for (let tab of AIPanel.querySelectorAll('.panel_tabs_area .panel_button[group="summary"]')) tab.classList.add('show');
 		chatTrigger.innerText = messages.hideChatPanel;
 		AIPanel.setAttribute('chat', 'true');
 		await wait(100);
@@ -172,6 +235,7 @@ const onChatterTrigger = async () => {
 		AIHistory.scrollTop = AIHistory.scrollHeight - AIHistory.clientHeight;
 	}
 	else {
+		for (let tab of AIPanel.querySelectorAll('.panel_tabs_area .panel_button[group="summary"]')) tab.classList.remove('show');
 		chatTrigger.innerText = messages.showChatPanel;
 		AIPanel.setAttribute('chat', 'false');
 	}
