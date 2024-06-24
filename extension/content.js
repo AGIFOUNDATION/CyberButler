@@ -399,6 +399,17 @@ const getPageContent = (container, keepLink=false) => {
 	content = content.replace(/<input(\s+[\w\W]*?)?>/gi, '');
 	content = content.replace(/<link(\s+[\w\W]*?)?>/gi, '');
 
+	content = content.replace(/<(h\d)(\s+[\w\W]*?)?>([\w\W]*?)<\/\1>/gi, (m, tag, prop, inner) => {
+		var lev = tag.match(/h(\d)/i);
+		lev = lev[1] * 1;
+		if (lev === 1) return '\n\n##\t' + inner + '\n\n';
+		if (lev === 2) return '\n\n###\t' + inner + '\n\n';
+		if (lev === 3) return '\n\n####\t' + inner + '\n\n';
+		if (lev === 4) return '\n\n#####\t' + inner + '\n\n';
+		if (lev === 5) return '\n\n######\t' + inner + '\n\n';
+		return inner;
+	});
+
 	content = content.replace(/<\/?(article|header|section|aside|footer|div|p|center|ul|ol|tr)(\s+[\w\W]*?)?>/gi, '<br><br>');
 	content = content.replace(/<\/?(option|span|font)(\s+[\w\W]*?)?>/gi, '');
 	content = content.replace(/<\/(td|th)><\1(\s+[\w\W]*?)?>/gi, ' | ');
@@ -422,16 +433,6 @@ const getPageContent = (container, keepLink=false) => {
 				return '[' + inner + '](' + match + ')';
 			});
 		}
-		content = content.replace(/<(h\d)(\s+[\w\W]*?)?>([\w\W]*?)<\/\1>/gi, (m, tag, prop, inner) => {
-			var lev = tag.match(/h(\d)/i);
-			lev = lev[1] * 1;
-			if (lev === 1) return '\n\n#\t' + inner + '\n\n';
-			if (lev === 2) return '\n\n##\t' + inner + '\n\n';
-			if (lev === 3) return '\n\n###\t' + inner + '\n\n';
-			if (lev === 4) return '\n\n####\t' + inner + '\n\n';
-			if (lev === 5) return '\n\n#####\t' + inner + '\n\n';
-			return inner;
-		});
 	}
 
 	content = content.replace(/\s*<br>\s*/gi, '\n');
@@ -484,7 +485,6 @@ const waitForMountUtil = (util) => new Promise(res => {
 	sendMessage("MountUtil", util, 'BackEnd');
 });
 
-const ArticleVectorCompressionRate = 0.4;
 var pageSummary = null, conversationVector = null;
 const summarizePage = async () => {
 	pageInfo = await getPageInfo();

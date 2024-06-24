@@ -162,7 +162,7 @@ const resizeHistoryArea = (immediately=false) => {
 
 		var inputerBox = AIAsker.parentNode.getBoundingClientRect();
 		var containerBox = AIHistory.parentNode.getBoundingClientRect();
-		var height = containerBox.height - 20 - inputerBox.height - 30 - 10;
+		var height = containerBox.height - 20 - inputerBox.height - 25;
 		AIHistory.style.height = height + 'px';
 	}, immediately ? 0 : 250);
 };
@@ -292,24 +292,19 @@ const onSendToCyprite = async () => {
 	}
 	var related = null;
 	if (!!vector) {
-		if (!conversationVector) {
-			if (!!pageVector) {
-				conversationVector = [];
-				conversationVector.push(normalVector(pageVector));
-				pageVector.forEach(item => {
-					// ArticleVectorCompressionRate
-					conversationVector.push({
-						weight: Math.floor(item.weight ** ArticleVectorCompressionRate) + 1,
-						vector: [...item.vector],
-					});
+		if (!conversationVector && !!pageVector) {
+			conversationVector = [];
+			conversationVector.push(normalVector(pageVector));
+			pageVector.forEach(item => {
+				conversationVector.push({
+					weight: item.weight,
+					vector: [...item.vector],
 				});
-			}
+			});
 		}
 		if (!!conversationVector) {
 			conversationVector.push(...vector);
 			related = await askSWandWait('FindSimilarArticle', {url: location.href, vector: conversationVector});
-			console.log('VVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV');
-			console.log(related);
 			relativeArticles.forEach(item => {
 				var article;
 				related.some(art => {
@@ -334,9 +329,7 @@ const onSendToCyprite = async () => {
 				}
 			});
 			related.sort((a, b) => b.similar - a.similar);
-			console.log(related);
-			related = filterSimilarArticle(related, 5);
-			console.log(related);
+			related = filterSimilarArticle(related, 10);
 		}
 	}
 
@@ -404,8 +397,7 @@ const normalVector = vectors => {
 	len = len ** 0.5;
 	vector = vector.map(v => v / len);
 
-	// ArticleVectorCompressionRate
-	weight = Math.floor(weight ** ArticleVectorCompressionRate) + 1;
+	weight = Math.round(weight / 1000000);
 
 	return { weight, vector };
 };

@@ -1,7 +1,7 @@
 #	CyberButler
 
 > -	Author: LostAbaddon
-> -	Version: 0.1.1
+> -	Version: 0.1.2
 
 Your Personal cyber knowledge vault butler.
 
@@ -35,9 +35,9 @@ This plugin will determine the type of page you are currently browsing and autom
 
 You can also click on the plugin's Action button, or use the shortcut key (Ctrl + Y) to manually invoke it.
 
-For article-style web pages, this plugin can summarize the content for you and interact with you based on the web page content. Users can ask questions about the current page content to Cyprite, and Cyprite will try to answer the user's questions, with the conversation history automatically saved for 24 hours.
+For article-style web pages, this plugin can summarize the content for you and interact with you based on the web page content. Users can ask questions about the current page content to Cyprite, and Cyprite will try to answer the user's questions, with the conversation history automatically saved for 24 hours, and you can also actively clear the chat history by closing the current tab or clicking the "Clear Conversation" button.
 
-Additionally, the plugin will remember all the web pages you have interacted with and load the historical pages when communicating with you, providing comprehensive interaction based on all these pages—of course, you can also choose to manually add or remove these pages to limit the interaction to the areas you are more interested in.
+Additionally, the plugin will remember all the web pages you have interacted with and load the historical pages which related with current chat topic when communicating with you, providing comprehensive interaction based on all these pages—of course, you can also choose to manually add or remove these pages to limit the interaction to the areas you are more interested in.
 
 When using a local knowledge base, the plugin will load local information through the server and use local files along with the web pages you have browsed as the current knowledge for Q&A interaction during the interaction.
 

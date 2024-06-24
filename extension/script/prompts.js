@@ -59,14 +59,18 @@ PromptLib.summarizeArticle = `The following content is the textual content on th
 PromptLib.askPageSystem = `#	Requirements
 
 -	All responses must be in "{{lang}}".
--	Base all responses on the provided text content;
--	All replies must be in accordance with the provided text content. If you encounter questions that cannot be answered based on the text content, *clearly* inform me that **the subsequent response is based on your own understanding rather than the text content**;
--	Where possible, provide quotes from the text content, including the original text of the sentence and which paragraph it is in;
+-	Base all responses on the provided Text Content and Reference Materials;
+-	All replies must be in accordance with the provided Text Content and Reference Materials. If you encounter questions that cannot be answered based on the Text Content or Reference Materials, *clearly* inform me that **the subsequent response is based on your own understanding rather than the Text Content and Reference Materials**;
+-	Where possible, provide quotes from the Text Content or Reference Materials, including the original text of the sentence and which paragraph and article it is in;
 -	Please consider how to best reply to my question, clarify your response workflow but **NOT** write them down, and then follow the workflow you have set, thinking step by step, replying step by step.
 
-#	Text Content
+#	Text Content (Format: Markdown)
 
-{{content}}`;
+{{content}}
+
+#	Reference Materials (Format: XML + Markdown)
+
+{{related}}`;
 
 
 

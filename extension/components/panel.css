@@ -265,7 +265,7 @@
 	display: block;
 }
 .panel_container .chat_history_area .chat_item .operator_bar img {
-	width: 12px;
+	width: 23px;
 	margin-left: 10px;
 	padding: 5px;
 	filter: invert(0.6) sepia(1.0) hue-rotate(160deg) brightness(1.9) drop-shadow(1px 1px 2px black);

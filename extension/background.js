@@ -700,12 +700,9 @@ EventHandler.AskSWAndWait = async (data, source, sid) => {
 	});
 };
 EventHandler.SavePageSummary = async (data, source, sid) => {
-	console.log('VVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV');
 	var tabInfo = await getTabInfo(sid);
 	var pageInfo = await getPageInfo(tabInfo.url);
-	console.log(pageInfo.title, data.title);
 	pageInfo.title = data.title || pageInfo.title;
-	console.log(pageInfo.title);
 	pageInfo.description = data.summary || pageInfo.description;
 	pageInfo.hash = data.hash || pageInfo.hash;
 	pageInfo.embedding = data.embedding || pageInfo.embedding;
@@ -779,15 +776,12 @@ EventHandler.FindSimilarArticle = async (data) => {
 };
 EventHandler.GetConversation = async (url) => {
 	url = parseURL(url);
-	var conversation = AIHistory[url];
-	if (!!conversation) return conversation;
-	conversation = await DBs.pageInfo.get('pageConversation', url);
+	var conversation = await DBs.pageInfo.get('pageConversation', url);
 	if (!conversation) return null;
 	return conversation.conversation;
 };
 EventHandler.ClearSummaryConversation = async (url) => {
 	url = parseURL(url);
-	delete AIHistory[url];
 	try {
 		await DBs.pageInfo.del('pageConversation', url);
 		return true;
@@ -800,7 +794,6 @@ EventHandler.ClearSummaryConversation = async (url) => {
 /* AI */
 
 const AIHandler = {};
-const AIHistory = {};
 const CacheLimit = 1000 * 60 * 60 * 24;
 
 const removeAIChatHistory = async (tid) => {
@@ -811,7 +804,6 @@ const removeAIChatHistory = async (tid) => {
 		if (!!list) {
 			delete Tab2Article[tid];
 			for (let url of list) {
-				delete AIHistory[url];
 				tasks.push(DBs.pageInfo.del('pageConversation', url));
 			}
 			if (!!tasks.length) {
@@ -895,31 +887,43 @@ AIHandler.embeddingContent = async (data) => {
 	return embedding;
 };
 AIHandler.askArticle = async (data, source, sid) => {
+	// Get conversation history prompts
 	var list = Tab2Article[sid], url = parseURL(data.url);
 	if (!list) {
 		list = [];
 		Tab2Article[sid] = list;
 	}
-	list.push(url);
-
-	list = AIHistory[url];
+	list = null;
+	list = await DBs.pageInfo.get('pageConversation', url);
 	if (!list) {
-		list = await DBs.pageInfo.get('pageConversation', url);
-		if (!list) {
-			list = [];
-			let prompt = PromptLib.assemble(PromptLib.askPageSystem, { content: data.content, lang: LangName[myInfo.lang] });
-			list.push(['system', prompt]);
-		}
-		else {
-			list = list.conversation;
-		}
-		AIHistory[url] = list;
+		list = [];
+	}
+	else {
+		list = list.conversation;
 	}
 	list.push(['human', data.question]);
 
+	// Update system prompt for relative articles
+	var config = { content: data.content, lang: LangName[myInfo.lang] }
+	if (!!data.related) {
+		let articles = await Promise.all(data.related.map(async item => {
+			var info = await getPageInfo(parseURL(item.url));
+			if (!info) return null;
+			return '<article title="' + (item.title || info.title) + '" url="' + info.url + '">\n' + info.description.trim() + '\n</article>';
+		}))
+		articles = articles.filter(info => !!info);
+		config.related = articles.join('\n');
+	}
+	else {
+		config.related = '(No Reference Material)';
+	}
+	var systemPrompt = PromptLib.assemble(PromptLib.askPageSystem, config);
+	list = list.filter(item => item[0] !== 'system');
+	list.unshift(['system', systemPrompt]);
+
 	var result;
 	try {
-		result = await callAIandWait('askArticle', list);
+		result = await callAIandWait('askArticle', [...list]);
 		list.push(['ai', result]);
 		await DBs.pageInfo.set("pageConversation", url, {
 			conversation: list,
