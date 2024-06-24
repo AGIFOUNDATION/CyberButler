@@ -80,7 +80,7 @@ const checkAvailability = async () => {
 		available = !!myInfo.apiKey;
 	}
 	else {
-		wsHost = await getWSConfig();
+		let wsHost = await getWSConfig();
 		available = !!wsHost;
 	}
 	if (!available) {
@@ -909,8 +909,9 @@ AIHandler.askArticle = async (data, source, sid) => {
 	}
 	list.push(['human', data.question]);
 
+	var result;
 	try {
-		let result = await callAIandWait('askArticle', list);
+		result = await callAIandWait('askArticle', list);
 		list.push(['ai', result]);
 		await DBs.pageInfo.set("pageConversation", url, {
 			conversation: list,
@@ -921,7 +922,7 @@ AIHandler.askArticle = async (data, source, sid) => {
 		console.error(err);
 		result = '';
 	}
-	
+
 	removeAIChatHistory();
 	return result;
 };
