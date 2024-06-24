@@ -1,7 +1,7 @@
 const ChatHistory = [];
 
 var showChatter = false, chatTrigger = null;
-var btnClearHistory = null;
+var btnClearHistory = null, relativeArticles = [];
 var AIContainer = null, AIPanel = null, AIAsker = null, AIHistory = null, AIRelated = null;
 
 /* UI */
@@ -176,10 +176,10 @@ const showPageSummary = async (summary) => {
 	]);
 	var messages = I18NMessages[myLang] || I18NMessages.en;
 
-	showChatter = false;
 	if (!AIContainer) await generateAIPanel(messages);
 
 	addSummaryAndRelated(messages, AIContainer.querySelector('.content_container'), summary, relatives);
+	relativeArticles = relatives;
 	showSummaryPanel();
 
 	restoreHistory(conversation);
@@ -214,7 +214,7 @@ const showComprehensivePanel = () => {
 	console.log('Show Comprehensive');
 };
 const onCloseMeByMask = ({target}) => {
-	if (!target.classList.contains('panel_mask')) return;
+	if (!target.classList.contains('panel_mask') && !target.classList.contains('panel_frame')) return;
 	onCloseMe();
 };
 const onCloseMe = () => {
@@ -308,7 +308,35 @@ const onSendToCyprite = async () => {
 		if (!!conversationVector) {
 			conversationVector.push(...vector);
 			related = await askSWandWait('FindSimilarArticle', {url: location.href, vector: conversationVector});
+			console.log('VVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV');
+			console.log(related);
+			relativeArticles.forEach(item => {
+				var article;
+				related.some(art => {
+					if (!!art.hash && !!item.hash) {
+						if (art.hash === item.hash) {
+							article = art;
+							return true;
+						}
+					}
+					else if (art.url === item.url) {
+						article = art;
+						return true;
+					}
+				});
+				if (!!article) {
+					if (article.similar < item.similar) {
+						article.similar = item.similar
+					}
+				}
+				else {
+					related.push(item);
+				}
+			});
+			related.sort((a, b) => b.similar - a.similar);
+			console.log(related);
 			related = filterSimilarArticle(related, 5);
+			console.log(related);
 		}
 	}
 
@@ -355,4 +383,63 @@ const restoreConversation = async () => {
 	if (!pageInfo) return;
 	if (!pageInfo.title) return;
 	return await askSWandWait('GetConversation', location.href);
+};
+const normalVector = vectors => {
+	var weight = 0, vector = [], len = 0;
+	vectors.forEach(item => {
+		len = Math.max(item.vector.length, len);
+	});
+	for (let i = 0; i < len; i ++) vector.push(0);
+
+	vectors.forEach(item => {
+		weight += item.weight;
+		item.vector.forEach((v, i) => {
+			vector[i] += v * item.weight;
+		});
+	});
+	vector = vector.map(v => v / weight);
+
+	len = 0;
+	vector.forEach(v => len += v ** 2);
+	len = len ** 0.5;
+	vector = vector.map(v => v / len);
+
+	// ArticleVectorCompressionRate
+	weight = Math.floor(weight ** ArticleVectorCompressionRate) + 1;
+
+	return { weight, vector };
+};
+const findSimilarArticle = async (vector) => {
+	if (!vector) return;
+
+	var result = await askSWandWait('FindSimilarArticle', {url: location.href, vector});
+
+	// Remove same article
+	if (!!pageHash) {
+		result = result.filter(item => item.hash !== pageHash);
+	}
+
+	// Filter
+	result = filterSimilarArticle(result, 10);
+	return result;
+};
+const filterSimilarArticle = (articles, count) => {
+	if (articles.length > count) articles.splice(count);
+
+	var log = [];
+	articles = articles.map(item => {
+		log.push({
+			title: item.title,
+			similar: item.similar,
+		});
+		return {
+			url: item.url,
+			title: item.title,
+			similar: item.similar,
+			hash: item.hash,
+		};
+	});
+	logger.info('Content', 'Similar Articles:');
+	console.table(log);
+	return articles;
 };

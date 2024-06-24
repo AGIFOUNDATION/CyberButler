@@ -91,6 +91,7 @@ const findContainer = () => {
 	var tagInfo = {}, contentTag, maxWeight = 0;
 	var candidates = document.body.querySelectorAll('p, div, span');
 	for (let ele of candidates) {
+		if (!!ele.classList && ele.classList.contains('cyprite')) continue;
 		let tag = ele.tagName;
 		let info = tagInfo[tag] || {
 			total: 0,
@@ -120,6 +121,7 @@ const findContainer = () => {
 	/* Assign values to the main text node */
 	candidates = document.body.querySelectorAll(contentTag);
 	for (let ele of candidates) {
+		if (!!ele.classList && ele.classList.contains('cyprite')) continue;
 		var size = ele.textContent.match(RegChar);
 		size = !!size ? size.length : 0;
 		var total = ele.innerHTML.replace(/<([\w\-]+)(\s+[\w\W]*?)?>/g, (m, tag) => '<' + tag + '>').match(RegChar);
@@ -137,6 +139,7 @@ const findContainer = () => {
 	candidates.sort((a, b) => a.textContent.length - b.textContent.length);
 	candidates = candidates.map(ele => {
 		if (ele.tagName === contentTag) return;
+		if (!!ele.classList && ele.classList.contains('cyprite')) return;
 
 		var size = ele.textContent.match(RegChar);
 		size = !!size ? size.length : 0;
@@ -226,6 +229,23 @@ const getCleanContainer = container => {
 
 	return shadow;
 };
+const clearHTML = html => {
+	html = html.replace(/"<([\w\d\-_]+)(\s+[\w\W]*?)?>[\w\W]*?<\/\1>"\s*/gi, '""');
+	html = html.replace(/<([\w\d\-_]+)(\s+[\w\W]*?)?>/gi, (m, tag) => tag.toLowerCase() === 'meta' ? m : '<' + tag + '>');
+
+	html = html.replace(/<form(\s+[\w\W]*?)?>[\w\W]*?<\/form>/gi, '');
+	html = html.replace(/<select(\s+[\w\W]*?)?>[\w\W]*?<\/select>/gi, '');
+	html = html.replace(/<object(\s+[\w\W]*?)?>[\w\W]*?<\/object>/gi, '');
+	html = html.replace(/<script(\s+[\w\W]*?)?>[\w\W]*?<\/script>/gi, '');
+	html = html.replace(/<style(\s+[\w\W]*?)?>[\w\W]*?<\/style>/gi, '');
+	html = html.replace(/<nostyle(\s+[\w\W]*?)?>[\w\W]*?<\/nostyle>/gi, '');
+	html = html.replace(/<textarea(\s+[\w\W]*?)?>[\w\W]*?<\/textarea>/gi, '');
+	html = html.replace(/<button(\s+[\w\W]*?)?>[\w\W]*?<\/button>/gi, '');
+	html = html.replace(/<input(\s+[\w\W]*?)?>/gi, '');
+	html = html.replace(/<link(\s+[\w\W]*?)?>/gi, '');
+
+	return html;
+};
 const checkIsArticle = (container) => {
 	var total = document.body.textContent.match(RegChar);
 	total = !!total ? total.length : 0;
@@ -243,29 +263,32 @@ const checkIsArticle = (container) => {
 	html = !!html ? html.length : 0;
 	var innerDensity = html === 0 ? 0 : content / html;
 
-	var weight = contentDensity * 1.2 + pageDensity * 0.8 + (innerDensity / pageDensity / 0.9);
+	var weight = contentDensity * 1.5 + pageDensity * 0.35 + (innerDensity / pageDensity / 0.9) * 1.15;
 	weight *= content / (400 + content);
-	return weight > 1.5;
+	logger.log('DOC', 'Article Density Weights:', (Math.round(contentDensity * 10000) / 100) + '%', (Math.round(pageDensity * 10000) / 100) + '%', (Math.round(innerDensity * 10000) / 100) + '%', (Math.round(weight / 1.4 * 10000) / 100) + '%');
+	return weight > 1.4;
 };
 const getPageTitle = (container) => {
 	// Locate the content container position
-	var html = document.querySelector('html').innerHTML.replace(/<([\w\-]+)(\s+[\w\W]*?)?>/g, (m, tag) => '<' + tag + '>');
-	var content = container.outerHTML.replace(/<([\w\-]+)(\s+[\w\W]*?)?>/g, (m, tag) => '<' + tag + '>');
-	var poses = [];
+	var html = clearHTML(document.querySelector('html').innerHTML);
+	var content = clearHTML(container.outerHTML);
+	var poses = [], tagLen = (container.tagName || '').length + 2;
 	html.replace(content, (m, pos) => {
 		poses.push([pos, pos + content.length]);
 	});
 
 	// Find out all title candidates
-	var candidates = document.querySelectorAll('header, h1, h2, [id*="title"], [name*="title"], [property*="title"]');
+	var candidates = document.querySelectorAll('header, h1, h2, [id*="title"], [name*="title"], [property*="title"], [id*="Title"], [name*="Title"], [property*="Title"], [id*="TITLE"], [name*="TITLE"], [property*="TITLE"]');
 	candidates = [...candidates];
 
 	// Calculate the distance between title candidate container and the content container
 	candidates = candidates.map(ele => {
 		if (!ele.outerHTML) return;
-		if (!ele.textContent || !ele.textContent.trim()) return;
+		var content = ele.textContent || ele.content || ele.getAttribute('content') || ele.value || ele.getAttribute('value') || '';
+		content = content.trim();
+		if (!content) return;
 
-		var ctx = ele.outerHTML.replace(/<([\w\-]+)(\s+[\w\W]*?)?>/g, (m, tag) => '<' + tag + '>');
+		var ctx = clearHTML(ele.outerHTML);
 		var delta = [];
 		html.replace(ctx, (m, p) => {
 			// Calculate the distance
@@ -274,7 +297,7 @@ const getPageTitle = (container) => {
 					delta.push(block[0] - p - ctx.length);
 				}
 				else if (p < block[1]) {
-					delta.push(p - block[0]);
+					delta.push(p - block[0] - tagLen);
 				}
 			});
 		});
@@ -283,7 +306,7 @@ const getPageTitle = (container) => {
 
 		// The final distance
 		delta.sort((a, b) => a - b);
-		return [ele, delta[0]];
+		return [ele, delta[0], content];
 	}).filter(ele => !!ele);
 
 	// Return page title if no suitable title container
@@ -291,7 +314,8 @@ const getPageTitle = (container) => {
 
 	candidates.sort((a, b) => a[1] - b[1]);
 	var titleContainer = candidates[0][0];
-	logger.strong('Ext', titleContainer);
+	var containerTitle = candidates[0][2];
+	logger.strong('DOC', titleContainer);
 
 	// Find out the inner container
 	candidates = [[], [], []];
@@ -320,7 +344,7 @@ const getPageTitle = (container) => {
 	if (candidates[0].length > 0) return candidates[0].join(' ');
 	else if (candidates[1].length > 0) return candidates[1][0];
 	else if (candidates[2].length > 0) return candidates[2][0];
-	else return titleContainer.textContent.trim();
+	else return containerTitle;
 };
 const getPageDescription = (isArticle, container) => {
 	var candidates;
@@ -363,6 +387,7 @@ const getPageContent = (container, keepLink=false) => {
 	}
 
 	content = content.replace(/\s+data\-mathml="<math(\s+[\w\W]*?)?>[\w\W]*?<\/math>"\s*/gi, ' ');
+	content = content.replace(/"<([\w\d\-_]+)(\s+[\w\W]*?)?>[\w\W]*?<\/\1>"\s*/gi, '""');
 	content = content.replace(/<form(\s+[\w\W]*?)?>[\w\W]*?<\/form>/gi, '');
 	content = content.replace(/<select(\s+[\w\W]*?)?>[\w\W]*?<\/select>/gi, '');
 	content = content.replace(/<object(\s+[\w\W]*?)?>[\w\W]*?<\/object>/gi, '');
@@ -424,7 +449,7 @@ const getPageContent = (container, keepLink=false) => {
 const getPageInfo = async () => {
 	var info = {};
 	var container = findContainer();
-	logger.strong('Ext', container);
+	logger.strong('DOC', container);
 	info.isArticle = checkIsArticle(container);
 	if (info.isArticle) {
 		info.title = getPageTitle(container);
@@ -437,7 +462,7 @@ const getPageInfo = async () => {
 		info.hash = '';
 	}
 	info.description = getPageDescription(info.isArticle, container);
-	logger.em('Ext', info);
+	logger.em('DOC', info);
 
 	return info;
 };
@@ -504,40 +529,6 @@ const translatePage = async () => {
 	console.log(article);
 };
 
-const findSimilarArticle = async (vector) => {
-	if (!vector) return;
-
-	var result = await askSWandWait('FindSimilarArticle', {url: location.href, vector});
-
-	// Remove same article
-	if (!!pageHash) {
-		result = result.filter(item => item.hash !== pageHash);
-	}
-
-	// Filter
-	result = filterSimilarArticle(result, 10);
-	return result;
-};
-const filterSimilarArticle = (articles, count) => {
-	if (articles.length > count) articles.splice(count);
-
-	var log = [];
-	articles = articles.map(item => {
-		log.push({
-			title: item.title,
-			similar: item.similar,
-		});
-		return {
-			url: item.url,
-			title: item.title,
-			similar: item.similar,
-			hash: item.hash,
-		};
-	});
-	logger.info('Content', 'Similar Articles:');
-	console.table(log);
-	return articles;
-};
 const checkPageNeedAI = async (page, path, host) => {
 	page = page.replace(/^[\w\-\d_]*?:\/\//i, '');
 	var data = await askSWandWait('CheckPageNeedAI', {page, path, host});
@@ -551,31 +542,6 @@ const checkPageNeedAI = async (page, path, host) => {
 const updatePageNeedAIInfo = async (page, path, host, need) => {
 	page = page.replace(/^[\w\-\d_]*?:\/\//i, '');
 	await askSWandWait('UpdatePageNeedAIInfo', {page, path, host, need});
-};
-const normalVector = vectors => {
-	var weight = 0, vector = [], len = 0;
-	vectors.forEach(item => {
-		len = Math.max(item.vector.length, len);
-	});
-	for (let i = 0; i < len; i ++) vector.push(0);
-
-	vectors.forEach(item => {
-		weight += item.weight;
-		item.vector.forEach((v, i) => {
-			vector[i] += v * item.weight;
-		});
-	});
-	vector = vector.map(v => v / weight);
-
-	len = 0;
-	vector.forEach(v => len += v ** 2);
-	len = len ** 0.5;
-	vector = vector.map(v => v / len);
-
-	// ArticleVectorCompressionRate
-	weight = Math.floor(weight ** ArticleVectorCompressionRate) + 1;
-
-	return { weight, vector };
 };
 
 const NeedAIChecker = {};
@@ -698,7 +664,7 @@ EventHandler.replyAskAndWait = (data) => {
 /* Tab */
 
 document.onreadystatechange = async () => {
-	logger.log('DOC', 'Ready State Changed: ' + document.readyState);
+	logger.log('Page', 'Ready State Changed: ' + document.readyState);
 	pageInfo = null;
 	pageInfo = await getPageInfo();
 	if (document.readyState === 'complete') {
@@ -796,7 +762,7 @@ const observer = new MutationObserver((list) => {
 			}
 			pageInfo = info;
 		}
-		logger.log('DOC', 'Mutation Observered');
+		logger.log('Page', 'Mutation Observered');
 		sendMessage("PageStateChanged", {
 			state: 'update',
 			url: location.href,

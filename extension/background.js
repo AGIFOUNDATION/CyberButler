@@ -700,9 +700,12 @@ EventHandler.AskSWAndWait = async (data, source, sid) => {
 	});
 };
 EventHandler.SavePageSummary = async (data, source, sid) => {
+	console.log('VVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV');
 	var tabInfo = await getTabInfo(sid);
 	var pageInfo = await getPageInfo(tabInfo.url);
+	console.log(pageInfo.title, data.title);
 	pageInfo.title = data.title || pageInfo.title;
+	console.log(pageInfo.title);
 	pageInfo.description = data.summary || pageInfo.description;
 	pageInfo.hash = data.hash || pageInfo.hash;
 	pageInfo.embedding = data.embedding || pageInfo.embedding;
@@ -772,12 +775,6 @@ EventHandler.FindSimilarArticle = async (data) => {
 		}
 	}));
 
-	var titles = [];
-	list = list.filter(item => {
-		if (titles.includes(item.title)) return false;
-		titles.push(item.title);
-		return true;
-	});
 	return list;
 };
 EventHandler.GetConversation = async (url) => {
@@ -1024,6 +1021,8 @@ const calculateNearestScore = (g1, g2) => {
 			prods.push([prod, w1 * w2, prod * w1 * w2, i, j]);
 		});
 	});
+	prods.sort((a, b) => b[1] - a[1]);
+	var max = prods[0][1];
 	prods.sort((a, b) => b[0] - a[0]);
 	var selects = [], len = Math.min(g1.length, g2.length);
 	for (let i = 0; i < len; i ++) {
@@ -1037,6 +1036,7 @@ const calculateNearestScore = (g1, g2) => {
 	}
 	var similar = 0;
 	selects.forEach(item => similar += item[2]);
+	similar /= max;
 
 	return similar;
 };

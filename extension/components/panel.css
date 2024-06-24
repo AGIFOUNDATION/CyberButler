@@ -39,6 +39,9 @@
 	text-underline-offset: 1px;
 	background-color: transparent;
 }
+.panel_container img {
+	background-color: transparent !important;
+}
 
 .panel_container .content_container {
 	color: var(--front-color);
@@ -350,20 +353,31 @@
 .panel_container ul > li:last-child, .panel_container ol > li:last-child {
 	margin-bottom: 0;
 }
-.panel_container blockquote {
+.panel_container blockquote, .panel_container pre {
 	box-sizing: border-box;
 	margin-top: 0.5em;
 	margin-bottom: 0.5em;
 	margin-left: 0px;
 	margin-right: 0px;
 	padding: 1px 5px;
+}
+.panel_container blockquote {
 	border-left: 5px solid var(--back-color);
 	box-shadow: 1px 1px 5px var(--back-color);
 }
+.panel_container pre {
+	background-color: var(--back-color);
+}
 .panel_container code {
 	padding: 2px 5px;
-	background-color: rgb(from var(--front-color) r g b / 20%);
 	border-radius: 4px;
+	background-color: rgb(from var(--front-color) r g b / 20%);
+	color: rgba(203, 27, 69, 1.0);
+}
+.panel_container pre code {
+	padding: 0px;
+	border-radius: 0px;
+	background-color: transparent;
 }
 .panel_container table th {
 	background-color: rgb(from var(--front-color) r g b / 30%);

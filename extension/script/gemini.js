@@ -172,6 +172,10 @@ AI.Gemini.embed = async (contents, model=DefaultEmbeddingModel, options={}) => {
 	logger.info('Gemini', 'Embed: ' + (time / 1000) + 's');
 
 	response = await response.json();
+	if (!response.embeddings?.map) {
+		logger.error('Gemini', "Abnormal Response:", response);
+		return null;
+	}
 	response = response.embeddings.map((embed, i) => {
 		return {
 			weight: weights[i],

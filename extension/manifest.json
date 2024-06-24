@@ -6,7 +6,7 @@
 		"email": "lostabaddon@gmail.com"
 	},
 	"homepage_url": "https://agifoundation.github.io/CyberButler/",
-	"version": "0.1.0",
+	"version": "0.1.1",
 	"description": "Your personal cyber knowledge vault butler.",
 	"icons": {
 		"16": "images/icon16.png",
