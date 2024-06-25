@@ -489,7 +489,7 @@ var pageSummary = null, conversationVector = null;
 const summarizePage = async (isRefresh=false) => {
 	runningAI = true;
 
-	AIContainer.querySelector('.content_container').innerHTML = '';
+	if (!!AIContainer) AIContainer.querySelector('.content_container').innerHTML = '';
 
 	pageInfo = await getPageInfo();
 	var article = pageInfo.content, hash = pageInfo.hash;
