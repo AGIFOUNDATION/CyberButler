@@ -591,7 +591,7 @@ EventHandler.utilMounted = (util) => {
 	var state = UtilsState[util];
 	if (!state) return;
 	state.loaded = true;
-	logger.info('Page', 'Utile Loaded: ' + util);
+	logger.info('Page', 'Util Loaded: ' + util);
 	var list = state.reses;
 	delete state.reses;
 	list.forEach(res => res());

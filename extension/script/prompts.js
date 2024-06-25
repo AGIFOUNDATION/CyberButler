@@ -49,16 +49,18 @@ PromptLib.summarizeArticle = `The following content is the textual content on th
 
 1.	**All answers must be based on the content of this article and should not speculate beyond the content provided;**
 2.	All responses must be in the language "{{lang}}";
-3.	Provide the main content of this article;
-4.	Divide the article into sections, and list which paragraphs each section contains and the main content of each section;
-5.	List the core ideas of the article, and under each core idea, the main arguments must be listed.
+3.	Reply in Markdown format;
+4.	Provide the main content of this article;
+5.	Divide the article into sections, and list which paragraphs each section contains and the main content of each section;
+6.	List the core ideas of the article, and under each core idea, the main arguments must be listed.
 
 #	Article Content to Be Summarized
 
 {{article}}`;
 PromptLib.askPageSystem = `#	Requirements
 
--	All responses must be in "{{lang}}".
+-	All responses must be in "{{lang}}";
+-	Reply in Markdown format;
 -	Base all responses on the provided Text Content and Reference Materials;
 -	All replies must be in accordance with the provided Text Content and Reference Materials. If you encounter questions that cannot be answered based on the Text Content or Reference Materials, *clearly* inform me that **the subsequent response is based on your own understanding rather than the Text Content and Reference Materials**;
 -	Where possible, provide quotes from the Text Content or Reference Materials, including the original text of the sentence and which paragraph and article it is in;
