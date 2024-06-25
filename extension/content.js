@@ -487,6 +487,8 @@ const waitForMountUtil = (util) => new Promise(res => {
 
 var pageSummary = null, conversationVector = null;
 const summarizePage = async (isRefresh=false) => {
+	runningAI = true;
+
 	AIContainer.querySelector('.content_container').innerHTML = '';
 
 	pageInfo = await getPageInfo();
@@ -499,6 +501,7 @@ const summarizePage = async (isRefresh=false) => {
 
 	if (!isRefresh && !!pageSummary && !!pageHash && hash === pageHash) {
 		showPageSummary(pageSummary);
+		runningAI = false;
 		return;
 	}
 
@@ -523,6 +526,8 @@ const summarizePage = async (isRefresh=false) => {
 		Notification.show(messages.cypriteName, messages.summarizeFailed, 'rightTop', 'fail', 5 * 1000);
 		showPageSummary('');
 	}
+
+	runningAI = false;
 };
 
 const translatePage = async () => {

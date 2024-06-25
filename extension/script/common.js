@@ -7,6 +7,12 @@ globalThis.Model2AI = {
 	"claude-3-5-sonnet-20240620": "Claude",
 	"claude-3-opus-20240229": "Claude",
 	"claude-3-haiku-20240307": "Claude",
+	"gpt-4o": "OpenAI",
+	"gpt-4-turbo": "OpenAI",
+	// "glm-4": "GLM",
+	"moonshot-v1-128k": "MoonShot",
+	"deepseek-chat": "DeepSeek",
+	"deepseek-coder": "DeepSeek",
 };
 globalThis.AI2Model = {
 	"gemini": [
@@ -17,6 +23,16 @@ globalThis.AI2Model = {
 		"claude-3-5-sonnet-20240620",
 		"claude-3-opus-20240229",
 		"claude-3-haiku-20240307",
+	],
+	"openai": [
+		"gpt-4o",
+		"gpt-4-turbo",
+	],
+	// "glm": ["glm-4"],
+	"moonshot": ["moonshot-v1-128k"],
+	"deepseek": [
+		"deepseek-chat",
+		"deepseek-coder"
 	],
 };
 

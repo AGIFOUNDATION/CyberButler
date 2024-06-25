@@ -132,6 +132,10 @@ AI.Gemini.chat = async (conversation, model=DefaultChatModel, options={}) => {
 	logger.info('Gemini', 'Chat: ' + (time / 1000) + 's');
 
 	response = await response.json();
+	var usage = response.usageMetadata;
+	if (!!usage) {
+		logger.info('Gemini', `Usage: Input ${usage.promptTokenCount}, Output: ${usage.candidatesTokenCount}`);
+	}
 	var reply = response.candidates;
 	if (!!reply) reply = reply[0];
 	if (!reply) {

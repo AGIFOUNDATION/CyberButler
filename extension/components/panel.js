@@ -1,4 +1,5 @@
 const ChatHistory = [];
+const ChatVectorLimit = 20;
 const MatchRelevantArticlesBasedOnConversation = true;
 
 var showChatter = false, runningAI = false, chatTrigger = null;
@@ -116,7 +117,7 @@ const generateModelList = async () => {
 		let key = apiKey[ai];
 		if (!key) continue;
 		available = true;
-		ModelList.push(...AI2Model[ai]);
+		if (!!AI2Model[ai]) ModelList.push(...AI2Model[ai]);
 	}
 
 	AIModelList.innerHTML = '';
@@ -350,8 +351,8 @@ const onSendToCyprite = async () => {
 	AIAsker.setAttribute('contentEditable', 'false');
 
 	// Get Embedding Vector for Request
+	var vector;
 	if (MatchRelevantArticlesBasedOnConversation) {
-		let vector;
 		try {
 			vector = await askAIandWait('embeddingContent', {title: "Request", article: question});
 		}
@@ -374,6 +375,7 @@ const onSendToCyprite = async () => {
 		}
 		if (!!conversationVector) {
 			conversationVector.push(...vector);
+			if (conversationVector.length > ChatVectorLimit) conversationVector = conversationVector.splice(conversationVector.length - ChatVectorLimit, ChatVectorLimit);
 			related = await askSWandWait('FindSimilarArticle', {url: location.href, vector: conversationVector});
 			relativeArticles.forEach(item => {
 				var article;
@@ -425,6 +427,7 @@ const onSendToCyprite = async () => {
 		askAIandWait('embeddingContent', {title: "Request", article: result}).then(vector => {
 			if (!vector) return;
 			conversationVector.push(...vector);
+			if (conversationVector.length > ChatVectorLimit) conversationVector = conversationVector.splice(conversationVector.length - ChatVectorLimit, ChatVectorLimit);
 		});
 	}
 };

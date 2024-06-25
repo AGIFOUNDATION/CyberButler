@@ -1,5 +1,6 @@
 import "./gemini.js";
 import "./claude.js";
+import "./gpt.js";
 
 const ResMap = new Map();
 const EmbeddingLimit = 2024;

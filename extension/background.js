@@ -434,7 +434,7 @@ const updateAIModelList = () => {
 		let key = myInfo.apiKey[ai];
 		if (!key) continue;
 		available = true;
-		ModelList.push(...AI2Model[ai]);
+		if (!!AI2Model[ai]) ModelList.push(...AI2Model[ai]);
 	}
 	myInfo.edgeAvailable = available;
 };

@@ -3,35 +3,13 @@ globalThis.AI.Claude = {};
 
 const DefaultChatModel = AI2Model.claude[0];
 
-AI.Claude.list = async () => {
-	var url = 'https://generativelanguage.googleapis.com/v1beta/models?key=' + myInfo.apiKey.gemini;
-	var request = {
-		method: "GET",
-		headers: {
-			"content-type": "application/json",
-		},
-	};
-
-	var response, time = Date.now();
-	try {
-		response = await waitUntil(fetch(url, request));
-	}
-	catch (err) {
-		throw err;
-	}
-	time = Date.now() - time;
-	logger.info('Claude', 'List: ' + (time / 1000) + 's');
-
-	response = await response.json();
-	return response;
-};
 AI.Claude.chat = async (conversation, model=DefaultChatModel, options={}) => {
 	var prompt = [];
 	var data = {
 		model,
 		top_k: options.top_k || 3,
-		temperature: 1.0,
-		max_tokens: 4096,
+		temperature: options.temperature || 1.0,
+		max_tokens: options.max_tokens || 4096,
 		messages: prompt,
 	};
 	var request = {
@@ -83,6 +61,10 @@ AI.Claude.chat = async (conversation, model=DefaultChatModel, options={}) => {
 	logger.info('Claude', 'Chat: ' + (time / 1000) + 's');
 
 	response = await response.json();
+	var usage = response.usage;
+	if (!!usage) {
+		logger.info('Claude', `Usage: Input ${usage.input_tokens}, Output: ${usage.output_tokens}`);
+	}
 	var reply = response.content;
 	if (!!reply) reply = reply[0];
 	if (!reply) {
