@@ -166,6 +166,7 @@ const addChatItem = (content, type) => {
 	if (!!content) {
 		let contentPad = newEle('div', 'cyprite', "chat_content");
 		contentPad.innerHTML = marked.parse(content);
+		contentPad._data = content;
 		item.appendChild(contentPad);
 	}
 	else {
@@ -300,8 +301,8 @@ const onCopyContent = async target => {
 		if (target === document.body) return;
 	}
 	target = target.querySelector('.chat_content');
-
-	var content = getPageContent(target, true);
+	var content = target._data;
+	if (!content) content = getPageContent(target, true);
 	await navigator.clipboard.writeText(content);
 	var messages = I18NMessages[myLang] || I18NMessages.en;
 	Notification.show(messages.cypriteName, messages.contentCopied, 'middleTop', 'success', 2 * 1000);
