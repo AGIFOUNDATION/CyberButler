@@ -11,6 +11,7 @@ globalThis.I18NMessages = {
 		showChatPanel: 'Ask Cyprite',
 		hideChatPanel: 'Hide Cyprite',
 		btnClearHistory: "Clear Conversation",
+		btnReSummary: "Summary Again",
 		waitForAI: 'Thinking, please wait...',
 		AIFailed: "*(I'm busy now, please try again later...)*",
 		sendMessageToCyprite: 'Send',
@@ -19,6 +20,7 @@ globalThis.I18NMessages = {
 		relatedArticles: "Related Articles",
 		noRelatedArticle: "No related article",
 		changeModelSuccess: "AI Model has been successfully switched",
+		clearConversationWhileRunning: "Cyprite is thinking, please wait a moment before clearing the conversation!",
 	},
 	zh: {
 		cypriteName: "机灵",
@@ -32,6 +34,7 @@ globalThis.I18NMessages = {
 		showChatPanel: '提问机灵',
 		hideChatPanel: '隐藏机灵',
 		btnClearHistory: "清空对话",
+		btnReSummary: "重新概述",
 		waitForAI: '思考中，请稍等……',
 		AIFailed: "*（忙碌中，请稍后再试……）*",
 		sendMessageToCyprite: '提问',
@@ -40,5 +43,6 @@ globalThis.I18NMessages = {
 		relatedArticles: "相关文章",
 		noRelatedArticle: "无相关文章",
 		changeModelSuccess: "AI模型已成功切换",
+		clearConversationWhileRunning: "机灵正在思考，稍后才能清空对话哦！",
 	},
 };

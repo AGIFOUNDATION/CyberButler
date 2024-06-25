@@ -208,6 +208,7 @@
 	user-select: none;
 }
 .panel_container .panel_button.always_show,
+.panel_container .panel_button.active.always,
 .panel_container .panel_button.active.show {
 	display: inline-block;
 }

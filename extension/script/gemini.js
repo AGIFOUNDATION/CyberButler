@@ -44,6 +44,22 @@ const assembleConversation = conversation => {
 	}
 	return prompt;
 };
+const scoreContent = content => {
+	var score = 0;
+	content = content.replace(/[a-zA-Z]+/g, () => {
+		score += 2.5;
+		return ' ';
+	});
+	content = content.replace(/[\d\.]+/g, () => {
+		score += 1;
+		return ' ';
+	});
+	content = content.replace(/[\u4e00-\u9fa5]/g, () => {
+		score += 1;
+		return ' ';
+	});
+	return Math.floor(score);
+};
 
 AI.Gemini.list = async () => {
 	var url = 'https://generativelanguage.googleapis.com/v1beta/models?key=' + myInfo.apiKey.gemini;
@@ -140,7 +156,7 @@ AI.Gemini.embed = async (contents, model=DefaultEmbeddingModel, options={}) => {
 
 	var requests = [], weights = [];
 	contents.forEach(item => {
-		weights.push(item.content.length);
+		weights.push(scoreContent(item.content));
 		requests.push({
 			model,
 			taskType: options.taskType || "RETRIEVAL_DOCUMENT",

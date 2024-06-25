@@ -486,7 +486,9 @@ const waitForMountUtil = (util) => new Promise(res => {
 });
 
 var pageSummary = null, conversationVector = null;
-const summarizePage = async () => {
+const summarizePage = async (isRefresh=false) => {
+	AIContainer.querySelector('.content_container').innerHTML = '';
+
 	pageInfo = await getPageInfo();
 	var article = pageInfo.content, hash = pageInfo.hash;
 	if (!article) {
@@ -495,13 +497,13 @@ const summarizePage = async () => {
 	}
 	article = 'TITLE: ' + pageInfo.title + '\n\n' + article;
 
-	if (!!pageSummary && !!pageHash && hash === pageHash) {
+	if (!isRefresh && !!pageSummary && !!pageHash && hash === pageHash) {
 		showPageSummary(pageSummary);
 		return;
 	}
 
 	var messages = I18NMessages[myLang] || I18NMessages.en;
-	var notify = Notification.show(messages.cypriteName, messages.summarizingPage, 'rightTop', 'message', 24 * 3600 * 1000);
+	var notify = Notification.show(messages.cypriteName, messages.summarizingPage, isRefresh ? "middleTop" : 'rightTop', 'message', 24 * 3600 * 1000);
 
 	var embedding, summary = await askAIandWait('summarizeArticle', {title: pageInfo.title, article});
 	if (!!summary) {

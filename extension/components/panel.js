@@ -1,7 +1,8 @@
 const ChatHistory = [];
+const MatchRelevantArticlesBasedOnConversation = true;
 
-var showChatter = false, chatTrigger = null;
-var btnClearHistory = null, relativeArticles = [];
+var showChatter = false, runningAI = false, chatTrigger = null;
+var relativeArticles = [];
 var AIContainer = null, AIPanel = null, AIAsker = null, AIHistory = null, AIRelated = null, AIModelList = null;
 
 /* UI */
@@ -91,11 +92,17 @@ const generateTabPanel = (messages) => {
 	chatTrigger.addEventListener('click', onSummaryChatTrigger);
 	tabPanel.appendChild(chatTrigger);
 
-	btnClearHistory = newEle('div', 'cyprite', 'panel_button');
+	var btnClearHistory = newEle('div', 'cyprite', 'panel_button');
 	btnClearHistory.setAttribute('group', 'summary');
 	btnClearHistory.innerText = messages.btnClearHistory;
-	btnClearHistory.addEventListener('click', onClearSummaryConversation);
+	btnClearHistory.addEventListener('click', clearSummaryConversation);
 	tabPanel.appendChild(btnClearHistory);
+
+	var btnReSummary = newEle('div', 'cyprite', 'panel_button', 'always');
+	btnReSummary.setAttribute('group', 'summary');
+	btnReSummary.innerText = messages.btnReSummary;
+	btnReSummary.addEventListener('click', () => summarizePage(true));
+	tabPanel.appendChild(btnReSummary);
 
 	return tabPanel;
 };
@@ -112,6 +119,7 @@ const generateModelList = async () => {
 		ModelList.push(...AI2Model[ai]);
 	}
 
+	AIModelList.innerHTML = '';
 	ModelList.forEach(mdl => {
 		var item = newEle('div', 'cyprite', 'panel_model_item');
 		item.innerText = mdl;
@@ -333,19 +341,26 @@ const onAfterInput = evt => {
 	onSendToCyprite();
 };
 const onSendToCyprite = async () => {
+	runningAI = true;
+
 	var messages = I18NMessages[myLang] || I18NMessages.en;
 	var question = getPageContent(AIAsker, true);
 	addChatItem(question, 'human');
 	AIAsker.innerText = messages.waitForAI;
 	AIAsker.setAttribute('contentEditable', 'false');
 
-	var vector;
-	try {
-		vector = await askAIandWait('embeddingContent', {title: "Request", article: question});
+	// Get Embedding Vector for Request
+	if (MatchRelevantArticlesBasedOnConversation) {
+		let vector;
+		try {
+			vector = await askAIandWait('embeddingContent', {title: "Request", article: question});
+		}
+		catch {
+			vector = null;
+		}
 	}
-	catch {
-		vector = null;
-	}
+
+	// Match relevant articles
 	var related = null;
 	if (!!vector) {
 		if (!conversationVector && !!pageVector) {
@@ -384,10 +399,14 @@ const onSendToCyprite = async () => {
 				}
 			});
 			related.sort((a, b) => b.similar - a.similar);
-			related = filterSimilarArticle(related, 10);
 		}
 	}
+	else {
+		related = [...relativeArticles];
+	}
+	related = filterSimilarArticle(related, 10);
 
+	// Call Ai for reply
 	var {title, content} = pageInfo;
 	if (!content) content = getPageContent(document.body, true);
 	var result = await askAIandWait('askArticle', { url: location.href, title, content, question, related });
@@ -398,8 +417,22 @@ const onSendToCyprite = async () => {
 	AIAsker.setAttribute('contentEditable', 'true');
 	await wait();
 	AIAsker.focus();
+
+	runningAI = false;
+
+	// Get Embedding Vector for Reply
+	if (MatchRelevantArticlesBasedOnConversation && !!conversationVector) {
+		askAIandWait('embeddingContent', {title: "Request", article: result}).then(vector => {
+			if (!vector) return;
+			conversationVector.push(...vector);
+		});
+	}
 };
-const onClearSummaryConversation = async () => {
+const clearSummaryConversation = async () => {
+	if (runningAI) {
+		Notification.show(messages.cypriteName, messages.clearConversationWhileRunning, 'middleTop', 'warn', 2 * 1000);
+		return;
+	}
 	askSWandWait('ClearSummaryConversation', location.href);
 	AIHistory.__inner.innerHTML = '';
 };
