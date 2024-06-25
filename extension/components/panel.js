@@ -19,6 +19,7 @@ const generateAIPanel = async (messages) => {
 
 	var avatar = newEle('div', 'cyprite', 'panel_logo');
 	avatar.innerHTML = '<img src="' + chrome.runtime.getURL('/images/cyprite.png') + '">';
+	avatar.addEventListener('mouseenter', updateModelList);
 	panel.appendChild(avatar);
 	var modelList = newEle('div', 'cyprite', "panel_model_chooser");
 	modelList.addEventListener('click', onChooseModel);
@@ -98,14 +99,12 @@ const generateTabPanel = (messages) => {
 
 	return tabPanel;
 };
-const updateModelList = async () => {
-	var apiKey = await chrome.storage.local.get('apiKey');
-	if (!apiKey) return;
-	apiKey = apiKey.apiKey;
-	if (!apiKey) return;
+const generateModelList = async () => {
+	var localInfo = await chrome.storage.local.get(['apiKey', 'AImodel']);
+	var model = localInfo.AImodel || '';
+	var apiKey = localInfo.apiKey || {};
 
 	ModelList.splice(0);
-
 	for (let ai in apiKey) {
 		let key = apiKey[ai];
 		if (!key) continue;
@@ -113,10 +112,13 @@ const updateModelList = async () => {
 		ModelList.push(...AI2Model[ai]);
 	}
 
-	ModelList.forEach(model => {
+	ModelList.forEach(mdl => {
 		var item = newEle('div', 'cyprite', 'panel_model_item');
-		item.innerText = model;
-		item.setAttribute('name', model);
+		item.innerText = mdl;
+		item.setAttribute('name', mdl);
+		if (mdl === model) {
+			item.classList.add('current');
+		}
 		AIModelList.appendChild(item);
 	});
 };
@@ -206,7 +208,7 @@ const showPageSummary = async (summary) => {
 
 	if (!AIContainer) await generateAIPanel(messages);
 
-	updateModelList();
+	generateModelList();
 	addSummaryAndRelated(messages, AIContainer.querySelector('.content_container'), summary, relatives);
 	relativeArticles = relatives;
 	showSummaryPanel();
@@ -242,6 +244,22 @@ const showComprehensivePanel = () => {
 
 	console.log('Show Comprehensive');
 };
+const updateModelList = async (model) => {
+	if (!model || !isString(model)) {
+		let localInfo = await chrome.storage.local.get(['AImodel']);
+		model = localInfo.AImodel || '';
+	}
+
+	[...AIModelList.querySelectorAll('.panel_model_item')].forEach(item => {
+		var mdl = item.getAttribute('name');
+		if (model === mdl) {
+			item.classList.add('current');
+		}
+		else {
+			item.classList.remove('current');
+		}
+	});
+};
 const onCloseMeByMask = ({target}) => {
 	if (!target.classList.contains('panel_mask') && !target.classList.contains('panel_frame')) return;
 	onCloseMe();
@@ -252,7 +270,8 @@ const onCloseMe = () => {
 const onChooseModel = async ({target}) => {
 	if (!target.classList.contains("panel_model_item")) return;
 	var model = target.getAttribute('name');
-	await chrome.storage.local.set({'AImodel': model});
+	chrome.storage.local.set({'AImodel': model});
+	updateModelList(model);
 
 	var messages = I18NMessages[myLang] || I18NMessages.en;
 	Notification.show(messages.cypriteName, messages.changeModelSuccess, 'middleTop', 'success', 2 * 1000);

@@ -122,6 +122,11 @@
 	white-space: nowrap;
 	cursor: pointer;
 }
+.panel_container .panel_logo .panel_model_chooser .panel_model_item.current {
+	padding: 0px;
+	padding-left: 5px;
+	border-left: 3px solid white;
+}
 .panel_container .panel_left, .panel_container .panel_right {
 	box-sizing: border-box;
 	position: absolute;
