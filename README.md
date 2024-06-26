@@ -45,5 +45,5 @@ When using a local knowledge base, the plugin will load local information throug
 
 1.	Summarize web page content and list the outline of the page content, conversation based on page content and related web pates;
 2.	Calculate page embedding vectors for subsequent multi-page association.
-3.	Translate text (in progress);
+3.	Translate text;
 4.	Multi AI Models.

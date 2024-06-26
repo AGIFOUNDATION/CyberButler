@@ -53,6 +53,7 @@
 		{
 			"resources": [
 				"/images/xmark.svg",
+				"/images/feather.svg",
 				"/images/circle-xmark.svg",
 				"/images/copy.svg",
 				"/images/cyprite.png"

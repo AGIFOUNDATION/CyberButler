@@ -16,10 +16,6 @@ const UtilList = {
 	},
 };
 
-globalThis.LangName = {
-	'zh': "Chinese",
-	'en': "English",
-};
 globalThis.Hints = {
 	zh: {
 		talkHint: "机灵说：",
@@ -1017,6 +1013,23 @@ AIHandler.askArticle = async (data, source, sid) => {
 
 	removeAIChatHistory();
 	return result;
+};
+AIHandler.translateContent = async (data, source, sid) => {
+	var available = await checkAvailability();
+	if (!available) return;
+
+	data.requirement = data.requirement || '(No Extra Requirement)';
+
+	var translation;
+	try {
+		translation = await callAIandWait('translateContent', data);
+	}
+	catch (err) {
+		showSystemNotification(err);
+		return null;
+	}
+
+	return translation;
 };
 
 /* Utils */

@@ -1,4 +1,8 @@
 globalThis.DefaultLang = 'en';
+globalThis.LangName = {
+	'zh': "Chinese",
+	'en': "English",
+};
 
 globalThis.ModelList = [];
 globalThis.Model2AI = {

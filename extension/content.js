@@ -507,25 +507,47 @@ const summarizePage = async (isRefresh=false) => {
 	runningAI = false;
 };
 
-const translatePage = async () => {
+var translationInfo = {
+	lang: '',
+	isSelection: false,
+	content: '',
+	translation: '',
+};
+const translatePage = async (isRefresh=false, lang, content, requirement) => {
 	runningAI = true;
 
-	var messages = I18NMessages[myLang] || I18NMessages.en;
-	var notify = Notification.show(messages.cypriteName, messages.summarizeArticle.running, isRefresh ? "middleTop" : 'rightTop', 'message', 24 * 3600 * 1000);
+	if (!!AIContainer) AIContainer.querySelector('.content_container').innerHTML = '';
 
-	var sel = document.getSelection();
-	var content = (sel.toString() || '').trim();
-	var isSelection = true;
-
+	var isSelection = false;
+	if (!content) {
+		let sel = document.getSelection();
+		content = (sel.toString() || '').trim();
+		isSelection = true;
+	}
+	else {
+		isSelection = true;
+	}
 	if (!content) {
 		isSelection = false;
 		if (!pageInfo) pageInfo = await getPageInfo();
 		content = pageInfo.content;
-		content = 'TITLE: ' + pageInfo.title + '\n\n' + content;
 	}
-	console.log(content);
+
+	var messages = I18NMessages[myLang] || I18NMessages.en;
+	var notify = Notification.show(messages.cypriteName, isSelection ? messages.translation.translatingSelection : messages.translation.translatingArticle, isRefresh ? "middleTop" : 'rightTop', 'message', 24 * 3600 * 1000);
+
+	if (!lang) lang = myLang;
+	lang = LangName[lang] || lang;
+
+	var translation = await askAIandWait('translateContent', {lang, content, requirement});
+	translationInfo.lang = lang;
+	translationInfo.isSelection = isSelection;
+	translationInfo.content = content;
+	translationInfo.translation = translation;
 
 	notify._hide();
+
+	showTranslationResult(isSelection, content, translation);
 
 	runningAI = false;
 };

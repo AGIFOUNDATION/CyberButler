@@ -9,10 +9,18 @@ globalThis.I18NMessages = {
 			autoWrite: "Optimize Writing",
 		},
 		summarizeArticle: {
-			running: 'The article is currently being summarizing, please wait a moment...',
+			running: 'The article is currently being summarizing, please wait...',
 			failed: 'The article summary has failed, you may try again later!',
 			relatedArticles: "Related Articles",
 			noRelatedArticle: "No related article",
+		},
+		translation: {
+			translatingArticle: "Translating the entire article, please wait...",
+			translatingSelection: "Translating the selected content, please wait...",
+			failed: 'Translation failed, you may try again later!',
+			noTranslatedYet: 'Not translated yet...',
+			selectionHint: "Content to be translated:",
+			articleHint: "Webpage content translation:",
 		},
 		buttons: {
 			sendMessageToCyprite: 'Send',
@@ -23,6 +31,9 @@ globalThis.I18NMessages = {
 			hideChatPanel: 'Hide Cyprite',
 			btnClearHistory: "Clear Conversation",
 			btnReSummary: "Summary Again",
+			btnReTranslateAll: "Re-translate Page",
+			hintTranslateInto: "Translate Into:",
+			btnTranslateAgain: "Re-Transalte",
 		},
 		mentions: {
 			changeModelSuccess: "AI Model has been successfully switched",
@@ -50,6 +61,14 @@ globalThis.I18NMessages = {
 			relatedArticles: "相关文章",
 			noRelatedArticle: "无相关文章",
 		},
+		translation: {
+			translatingArticle: "正在翻译全文，请稍等……",
+			translatingSelection: "正在翻译所选内容，请稍等……",
+			failed: '翻译失败了，您可以稍后再试一次哦！',
+			noTranslatedYet: '尚未翻译……',
+			selectionHint: "待翻译内容：",
+			articleHint: "网页正文翻译：",
+		},
 		buttons: {
 			sendMessageToCyprite: '提问',
 			showSummaryPanel: '概述总结',
@@ -59,6 +78,9 @@ globalThis.I18NMessages = {
 			hideChatPanel: '隐藏机灵',
 			btnClearHistory: "清空对话",
 			btnReSummary: "重新概述",
+			btnReTranslateAll: "重新翻译全文",
+			hintTranslateInto: "翻译为：",
+			btnTranslateAgain: "重新翻译",
 		},
 		mentions: {
 			changeModelSuccess: "AI模型已成功切换",
