@@ -221,49 +221,54 @@
 	outline: none;
 	color: var(--front-color);
 }
-.panel_container .panel_button.button_extra_requirement {
-	position: absolute;
-	bottom: 5px;
-	right: 5px;
-	margin: 0px;
-	box-sizing: border-box;
-	width: 33px;
-	height: 33px;
-	padding: 5px;
-	cursor: pointer;
+.panel_container[name="translate"] .content_container  {
+	bottom: 170px;
 }
-.panel_container .panel_button.button_extra_requirement img {
-	box-sizing: border-box;
-	width: 23px;
-	filter: invert(0.6) sepia(1.0) hue-rotate(160deg) brightness(1.9) drop-shadow(1px 1px 2px black);
-}
-.panel_container .panel_button.button_extra_requirement .panel_input_frame {
+.panel_container .panel_extrareq_inputform {
 	display: none;
-	position: absolute;
-	bottom: -1px;
-	right: -1px;
 	box-sizing: border-box;
-	width: 450px;
-	height: 350px;
+	position: absolute;
+	bottom: 10px;
+	height: 150px;
+	left: 10px;
+	right: 10px;
 	padding: 10px;
 	border-radius: 8px;
 	border: 1px solid black;
-	background-color: var(--back-color);
-	box-shadow: 2px 2px 5px rgb(from var(--back-color) r g b / 80%);
 }
-.panel_container .panel_button.button_extra_requirement:hover .panel_input_frame {
+.panel_container[name="translate"] .panel_extrareq_inputform {
 	display: block;
 }
-.panel_container .panel_button.button_extra_requirement .panel_input_frame textarea {
+.panel_container .panel_extrareq_inputform textarea {
 	box-sizing: border-box;
-	width: 450px;
-	height: 300px;
+	position: absolute;
+	top: 10px;
+	bottom: 10px;
+	left: 10px;
+	right: 110px;
 	padding: 8px;
 	border-radius: 5px;
 	border: 1px solid black;
 	background-color: transparent;
 	outline: none;
 	resize: none;
+}
+.panel_container .panel_extrareq_inputform .input_sender {
+	box-sizing: border-box;
+	position: absolute;
+	top: 10px;
+	bottom: 10px;
+	left: auto;
+	right: 10px;
+	width: 100px;
+	height: auto;
+	line-height: 20px;
+}
+.panel_container .panel_extrareq_inputform .input_sender img {
+	box-sizing: border-box;
+	width: 30px;
+	margin-top: 30px;
+	filter: invert(0.6) sepia(1.0) hue-rotate(160deg) brightness(1.9) drop-shadow(1px 1px 2px black);
 }
 .panel_container .input_container {
 	position: absolute;
@@ -429,6 +434,8 @@
 .panel_container ul, .panel_container ol {
 	margin-top: 0.5em;
 	margin-bottom: 0.5em;
+	margin-left: 0px;
+	margin-right: 0px;
 	padding-left: 2em;
 }
 .panel_container li {

@@ -12,7 +12,7 @@ const ModelOrder = [
 
 var showChatter = false, runningAI = false, chatTrigger = null;
 var relativeArticles = [];
-var extraTranslationRequirement = '';
+var extraTranslationRequirement = '', inputerTranslationLanguage = null;
 var AIContainer = null, AIPanel = null, AIAsker = null, AIHistory = null, AIRelated = null, AIModelList = null;
 
 /* UI */
@@ -68,8 +68,8 @@ const generateAIPanel = async (messages) => {
 	historyList.__inner.addEventListener('mouseup', onClickChatItem);
 	historyList.appendChild(historyList.__inner);
 
-	var btnExtraRequirement = generateTranslationExtraRequirementPanel(messages);
-	panel.appendChild(btnExtraRequirement);
+	var extraRequirementPanel = generateTranslationExtraRequirementPanel(messages);
+	leftPanel.appendChild(extraRequirementPanel);
 
 	document.body.appendChild(background);
 
@@ -140,7 +140,8 @@ const generateTabPanel = (messages) => {
 	var btnChangeLanguage = newEle('div', 'cyprite', 'panel_button', 'always');
 	btnChangeLanguage.setAttribute('group', 'translate');
 	btnChangeLanguage.innerText = messages.buttons.hintTranslateInto;
-	var inputerTranslationLanguage = newEle('input', 'cyprite', 'panel_input', 'translate_target_language');
+	inputerTranslationLanguage = newEle('input', 'cyprite', 'panel_input', 'translate_target_language');
+	inputerTranslationLanguage.value = LangName[myLang] || myLang;
 	btnChangeLanguage.appendChild(inputerTranslationLanguage);
 	tabPanel.appendChild(btnChangeLanguage);
 
@@ -170,25 +171,23 @@ const generateModelList = async () => {
 	});
 };
 const generateTranslationExtraRequirementPanel = (messages) => {
-	var btnExtraRequirement = newEle('div', 'cyprite', 'panel_button', 'always', 'button_extra_requirement');
-	btnExtraRequirement.setAttribute('group', 'translate');
-	btnExtraRequirement.innerHTML = '<img button="true" action="editExtraRequirement" src="' + chrome.runtime.getURL('/images/feather.svg') + '">';
-
-	var inputFrame = newEle('div', 'cyprite', 'panel_input_frame');
+	var inputFrame = newEle('div', 'cyprite', 'panel_extrareq_inputform');
 	var inputter = newEle('textarea', 'cyprite');
 	inputFrame.appendChild(inputter);
-	btnExtraRequirement.appendChild(inputFrame);
 
 	var submitter = newEle('div', 'cyprite', 'input_sender');
-	submitter.innerText = messages.buttons.btnTranslateAgain;
+	submitter.innerHTML = '<img button="true" action="editExtraRequirement" src="' + chrome.runtime.getURL('/images/feather.svg') + '">';
+	var inner = newEle('div', 'cyprite');
+	inner.innerText = messages.buttons.btnTranslateAgain;
+	submitter.appendChild(inner);
 	submitter.addEventListener('click', () => {
 		extraTranslationRequirement = inputter.value;
-		var lang = AIPanel.querySelector('.translate_target_language').value || translationInfo.lang || myLang;
+		var lang = inputerTranslationLanguage.value || translationInfo.lang || myLang;
 		translatePage(true, lang, translationInfo.isSelection ? translationInfo.content : '', extraTranslationRequirement);
 	});
 	inputFrame.appendChild(submitter);
 
-	return btnExtraRequirement;
+	return inputFrame;
 };
 const addSummaryAndRelated = (messages, container, summary, relatedList) => {
 	container.innerHTML = marked.parse(summary, {breaks: true});
@@ -290,7 +289,8 @@ const showTranslationResult = async (isSelection, content, translation) => {
 
 	if (!AIContainer) await generateAIPanel(messages);
 
-	AIContainer.querySelector('.panel_input.translate_target_language').value = translationInfo.lang;
+	inputerTranslationLanguage.value = translationInfo.lang || LangName[myLang] || myLang;
+
 	generateModelList();
 	var ctx;
 	if (isSelection) {
@@ -311,6 +311,8 @@ const showTranslationResult = async (isSelection, content, translation) => {
 };
 const switchPanel = group => {
 	var actionName = 'show' + group[0].toUpperCase() + group.substring(1);
+
+	AIPanel.setAttribute('name', group);
 
 	for (let tab of AIPanel.querySelectorAll('.panel_tabs_area .panel_tab')) tab.classList.remove('active');
 	AIPanel.querySelector(`.panel_tabs_area .panel_tab[action="${actionName}"]`).classList.add('active');

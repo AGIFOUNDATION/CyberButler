@@ -33,7 +33,7 @@ globalThis.I18NMessages = {
 			btnReSummary: "Summary Again",
 			btnReTranslateAll: "Re-translate Page",
 			hintTranslateInto: "Translate Into:",
-			btnTranslateAgain: "Re-Transalte",
+			btnTranslateAgain: "Adjust Transaltion",
 		},
 		mentions: {
 			changeModelSuccess: "AI Model has been successfully switched",
@@ -80,7 +80,7 @@ globalThis.I18NMessages = {
 			btnReSummary: "重新概述",
 			btnReTranslateAll: "重新翻译全文",
 			hintTranslateInto: "翻译为：",
-			btnTranslateAgain: "重新翻译",
+			btnTranslateAgain: "调整翻译",
 		},
 		mentions: {
 			changeModelSuccess: "AI模型已成功切换",
