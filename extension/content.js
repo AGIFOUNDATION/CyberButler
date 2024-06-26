@@ -531,6 +531,7 @@ const translatePage = async (isRefresh=false, lang, content, requirement) => {
 		isSelection = false;
 		if (!pageInfo) pageInfo = await getPageInfo();
 		content = pageInfo.content;
+		if (!content) content = getPageContent(document.body, true);
 	}
 
 	var messages = I18NMessages[myLang] || I18NMessages.en;
