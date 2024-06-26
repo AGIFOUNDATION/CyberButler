@@ -219,8 +219,10 @@ const clearHTML = (html, full=true, markList=false) => {
 	[...container.querySelectorAll('*')].forEach(item => {
 		[...item.attributes].forEach(attr => {
 			attr = attr.name;
-			if (attr === 'href') return;
-			if (attr === 'src') return;
+			if (markList) {
+				if (attr === 'href') return;
+				if (attr === 'src') return;
+			}
 			item.removeAttribute(attr);
 		});
 	});
@@ -403,9 +405,10 @@ const getPageContent = (container, keepLink=false) => {
 	content = content.replace(/<\/li>/gi, '\n');
 	content = content.replace(/<\/?(b|strong)(\s+[\w\W]*?)?>/gi, '**');
 	content = content.replace(/<\/?(i|em)(\s+[\w\W]*?)?>/gi, '*');
-	if (!keepLink) content = content.replace(/<\/?a(\s+[\w\W]*?)?>/gi, '');
-
-	if (keepLink) {
+	if (!keepLink) {
+		content = content.replace(/<\/?a(\s+[\w\W]*?)?>/gi, '');
+	}
+	else {
 		let temp = '';
 		while (content !== temp) {
 			temp = content;
