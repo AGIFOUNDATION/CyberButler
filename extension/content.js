@@ -483,7 +483,7 @@ const summarizePage = async (isRefresh=false) => {
 	}
 
 	var messages = I18NMessages[myLang] || I18NMessages.en;
-	var notify = Notification.show(messages.cypriteName, messages.summarizingPage, isRefresh ? "middleTop" : 'rightTop', 'message', 24 * 3600 * 1000);
+	var notify = Notification.show(messages.cypriteName, messages.summarizeArticle.running, isRefresh ? "middleTop" : 'rightTop', 'message', 24 * 3600 * 1000);
 
 	var embedding, summary = await askAIandWait('summarizeArticle', {title: pageInfo.title, article});
 	if (!!summary) {
@@ -500,7 +500,7 @@ const summarizePage = async (isRefresh=false) => {
 		showPageSummary(summary);
 	}
 	else {
-		Notification.show(messages.cypriteName, messages.summarizeFailed, 'rightTop', 'fail', 5 * 1000);
+		Notification.show(messages.cypriteName, messages.summarizeArticle.failed, 'rightTop', 'fail', 5 * 1000);
 		showPageSummary('');
 	}
 
@@ -508,10 +508,26 @@ const summarizePage = async (isRefresh=false) => {
 };
 
 const translatePage = async () => {
-	if (!pageInfo) pageInfo = await getPageInfo();
-	var article = pageInfo.content;
-	article = 'TITLE: ' + pageInfo.title + '\n\n' + article;
-	console.log(article);
+	runningAI = true;
+
+	var messages = I18NMessages[myLang] || I18NMessages.en;
+	var notify = Notification.show(messages.cypriteName, messages.summarizeArticle.running, isRefresh ? "middleTop" : 'rightTop', 'message', 24 * 3600 * 1000);
+
+	var sel = document.getSelection();
+	var content = (sel.toString() || '').trim();
+	var isSelection = true;
+
+	if (!content) {
+		isSelection = false;
+		if (!pageInfo) pageInfo = await getPageInfo();
+		content = pageInfo.content;
+		content = 'TITLE: ' + pageInfo.title + '\n\n' + content;
+	}
+	console.log(content);
+
+	notify._hide();
+
+	runningAI = false;
 };
 
 const checkPageNeedAI = async (page, path, host) => {
@@ -645,9 +661,24 @@ EventHandler.replyAskAndWait = (data) => {
 	delete NeedAIChecker[data.id];
 	res(data.result);
 };
-EventHandler.onContextMenuAction = (data) => {
+EventHandler.onContextMenuAction = async (data) => {
 	if (data.action === 'launchCyprite') {
-		EventHandler.requestCypriteNotify({forceShow: true});
+		await waitForMountUtil('notification');
+
+		if (!pageSummary) {
+			pageSummary = await askSWandWait('LoadPageSummary');
+			if (!!pageSummary) {
+				pageVector = pageSummary.embedding;
+				pageHash = pageSummary.hash;
+				pageSummary = pageSummary.description;
+			}
+		}
+		await summarizePage();
+	}
+	else if (data.action === 'translateSelection') {
+		await waitForMountUtil('notification');
+
+		await translatePage();
 	}
 };
 

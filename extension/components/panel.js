@@ -58,7 +58,7 @@ const generateAIPanel = async (messages) => {
 	inputArea.addEventListener('keyup', onAfterInput);
 	inputContainer.appendChild(inputArea);
 	var sender = newEle('div', 'cyprite', 'input_sender');
-	sender.innerText = messages.sendMessageToCyprite;
+	sender.innerText = messages.buttons.sendMessageToCyprite;
 	sender.addEventListener('click', onSendToCyprite);
 	rightPanel.appendChild(sender);
 	var historyList = newEle('div', 'cyprite', "chat_history_area", "scrollable");
@@ -80,36 +80,36 @@ const generateTabPanel = (messages) => {
 
 	var btnSummary = newEle('div', 'cyprite', 'panel_tab');
 	btnSummary.setAttribute('action', 'showSummary');
-	btnSummary.innerText = messages.showSummaryPanel;
+	btnSummary.innerText = messages.buttons.showSummaryPanel;
 	btnSummary.addEventListener('click', showSummaryPanel);
 	tabPanel.appendChild(btnSummary);
 
-	var btnTranslate = newEle('div', 'cyprite', 'panel_tab', 'invalid');
+	var btnTranslate = newEle('div', 'cyprite', 'panel_tab');
 	btnTranslate.setAttribute('action', 'showTranslate');
-	btnTranslate.innerText = messages.showTranslatePanel;
+	btnTranslate.innerText = messages.buttons.showTranslatePanel;
 	btnTranslate.addEventListener('click', showTranslatePanel);
 	tabPanel.appendChild(btnTranslate);
 
 	var btnComprehensive = newEle('div', 'cyprite', 'panel_tab', 'invalid');
 	btnComprehensive.setAttribute('action', 'showComprehensive');
-	btnComprehensive.innerText = messages.showComprehensivePanel;
+	btnComprehensive.innerText = messages.buttons.showComprehensivePanel;
 	btnComprehensive.addEventListener('click', showComprehensivePanel);
 	tabPanel.appendChild(btnComprehensive);
 
 	chatTrigger = newEle('div', 'cyprite', 'panel_button', "always_show");
-	chatTrigger.innerText = messages.showChatPanel;
+	chatTrigger.innerText = messages.buttons.showChatPanel;
 	chatTrigger.addEventListener('click', onSummaryChatTrigger);
 	tabPanel.appendChild(chatTrigger);
 
 	var btnClearHistory = newEle('div', 'cyprite', 'panel_button');
 	btnClearHistory.setAttribute('group', 'summary');
-	btnClearHistory.innerText = messages.btnClearHistory;
+	btnClearHistory.innerText = messages.buttons.btnClearHistory;
 	btnClearHistory.addEventListener('click', clearSummaryConversation);
 	tabPanel.appendChild(btnClearHistory);
 
 	var btnReSummary = newEle('div', 'cyprite', 'panel_button', 'always');
 	btnReSummary.setAttribute('group', 'summary');
-	btnReSummary.innerText = messages.btnReSummary;
+	btnReSummary.innerText = messages.buttons.btnReSummary;
 	btnReSummary.addEventListener('click', () => summarizePage(true));
 	tabPanel.appendChild(btnReSummary);
 
@@ -142,10 +142,10 @@ const addSummaryAndRelated = (messages, container, summary, relatedList) => {
 	container.innerHTML = marked.parse(summary);
 
 	var related = newEle('h2', 'cyprite', 'related_articles_area');
-	related.innerText = messages.relatedArticles;
+	related.innerText = messages.summarizeArticle.relatedArticles;
 	var list = newEle('ul', 'cyprite', 'related_articles_list');
 	if (!relatedList || !relatedList.length) {
-		list.innerHTML = '<li>' + messages.noRelatedArticle + '</li>';
+		list.innerHTML = '<li>' + messages.summarizeArticle.noRelatedArticle + '</li>';
 	}
 	else {
 		relatedList.forEach(item => {
@@ -167,7 +167,7 @@ const addChatItem = (content, type) => {
 
 	var titleBar = newEle('div', 'cyprite', "chat_title");
 	if (type === 'human') {
-		titleBar.innerText = messages.yourTalkPrompt + ':';
+		titleBar.innerText = messages.conversation.yourTalkPrompt;
 		item.classList.add('human');
 	}
 	else if (type === 'cyprite') {
@@ -290,7 +290,7 @@ const onChooseModel = async ({target}) => {
 	updateModelList(model);
 
 	var messages = I18NMessages[myLang] || I18NMessages.en;
-	Notification.show(messages.cypriteName, messages.changeModelSuccess, 'middleTop', 'success', 2 * 1000);
+	Notification.show(messages.cypriteName, messages.mentions.changeModelSuccess, 'middleTop', 'success', 2 * 1000);
 };
 const onSummaryChatTrigger = async () => {
 	if (!chatTrigger) return;
@@ -299,7 +299,7 @@ const onSummaryChatTrigger = async () => {
 	showChatter = !showChatter;
 	if (showChatter) {
 		for (let tab of AIPanel.querySelectorAll('.panel_tabs_area .panel_button[group="summary"]')) tab.classList.add('show');
-		chatTrigger.innerText = messages.hideChatPanel;
+		chatTrigger.innerText = messages.buttons.hideChatPanel;
 		AIPanel.setAttribute('chat', 'true');
 		await wait(100);
 		AIAsker.focus();
@@ -309,7 +309,7 @@ const onSummaryChatTrigger = async () => {
 	}
 	else {
 		for (let tab of AIPanel.querySelectorAll('.panel_tabs_area .panel_button[group="summary"]')) tab.classList.remove('show');
-		chatTrigger.innerText = messages.showChatPanel;
+		chatTrigger.innerText = messages.buttons.showChatPanel;
 		AIPanel.setAttribute('chat', 'false');
 	}
 };
@@ -340,7 +340,7 @@ const onCopyContent = async target => {
 	if (!content) content = getPageContent(target, true);
 	await navigator.clipboard.writeText(content);
 	var messages = I18NMessages[myLang] || I18NMessages.en;
-	Notification.show(messages.cypriteName, messages.contentCopied, 'middleTop', 'success', 2 * 1000);
+	Notification.show(messages.cypriteName, messages.mentions.contentCopied, 'middleTop', 'success', 2 * 1000);
 };
 const onAfterInput = evt => {
 	resizeHistoryArea();
@@ -354,7 +354,7 @@ const onSendToCyprite = async () => {
 	var messages = I18NMessages[myLang] || I18NMessages.en;
 	var question = getPageContent(AIAsker, true);
 	addChatItem(question, 'human');
-	AIAsker.innerText = messages.waitForAI;
+	AIAsker.innerText = messages.conversation.waitForAI;
 	AIAsker.setAttribute('contentEditable', 'false');
 
 	// Get Embedding Vector for Request
@@ -419,7 +419,7 @@ const onSendToCyprite = async () => {
 	var {title, content} = pageInfo;
 	if (!content) content = getPageContent(document.body, true);
 	var result = await askAIandWait('askArticle', { url: location.href, title, content, question, related });
-	if (!result) result = messages.AIFailed;
+	if (!result) result = messages.conversation.AIFailed;
 	addChatItem(result, 'cyprite');
 
 	AIAsker.innerText = '';
@@ -440,7 +440,7 @@ const onSendToCyprite = async () => {
 };
 const clearSummaryConversation = async () => {
 	if (runningAI) {
-		Notification.show(messages.cypriteName, messages.clearConversationWhileRunning, 'middleTop', 'warn', 2 * 1000);
+		Notification.show(messages.cypriteName, messages.mentions.clearConversationWhileRunning, 'middleTop', 'warn', 2 * 1000);
 		return;
 	}
 	askSWandWait('ClearSummaryConversation', location.href);

@@ -114,7 +114,6 @@ chrome.runtime.onInstalled.addListener(async () => {
 		id: "translateSelection",
 		title: messages.translate,
 		contexts: ["selection"],
-		enabled: false,
 	});
 	chrome.contextMenus.create({
 		id: "autoWrite",

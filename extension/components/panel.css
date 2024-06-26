@@ -189,7 +189,7 @@
 	color: var(--front-color);
 }
 .panel_container .panel_tab.invalid {
-	color: rgb(from var(--front-color) calc(r * 0.5) calc(g * 0.5) calc(b * 0.5) / 50%);
+	color: rgb(from var(--front-color) calc(r * 0.5) calc(g * 0.5) calc(b * 0.5) / 30%);
 	pointer-events: none;
 }
 .panel_container .panel_button {
