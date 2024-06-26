@@ -129,14 +129,6 @@ const generateTabPanel = (messages) => {
 
 	/* Translation Buttons */
 
-	var btnReTranslateAll = newEle('div', 'cyprite', 'panel_button', 'always');
-	btnReTranslateAll.setAttribute('group', 'translate');
-	btnReTranslateAll.innerText = messages.buttons.btnReTranslateAll;
-	btnReTranslateAll.addEventListener('click', () => {
-		translatePage(true, inputerTranslationLanguage.value);
-	});
-	tabPanel.appendChild(btnReTranslateAll);
-
 	var btnChangeLanguage = newEle('div', 'cyprite', 'panel_button', 'always');
 	btnChangeLanguage.setAttribute('group', 'translate');
 	btnChangeLanguage.innerText = messages.buttons.hintTranslateInto;
