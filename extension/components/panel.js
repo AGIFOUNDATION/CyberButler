@@ -1,6 +1,14 @@
 const ChatHistory = [];
 const ChatVectorLimit = 20;
 const MatchRelevantArticlesBasedOnConversation = true;
+const ModelOrder = [
+	"gemini",
+	"claude",
+	"openai",
+	"moonshot",
+	"deepseek",
+	"glm",
+];
 
 var showChatter = false, runningAI = false, chatTrigger = null;
 var relativeArticles = [];
@@ -113,12 +121,11 @@ const generateModelList = async () => {
 	var apiKey = localInfo.apiKey || {};
 
 	ModelList.splice(0);
-	for (let ai in apiKey) {
-		let key = apiKey[ai];
-		if (!key) continue;
-		available = true;
+	ModelOrder.forEach(ai => {
+		var key = apiKey[ai];
+		if (!key) return;
 		if (!!AI2Model[ai]) ModelList.push(...AI2Model[ai]);
-	}
+	});
 
 	AIModelList.innerHTML = '';
 	ModelList.forEach(mdl => {

@@ -21,6 +21,11 @@ globalThis.I18NMessages = {
 		noRelatedArticle: "No related article",
 		changeModelSuccess: "AI Model has been successfully switched",
 		clearConversationWhileRunning: "Cyprite is thinking, please wait a moment before clearing the conversation!",
+		contextMenus: {
+			launch: "Summon Cyprit",
+			translate: "Translate Selection",
+			autoWrite: "Optimize Writing",
+		},
 	},
 	zh: {
 		cypriteName: "机灵",
@@ -44,5 +49,10 @@ globalThis.I18NMessages = {
 		noRelatedArticle: "无相关文章",
 		changeModelSuccess: "AI模型已成功切换",
 		clearConversationWhileRunning: "机灵正在思考，稍后才能清空对话哦！",
+		contextMenus: {
+			launch: "召唤机灵",
+			translate: "翻译所选段落",
+			autoWrite: "优化输入",
+		},
 	},
 };

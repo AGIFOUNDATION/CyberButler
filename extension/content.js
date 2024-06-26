@@ -97,7 +97,7 @@ const findContainer = () => {
 			total: 0,
 			value: 0,
 		};
-		let total = ele.innerHTML.replace(/<([\w\-]+)(\s+[\w\W]*?)?>/g, (m, tag) => '<' + tag + '>').match(RegChar);
+		let total = clearHTML(ele.innerHTML, false).match(RegChar);
 		total = !!total ? total.length : 0;
 		if (total > 0) {
 			let size = ele.textContent.match(RegChar);
@@ -124,7 +124,7 @@ const findContainer = () => {
 		if (!!ele.classList && ele.classList.contains('cyprite')) continue;
 		var size = ele.textContent.match(RegChar);
 		size = !!size ? size.length : 0;
-		var total = ele.innerHTML.replace(/<([\w\-]+)(\s+[\w\W]*?)?>/g, (m, tag) => '<' + tag + '>').match(RegChar);
+		var total = clearHTML(ele.innerHTML, false).match(RegChar);
 		total = !!total ? total.length : 0;
 		ele._density = total > 0 ? size / total : 0;
 		ele._tagWeight = calculateTagWeight(ele);
@@ -143,7 +143,7 @@ const findContainer = () => {
 
 		var size = ele.textContent.match(RegChar);
 		size = !!size ? size.length : 0;
-		var total = ele.innerHTML.replace(/<([\w\-]+)(\s+[\w\W]*?)?>/g, (m, tag) => '<' + tag + '>').match(RegChar);
+		var total = clearHTML(ele.innerHTML, false).match(RegChar);
 		total = !!total ? total.length : 0;
 		ele._density = total > 0 ? size / total : 0;
 
@@ -204,45 +204,22 @@ const removeChildren = (container, tag) => {
 		upper.removeChild(ele);
 	}
 };
-const getCleanContainer = container => {
-	var frame = document.createDocumentFragment(), shadow = document.createElement('container');
-	shadow.innerHTML = container.innerHTML;
-	frame.appendChild(shadow);
-	removeChildren(frame, 'noscript');
-	removeChildren(frame, 'script');
-	removeChildren(frame, 'style');
-	removeChildren(frame, 'form');
-	removeChildren(frame, 'select');
-	removeChildren(frame, 'input');
-	removeChildren(frame, 'textarea');
-	removeChildren(frame, 'ol');
-	removeChildren(frame, 'ul');
-	removeChildren(frame, 'button');
-	removeChildren(frame, 'img');
-	removeChildren(frame, 'image');
-	removeChildren(frame, 'picture');
-	removeChildren(frame, 'audio');
-	removeChildren(frame, 'video');
-	removeChildren(frame, 'object');
-	removeChildren(frame, 'aside');
-	removeChildren(frame, 'footer');
+const clearHTML = (html, full=true) => {
+	var container = document.createElement('container');
+	container.innerHTML = html;
 
-	return shadow;
-};
-const clearHTML = html => {
+	[...container.querySelectorAll('.cyprite')].forEach(item => {
+		item.parentNode.removeChild(item);
+	});
+	if (full) {
+		[...container.querySelectorAll('form, select, button, textarea, input, object, script, style, nostyle, noscript, link, video, audio')].forEach(item => {
+			item.parentNode.removeChild(item);
+		});
+	}
+
+	html = container.innerHTML;
 	html = html.replace(/"<([\w\d\-_]+)(\s+[\w\W]*?)?>[\w\W]*?<\/\1>"\s*/gi, '""');
 	html = html.replace(/<([\w\d\-_]+)(\s+[\w\W]*?)?>/gi, (m, tag) => tag.toLowerCase() === 'meta' ? m : '<' + tag + '>');
-
-	html = html.replace(/<form(\s+[\w\W]*?)?>[\w\W]*?<\/form>/gi, '');
-	html = html.replace(/<select(\s+[\w\W]*?)?>[\w\W]*?<\/select>/gi, '');
-	html = html.replace(/<object(\s+[\w\W]*?)?>[\w\W]*?<\/object>/gi, '');
-	html = html.replace(/<script(\s+[\w\W]*?)?>[\w\W]*?<\/script>/gi, '');
-	html = html.replace(/<style(\s+[\w\W]*?)?>[\w\W]*?<\/style>/gi, '');
-	html = html.replace(/<nostyle(\s+[\w\W]*?)?>[\w\W]*?<\/nostyle>/gi, '');
-	html = html.replace(/<textarea(\s+[\w\W]*?)?>[\w\W]*?<\/textarea>/gi, '');
-	html = html.replace(/<button(\s+[\w\W]*?)?>[\w\W]*?<\/button>/gi, '');
-	html = html.replace(/<input(\s+[\w\W]*?)?>/gi, '');
-	html = html.replace(/<link(\s+[\w\W]*?)?>/gi, '');
 
 	return html;
 };
@@ -667,6 +644,11 @@ EventHandler.replyAskAndWait = (data) => {
 	if (!res) return;
 	delete NeedAIChecker[data.id];
 	res(data.result);
+};
+EventHandler.onContextMenuAction = (data) => {
+	if (data.action === 'launchCyprite') {
+		EventHandler.requestCypriteNotify({forceShow: true});
+	}
 };
 
 /* Tab */

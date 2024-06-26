@@ -411,6 +411,13 @@
 	border-radius: 0px;
 	background-color: transparent;
 }
+.panel_container devsite-code {
+	margin: 0px -8px !important;
+}
+.panel_container devsite-code pre {
+	padding-top: 0.5em;
+	padding-bottom: 0.5em;
+}
 .panel_container table th {
 	background-color: rgb(from var(--front-color) r g b / 30%);
 }

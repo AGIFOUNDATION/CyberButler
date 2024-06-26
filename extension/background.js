@@ -1,6 +1,7 @@
 import "./script/common.js";
 import "./script/cachedDB.js";
 import "./script/ai.js";
+import "./script/i18n.js";
 import "./script/prompts.js";
 
 const i18nList = ['en', 'zh'];
@@ -99,6 +100,30 @@ const showSystemNotification = (message) => {
 	});
 };
 chrome.runtime.onInstalled.addListener(async () => {
+	const info = await chrome.storage.sync.get('lang');
+	const lang = info.lang || DefaultLang;
+	const messages = (I18NMessages[lang] || I18NMessages[DefaultLang]).contextMenus;
+
+	// Register ContextMenus
+	chrome.contextMenus.create({
+		id: "launchCyprite",
+		title: messages.launch,
+		contexts: ["all"],
+	});
+	chrome.contextMenus.create({
+		id: "translateSelection",
+		title: messages.translate,
+		contexts: ["selection"],
+		enabled: false,
+	});
+	chrome.contextMenus.create({
+		id: "autoWrite",
+		title: messages.autoWrite,
+		contexts: ["editable"],
+		enabled: false,
+	});
+
+	// Refresh all Tabs
 	const csList = chrome.runtime.getManifest().content_scripts;
 	for (const cs of csList) {
 		const tabs = await chrome.tabs.query({url: cs.matches});
@@ -124,6 +149,38 @@ chrome.storage.local.onChanged.addListener(evt => {
 	if (!!evt.AImodel?.newValue) {
 		myInfo.model = evt.AImodel.newValue;
 	}
+});
+chrome.storage.sync.onChanged.addListener(evt => {
+	if (!!evt.lang?.newValue) {
+		let lang = evt.lang.newValue || myInfo.lang;
+		let messages = (I18NMessages[lang] || I18NMessages[DefaultLang]).contextMenus;
+
+		// Update ContextMenus
+		chrome.contextMenus.update("launchCyprite", {
+			title: messages.launch,
+		});
+		chrome.contextMenus.update("translateSelection", {
+			title: messages.translate,
+		});
+		chrome.contextMenus.update("autoWrite", {
+			title: messages.autoWrite,
+		});
+
+	}
+});
+chrome.contextMenus.onClicked.addListener((evt, tab) => {
+	// No action in Extension page.
+	if (evt.pageUrl.indexOf('chrome') === 0 || evt.frameUrl.indexOf('chrome') === 0) {
+		return;
+	}
+	dispatchEvent({
+		event: "onContextMenuAction",
+		data: {
+			action: evt.menuItemId
+		},
+		target: "FrontEnd",
+		tid: tab.id,
+	});
 });
 
 /* Page Manager */
@@ -565,9 +622,11 @@ const prepareWS = (wsUrl) => new Promise((res, rej) => {
 
 const EventHandler = {};
 const dispatchEvent = async (msg) => {
+	msg.sender = msg.sender || 'BackEnd';
+
 	// To Server via WebSocket
 	if (msg.target === 'ServerEnd') {
-		sendMessage(msg.event, msg.data, msg.sender || 'BackEnd', msg.sid);
+		sendMessage(msg.event, msg.data, msg.sender, msg.sid);
 	}
 	// To ContentScript and UserScript
 	else if (msg.target === "FrontEnd" || msg.target === 'PageEnd') {
@@ -580,7 +639,6 @@ const dispatchEvent = async (msg) => {
 		if (!tid) return;
 		let port = TabPorts.get(tid);
 		if (!port) return;
-		msg.sender = msg.sender || 'BackEnd';
 		try {
 			await port.postMessage(msg);
 		} catch {}

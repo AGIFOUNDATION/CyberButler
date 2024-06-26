@@ -1,10 +1,6 @@
 #	TODO
 
--	接入更多AI
-	+	OpenAI
-	+	Kimi
-	+	GLM
-	+	DeepSeek
+-	AI排序
 -	多页面综合聊天
 -	多语言翻译和划句翻译
 -	当前页面的快速聊天入口
