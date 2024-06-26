@@ -35,7 +35,7 @@ const newNotification = (title, message, duration=3000, type, position) => {
 		timer = setTimeout(notify._hide, timeLeft);
 	};
 
-	var notify = newEle('div', 'notification', type, position);
+	var notify = newEle('div', 'extension_component', 'notification', type, position);
 	notify._type = type;
 	notify._positon = position;
 	notify._closed = false;

@@ -204,11 +204,11 @@ const removeChildren = (container, tag) => {
 		upper.removeChild(ele);
 	}
 };
-const clearHTML = (html, full=true) => {
+const clearHTML = (html, full=true, markList=false) => {
 	var container = document.createElement('container');
 	container.innerHTML = html;
 
-	[...container.querySelectorAll('.cyprite')].forEach(item => {
+	[...container.querySelectorAll('.cyprite, .extension_component')].forEach(item => {
 		item.parentNode.removeChild(item);
 	});
 	if (full) {
@@ -216,12 +216,37 @@ const clearHTML = (html, full=true) => {
 			item.parentNode.removeChild(item);
 		});
 	}
+	[...container.querySelectorAll('*')].forEach(item => {
+		[...item.attributes].forEach(attr => {
+			attr = attr.name;
+			if (attr === 'href') return;
+			if (attr === 'src') return;
+			item.removeAttribute(attr);
+		});
+	});
+
+	if (markList) {
+		[...container.querySelectorAll('ul > li')].forEach(li => {
+			li.setAttribute('mark', '-');
+		});
+		[...container.querySelectorAll('ol > li')].forEach((li, i) => {
+			li.setAttribute('mark', (i + 1) + '.');
+		});
+	}
 
 	html = container.innerHTML;
-	html = html.replace(/"<([\w\d\-_]+)(\s+[\w\W]*?)?>[\w\W]*?<\/\1>"\s*/gi, '""');
-	html = html.replace(/<([\w\d\-_]+)(\s+[\w\W]*?)?>/gi, (m, tag) => tag.toLowerCase() === 'meta' ? m : '<' + tag + '>');
+	html = html.replace(/<!\-\-[\w\W]*?\-\->/gi, '');
+	html = html.split(/\s*\n\s*/);
+	html = html.map(line => line.trim()).filter(line => !!line);
+	html = html.join('');
 
-	return html;
+	var temp;
+	while (html !== temp) {
+		temp = html;
+		html = html.replace(/([\w\d\-])>\s+<(\/?[\w\d\-])/gi, (m, a, b) => a + '><' + b);
+	}
+
+	return html.trim();
 };
 const checkIsArticle = (container) => {
 	var total = document.body.textContent.match(RegChar);
@@ -356,26 +381,7 @@ const getPageDescription = (isArticle, container) => {
 const getPageContent = (container, keepLink=false) => {
 	var content = isString(container) ? container : container.innerHTML || container.toString();
 
-	var temp;
-	while (content !== temp) {
-		temp = content;
-		content = content.replace(/(\w+)>[\s\n\r]+<(\/?\w+)/gi, (m, a, b) => a + '><' + b);
-		content = content.trim();
-	}
-
-	content = content.replace(/\s+data\-mathml="<math(\s+[\w\W]*?)?>[\w\W]*?<\/math>"\s*/gi, ' ');
-	content = content.replace(/"<([\w\d\-_]+)(\s+[\w\W]*?)?>[\w\W]*?<\/\1>"\s*/gi, '""');
-	content = content.replace(/<form(\s+[\w\W]*?)?>[\w\W]*?<\/form>/gi, '');
-	content = content.replace(/<select(\s+[\w\W]*?)?>[\w\W]*?<\/select>/gi, '');
-	content = content.replace(/<object(\s+[\w\W]*?)?>[\w\W]*?<\/object>/gi, '');
-	content = content.replace(/<script(\s+[\w\W]*?)?>[\w\W]*?<\/script>/gi, '');
-	content = content.replace(/<style(\s+[\w\W]*?)?>[\w\W]*?<\/style>/gi, '');
-	content = content.replace(/<nostyle(\s+[\w\W]*?)?>[\w\W]*?<\/nostyle>/gi, '');
-	content = content.replace(/<textarea(\s+[\w\W]*?)?>[\w\W]*?<\/textarea>/gi, '');
-	content = content.replace(/<button(\s+[\w\W]*?)?>[\w\W]*?<\/button>/gi, '');
-	content = content.replace(/<input(\s+[\w\W]*?)?>/gi, '');
-	content = content.replace(/<link(\s+[\w\W]*?)?>/gi, '');
-
+	content = clearHTML(content, true, true);
 	content = content.replace(/<(h\d)(\s+[\w\W]*?)?>([\w\W]*?)<\/\1>/gi, (m, tag, prop, inner) => {
 		var lev = tag.match(/h(\d)/i);
 		lev = lev[1] * 1;
@@ -386,23 +392,23 @@ const getPageContent = (container, keepLink=false) => {
 		if (lev === 5) return '\n\n######\t' + inner + '\n\n';
 		return inner;
 	});
-
 	content = content.replace(/<\/?(article|header|section|aside|footer|div|p|center|ul|ol|tr)(\s+[\w\W]*?)?>/gi, '<br><br>');
 	content = content.replace(/<\/?(option|span|font)(\s+[\w\W]*?)?>/gi, '');
 	content = content.replace(/<\/(td|th)><\1(\s+[\w\W]*?)?>/gi, ' | ');
 	content = content.replace(/<(td|th)(\s+[\w\W]*?)?>/gi, '| ');
 	content = content.replace(/<\/(td|th)>/gi, ' |');
 	content = content.replace(/<hr(\s+[\w\W]*?)?>/gi, '<br>----<br>');
+	content = content.replace(/<li mark="([\w\W]+?)">/gi, (m, mark) => mark + '\t');
 	content = content.replace(/<li(\s+[\w\W]*?)?>/gi, '-\t');
 	content = content.replace(/<\/li>/gi, '\n');
 	content = content.replace(/<\/?(b|strong)(\s+[\w\W]*?)?>/gi, '**');
 	content = content.replace(/<\/?(i|em)(\s+[\w\W]*?)?>/gi, '*');
 	if (!keepLink) content = content.replace(/<\/?a(\s+[\w\W]*?)?>/gi, '');
 
-	temp = '';
-	while (content !== temp) {
-		temp = content;
-		if (keepLink) {
+	if (keepLink) {
+		let temp = '';
+		while (content !== temp) {
+			temp = content;
 			content = content.replace(/<a(\s+[\w\W]*?)?>([\w\W]*?)<\/a>/gi, (m, prop, inner) => {
 				var match = (prop || '').match(/href=('|")([\w\W]*?)\1/);
 				if (!match) return inner;
@@ -531,7 +537,7 @@ const translatePage = async (isRefresh=false, lang, content, requirement) => {
 		isSelection = false;
 		if (!pageInfo) pageInfo = await getPageInfo();
 		content = pageInfo.content;
-		if (!content) content = getPageContent(document.body, true);
+		if (!content) content = getPageContent(document.body, false);
 	}
 
 	var messages = I18NMessages[myLang] || I18NMessages.en;

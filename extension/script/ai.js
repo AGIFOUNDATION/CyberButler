@@ -292,6 +292,7 @@ EdgedAI.translateContent = async (tid, data) => {
 	var prompt = [];
 	prompt.push(['system', PromptLib.assemble(PromptLib.translationSystem, data)]);
 	prompt.push(['human', PromptLib.assemble(PromptLib.translationRunning, data)]);
+	console.log(prompt);
 
 	var aiName = Model2AI[myInfo.model];
 	var chatToAI = AI[aiName];
