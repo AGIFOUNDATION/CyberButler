@@ -58,8 +58,18 @@ const initDB = async () => {
 
 /* Management */
 
+const gotoUniquePage = async (url) => {
+	var tab = await chrome.tabs.query({url});
+	if (!!tab) tab = tab[0];
+	if (!tab) {
+		chrome.tabs.create({url});
+	}
+	else {
+		chrome.tabs.update(tab.id, {active: true, highlighted: true});
+	}
+};
 const configureCyberButler = () => {
-	chrome.tabs.create({url: chrome.runtime.getURL(`pages/${myInfo.lang}/config.html`)});
+	gotoUniquePage(chrome.runtime.getURL(`pages/${myInfo.lang}/config.html`));
 };
 const checkAvailability = async () => {
 	var available = true;
@@ -499,7 +509,6 @@ const getWSConfig = async () => {
 	if (myInfo.lang !== remoteInfo) {
 		tasks.push(chrome.storage.sync.set({lang: myInfo.lang}));
 	}
-	myInfo.model = localInfo.AImodel || myInfo.model || ModelList[0];
 
 	myInfo.apiKey = localInfo.apiKey || {};
 	if (isString(myInfo.apiKey)) {
@@ -510,6 +519,7 @@ const getWSConfig = async () => {
 	}
 	myInfo.useLocalKV = !localInfo.wsHost;
 	updateAIModelList();
+	myInfo.model = localInfo.AImodel || myInfo.model || ModelList[0];
 
 	if (tasks.length > 0) await Promise.all(tasks);
 
@@ -784,7 +794,7 @@ EventHandler.SavePageSummary = async (data, source, sid) => {
 	]);
 };
 EventHandler.GotoConversationPage = () => {
-	chrome.tabs.create({url: chrome.runtime.getURL('/pages/newtab.html?mode=conversation')});
+	gotoUniquePage(chrome.runtime.getURL('/pages/newtab.html?mode=conversation'));
 };
 
 EventHandler.CalculateHash = async (data) => {

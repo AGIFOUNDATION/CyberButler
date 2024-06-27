@@ -187,7 +187,13 @@ const batchize = content => {
 	content = content.filter(block => !!block);
 	return content;
 };
-const callAI = async (tid, model, prompt) => {
+const callAI = async (tid, prompt, model) => {
+	model = model || myInfo.model;
+	if (!model) {
+		replyRequest(tid, null, 'AI Model not set.');
+		return;
+	}
+
 	var aiName = Model2AI[model];
 	var chatToAI = AI[aiName];
 	if (!!chatToAI) chatToAI = chatToAI.chat;
@@ -217,12 +223,12 @@ EdgedAI.sayHello = async (tid) => {
 		time: timestmp2str(Date.now(), "YY年MM月DD日 :WDE: hh:mm"),
 	});
 
-	callAI(tid, myInfo.model, [['human', prompt]]);
+	callAI(tid, [['human', prompt]]);
 };
 EdgedAI.summarizeArticle = async (tid, article) => {
 	var prompt = PromptLib.assemble(PromptLib.summarizeArticle, { article, lang: LangName[myInfo.lang] });
 
-	callAI(tid, myInfo.model, [['human', prompt]]);
+	callAI(tid, [['human', prompt]]);
 };
 EdgedAI.embeddingArticle = async (tid, data) => {
 	var batch = [];
@@ -266,22 +272,22 @@ EdgedAI.findRelativeArticles = async (tid, data) => {
 		return;
 	}
 
-	callAI(tid, model, prompt);
+	callAI(tid, prompt, model);
 };
 EdgedAI.askArticle = async (tid, conversation) => {
-	callAI(tid, myInfo.model, conversation);
+	callAI(tid, conversation, myInfo.model);
 };
 EdgedAI.translateContent = async (tid, data) => {
 	var prompt = [];
 	prompt.push(['system', PromptLib.assemble(PromptLib.translationSystem, data)]);
 	prompt.push(['human', PromptLib.assemble(PromptLib.translationRunning, data)]);
 
-	callAI(tid, myInfo.model, prompt);
+	callAI(tid, prompt);
 };
 EdgedAI.translateSentence = async (tid, data) => {
 	var prompt = [];
 	prompt.push(['system', PromptLib.assemble(PromptLib.instantTranslationSystem, data)]);
 	prompt.push(['human', PromptLib.assemble(PromptLib.instantTranslationRunning, data)]);
 
-	callAI(tid, myInfo.model, prompt);
+	callAI(tid, prompt);
 };
