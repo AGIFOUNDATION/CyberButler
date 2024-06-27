@@ -58,19 +58,8 @@ const initDB = async () => {
 
 /* Management */
 
-const configureCyberButler = async () => {
-	var url = chrome.runtime.getURL(`pages/${myInfo.lang}/config.html`);
-	var tab = await chrome.tabs.query({url});
-	if (!!tab && tab.length > 0) {
-		tab = tab[0];
-		chrome.tabs.highlight({
-			windowId: tab.windowId,
-			tabs: tab.index
-		});
-	}
-	else {
-		chrome.tabs.create({url});
-	}
+const configureCyberButler = () => {
+	chrome.tabs.create({url: chrome.runtime.getURL(`pages/${myInfo.lang}/config.html`)});
 };
 const checkAvailability = async () => {
 	var available = true;
@@ -794,21 +783,8 @@ EventHandler.SavePageSummary = async (data, source, sid) => {
 		setPageInfo(tabInfo.url, pageInfo),
 	]);
 };
-EventHandler.GotoConversationPage = async () => {
-	// var url = chrome.runtime.getURL('/pages/newtab.html?mode=conversation');
-	var url = chrome.runtime.getURL('/pages/newtab.html');
-	var tab = await chrome.tabs.query({url});
-	if (!!tab && tab.length > 0) {
-		tab = tab[0];
-		chrome.tabs.highlight({
-			windowId: tab.windowId,
-			tabs: tab.index
-		});
-	}
-	else {
-		chrome.tabs.create({url});
-	}
-
+EventHandler.GotoConversationPage = () => {
+	chrome.tabs.create({url: chrome.runtime.getURL('/pages/newtab.html?mode=conversation')});
 };
 
 EventHandler.CalculateHash = async (data) => {
