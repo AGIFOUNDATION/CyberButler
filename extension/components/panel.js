@@ -300,7 +300,7 @@ const showTranslationResult = async (isSelection, content, translation) => {
 	else {
 		ctx = '**' + messages.translation.articleHint + '**\n\n----\n\n' + (translation || messages.translation.noTranslatedYet);
 	}
-	conversation.push(['cyprite', messages.translation.instantTranslateHint]);
+	conversation.push(['ai', messages.translation.instantTranslateHint]);
 
 	generateModelList();
 	AIContainer.querySelector('.content_container').innerHTML = marked.parse(ctx, {breaks: true});
