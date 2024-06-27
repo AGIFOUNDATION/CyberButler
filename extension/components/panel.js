@@ -184,7 +184,7 @@ const generateTranslationExtraRequirementPanel = (messages) => {
 	return inputFrame;
 };
 const addSummaryAndRelated = (messages, container, summary, relatedList) => {
-	container.innerHTML = marked.parse(summary, {breaks: true});
+	container.innerHTML = marked.parse(summary, {breaks: true}) || messages.conversation.AIFailed;
 
 	var related = newEle('h2', 'cyprite', 'related_articles_area');
 	related.innerText = messages.summarizeArticle.relatedArticles;
@@ -228,7 +228,7 @@ const addChatItem = (content, type) => {
 
 	if (!!content) {
 		let contentPad = newEle('div', 'cyprite', "chat_content");
-		contentPad.innerHTML = marked.parse(content, {breaks: true});
+		contentPad.innerHTML = marked.parse(content, {breaks: true}) || messages.conversation.AIFailed;
 		contentPad._data = content;
 		item.appendChild(contentPad);
 	}
@@ -306,7 +306,7 @@ const showTranslationResult = async (isSelection, content, translation) => {
 	conversation.push(['ai', messages.translation.instantTranslateHint]);
 
 	generateModelList();
-	AIContainer.querySelector('.content_container').innerHTML = marked.parse(ctx, {breaks: true});
+	AIContainer.querySelector('.content_container').innerHTML = marked.parse(ctx, {breaks: true}) || messages.conversation.AIFailed;
 	restoreHistory(conversation);
 	resizeHistoryArea(true);
 	switchPanel('translate');

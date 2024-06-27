@@ -1262,6 +1262,7 @@ const findRelativeArticles = async (data) => {
 	// Cold Down
 	await wait(ColdDownDuration);
 	delete RelativeHandler[data.tid];
+	logger.log('SW', 'Cold Down finished for ' + data.url);
 };
 
 /* Init */

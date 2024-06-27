@@ -122,7 +122,7 @@ You must follow the requirements below when searching for the most relevant arti
 
 -	Analyze the type and main content of the article in "Current Articles" (but do not output);
 -	Analyze the type and content of each candidate article in the "Article List" (but do not output), if the type of an article is different from the "Current Articles", it should not be considered as relative article. For example, if the "Current Articles" is a popular science or academic article, and the candidate article is a novel, it is considered irrelevant. If the "Current Articles" is an academic article, and the candidate article is a popular science article, it is considered relevant;
--	Find articles that are as relevant as possible to the "Current Articles" and "Current Conversation Content" from the "Article List";
+-	Find articles that are as relevant as possible to the "Current Articles" and "Current Conversation Content" from the "Article List", and no more than 10 or less than 2;
 -	The output format must **STRICTLY** follow the requirements in the "Output Format", remember: **Do not translate the article title, it must remain the same.**
 -	The "Output Format" listed two item, but you should list all the relative article item instead of just two of them.
 

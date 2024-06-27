@@ -3,6 +3,59 @@ globalThis.AI.Claude = {};
 
 const DefaultChatModel = AI2Model.claude[0];
 
+const convertClaudeChinese = content => {
+	if (!content) return '';
+	content = content.trim();
+	if (!content) return '';
+
+	content = content.split(/\r*\n\r*/);
+	content = content.map(line => {
+		line = line.replace(/[\u4e00-\u9fa5\u3000-\u303f\uff00-\uffef]\s*[\(\)]|[\(\)]\s*[\u4e00-\u9fa5\u3000-\u303f\uff00-\uffef]/gi, (m) => {
+			m = m.replace(/\s*([\(\)])\s*/g, (m, o) => {
+				if (o === ',') return '，';
+				if (o === ':') return '：';
+				if (o === ';') return '；';
+				if (o === '?') return '？';
+				if (o === '!') return '！';
+				if (o === '(') return '（';
+				if (o === ')') return '）';
+				return o;
+			});
+			return m;
+		});
+		line = line.replace(/[\u4e00-\u9fa5\u3000-\u303f\uff00-\uffef]\s*[,:;\?\!]/gi, (m) => {
+			m = m.replace(/\s*([,:;\?\!\(\)])\s*/g, (m, o) => {
+				if (o === ',') return '，';
+				if (o === ':') return '：';
+				if (o === ';') return '；';
+				if (o === '?') return '？';
+				if (o === '!') return '！';
+				if (o === '(') return '（';
+				if (o === ')') return '）';
+				return o;
+			});
+			return m;
+		});
+		line = line.replace(/[\u4e00-\u9fa5\u3000-\u303f\uff00-\uffef]\s*\.+/gi, (m) => {
+			m = m.replace(/\s*(\.+)\s*/g, (m, o) => {
+				if (o.length === 1) return '。';
+				return "……";
+			});
+			return m;
+		});
+		line = line.replace(/[\u4e00-\u9fa5\u3000-\u303f\uff00-\uffef]\s*\-{2,}|\-{2,}\s*[\u4e00-\u9fa5\u3000-\u303f\uff00-\uffef]/gi, (m) => {
+			m = m.replace(/\s*(\-{2,})\s*/g, (m, o) => {
+				return "——";
+			});
+			return m;
+		});
+		return line;
+	});
+	content = content.join('\n');
+
+	return content;
+};
+
 AI.Claude.chat = async (conversation, model=DefaultChatModel, options={}) => {
 	var prompt = [];
 	var data = {
@@ -62,6 +115,7 @@ AI.Claude.chat = async (conversation, model=DefaultChatModel, options={}) => {
 
 	response = await response.json();
 	var json = response;
+	console.log(json);
 	var usage = response.usage;
 	if (!!usage) {
 		logger.info('Claude', `Usage: Input ${usage.input_tokens}, Output: ${usage.output_tokens}`);
@@ -73,7 +127,9 @@ AI.Claude.chat = async (conversation, model=DefaultChatModel, options={}) => {
 		reply = "";
 	}
 	else {
-		reply = reply.text;
+		console.log(reply.text);
+		reply = convertClaudeChinese(reply.text);
+		console.log(reply);
 	}
 
 	return reply;

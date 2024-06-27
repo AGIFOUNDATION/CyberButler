@@ -42,7 +42,7 @@ globalThis.AI2Model = {
 globalThis.FastAI = {
 	"Gemini": "gemini-1.5-flash",
 	"Claude": "claude-3-5-sonnet-20240620",
-	"Openai": "gpt-4o",
+	"OpenAI": "gpt-4o",
 };
 globalThis.DeepAI = {
 	"Gemini": "gemini-1.5-pro",
