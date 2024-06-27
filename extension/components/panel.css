@@ -141,6 +141,9 @@
 	width: 66%;
 	left: 0px;
 }
+.panel_container[name="translate"][chat="true"] .panel_left {
+	width: 50%;
+}
 .panel_container .panel_right {
 	display: none;
 	width: calc(34% + 10px);
@@ -148,6 +151,9 @@
 	padding: 10px;
 	padding-top: 0px;
 	border-left: 1px solid rgba(23, 23, 23, 1.0);
+}
+.panel_container[name="translate"] .panel_right {
+	width: calc(50% + 10px);
 }
 .panel_container[chat="true"] .panel_right {
 	display: block;
@@ -251,6 +257,8 @@
 	border-radius: 5px;
 	border: 1px solid black;
 	background-color: transparent;
+	box-shadow: 1px 1px 5px rgba(10, 10, 15, 0.8);
+	color: var(--front-color);
 	outline: none;
 	resize: none;
 }

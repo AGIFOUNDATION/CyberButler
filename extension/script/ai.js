@@ -1,6 +1,6 @@
-import "./gemini.js";
-import "./claude.js";
-import "./gpt.js";
+import "./ai/gemini.js";
+import "./ai/claude.js";
+import "./ai/gpt.js";
 
 const ResMap = new Map();
 const EmbeddingLimit = 2024;
@@ -316,7 +316,6 @@ EdgedAI.translateSentence = async (tid, data) => {
 	var prompt = [];
 	prompt.push(['system', PromptLib.assemble(PromptLib.instantTranslationSystem, data)]);
 	prompt.push(['human', PromptLib.assemble(PromptLib.instantTranslationRunning, data)]);
-	console.log(prompt);
 
 	var aiName = Model2AI[myInfo.model];
 	var chatToAI = AI[aiName];

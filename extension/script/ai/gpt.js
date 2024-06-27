@@ -104,17 +104,20 @@ AI.OpenAI.chat = async (conversation, model=DefaultOpenAIChatModel, options={}) 
 	logger.info('OpenAI', 'Chat: ' + (time / 1000) + 's');
 
 	response = await response.json();
+	var json = response;
 	var usage = response.usage;
 	if (!!usage) {
 		logger.info('OpenAI', `Usage: Input ${usage.prompt_tokens}, Output: ${usage.completion_tokens}`);
 	}
 	var reply = response.choices;
 	if (!!reply) reply = reply[0];
+	if (!!reply) reply = reply.message?.content;
 	if (!reply) {
+		logger.log('OpenAI', "Response:", json);
 		reply = "";
 	}
 	else {
-		reply = (reply.message?.content || '').trim();
+		reply = reply.trim();
 	}
 
 	return reply;
@@ -149,8 +152,12 @@ AI.OpenAI.draw = async (prompt, model=DefaultOpenAIDrawModel, options={}) => {
 	logger.info('OpenAI', 'Chat: ' + (time / 1000) + 's');
 
 	response = await response.json();
+	var json = response;
 	var reply = response.data;
-	if (!reply) return [];
+	if (!reply) {
+		logger.log('OpenAI', "Response:", json);
+		return [];
+	}
 	reply = reply.map(item => item.url);
 	return reply;
 };
@@ -204,17 +211,20 @@ AI.MoonShot.chat = async (conversation, model=DefaultMoonShotChatModel, options=
 	logger.info('MoonShot', 'Chat: ' + (time / 1000) + 's');
 
 	response = await response.json();
+	var json = response;
 	var usage = response.usage;
 	if (!!usage) {
 		logger.info('MoonShot', `Usage: Input ${usage.prompt_tokens}, Output: ${usage.completion_tokens}`);
 	}
 	var reply = response.choices;
 	if (!!reply) reply = reply[0];
+	if (!!reply) reply = reply.message?.content;
 	if (!reply) {
+		logger.log('MoonShot', "Response:", json);
 		reply = "";
 	}
 	else {
-		reply = (reply.message?.content || '').trim();
+		reply = reply.trim();
 	}
 
 	return reply;
@@ -271,17 +281,20 @@ AI.DeepSeek.chat = async (conversation, model=DefaultDeepSeekChatModel, options=
 	logger.info('DeepSeek', 'Chat: ' + (time / 1000) + 's');
 
 	response = await response.json();
+	var json = response;
 	var usage = response.usage;
 	if (!!usage) {
 		logger.info('DeepSeek', `Usage: Input ${usage.prompt_tokens}, Output: ${usage.completion_tokens}`);
 	}
 	var reply = response.choices;
 	if (!!reply) reply = reply[0];
+	if (!!reply) reply = reply.message?.content;
 	if (!reply) {
+		logger.log('DeepSeek', "Response:", json);
 		reply = "";
 	}
 	else {
-		reply = (reply.message?.content || '').trim();
+		reply = reply.trim();
 	}
 
 	return reply;

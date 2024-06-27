@@ -1,5 +1,6 @@
 const ChatHistory = [];
 const ChatVectorLimit = 20;
+const ArticleSimilarRate = 1.0;
 const MatchRelevantArticlesBasedOnConversation = true;
 const ModelOrder = [
 	"gemini",
@@ -476,6 +477,7 @@ const onSendToCyprite = async () => {
 						if (article.similar < item.similar) {
 							article.similar = item.similar
 						}
+						article.similar *= ArticleSimilarRate;
 					}
 					else {
 						related.push(item);

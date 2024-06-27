@@ -1,8 +1,8 @@
+import "./script/i18n.js";
 import "./script/common.js";
 import "./script/cachedDB.js";
 import "./script/ai.js";
-import "./script/i18n.js";
-import "./script/prompts.js";
+import "./script/ai/prompts.js";
 
 const i18nList = ['en', 'zh'];
 const UtilList = {

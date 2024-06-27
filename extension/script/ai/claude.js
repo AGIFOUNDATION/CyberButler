@@ -61,6 +61,7 @@ AI.Claude.chat = async (conversation, model=DefaultChatModel, options={}) => {
 	logger.info('Claude', 'Chat: ' + (time / 1000) + 's');
 
 	response = await response.json();
+	var json = response;
 	var usage = response.usage;
 	if (!!usage) {
 		logger.info('Claude', `Usage: Input ${usage.input_tokens}, Output: ${usage.output_tokens}`);
@@ -68,6 +69,7 @@ AI.Claude.chat = async (conversation, model=DefaultChatModel, options={}) => {
 	var reply = response.content;
 	if (!!reply) reply = reply[0];
 	if (!reply) {
+		logger.log('Claude', "Response:", json);
 		reply = "";
 	}
 	else {
