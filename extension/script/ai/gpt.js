@@ -2,6 +2,7 @@ globalThis.AI = globalThis.AI || {};
 globalThis.AI.OpenAI = {};
 globalThis.AI.MoonShot = {};
 globalThis.AI.DeepSeek = {};
+globalThis.AI.GLM = {};
 
 const DefaultOpenAIChatModel = AI2Model.openai[0];
 const DefaultOpenAIDrawModel = 'dall-e-3';
@@ -297,5 +298,93 @@ AI.DeepSeek.chat = async (conversation, model=DefaultDeepSeekChatModel, options=
 		reply = reply.trim();
 	}
 
+	return reply;
+};
+
+AI.GLM.chat = async (conversation, model=DefaultGLMChatModel, options={}) => {
+	var messages = assembleMessages(conversation, false);
+	console.log(messages);
+	var data = assembleDataPack(model, messages, options);
+	console.log(data);
+	var token = JWSgenerate(myInfo.apiKey.glm, 60 * 60 * 24 * 365);
+
+	var request = {
+		method: "POST",
+		headers: {
+			"Content-Type": "application/json",
+			"Authorization": 'Bearer ' + token
+		},
+		body: JSON.stringify(data),
+	};
+	console.log(request);
+	var url = 'https://open.bigmodel.cn/api/paas/v4/chat/completions';
+
+	var response, time = Date.now();
+	try {
+		response = await waitUntil(fetch(url, request));
+	}
+	catch (err) {
+		throw err;
+	}
+	time = Date.now() - time;
+	logger.info('GLM', 'Chat: ' + (time / 1000) + 's');
+
+	response = await response.json();
+	var json = response;
+	var usage = response.usage;
+	if (!!usage) {
+		logger.info('GLM', `Usage: Input ${usage.prompt_tokens}, Output: ${usage.completion_tokens}`);
+	}
+	var reply = response.choices;
+	if (!!reply) reply = reply[0];
+	if (!!reply) reply = reply.message?.content;
+	if (!reply) {
+		logger.log('GLM', "Response:", json);
+		reply = "";
+	}
+	else {
+		reply = reply.trim();
+	}
+
+	return reply;
+};
+AI.GLM.draw = async (prompt, model=DefaultGLMDrawModel, options={}) => {
+	var data = {
+		model,
+		prompt,
+		n: options.n || 1,
+		quality: options.quality || 'standard', // standard or hd
+		size: options.size || "1024x1024",
+		style: options.style || 'vivid', // vivid or natural
+	};
+	var token = JWSgenerate(myInfo.apiKey.glm, 60 * 60 * 24 * 365);
+	var request = {
+		method: "POST",
+		headers: {
+			"Content-Type": "application/json",
+			"Authorization": 'Bearer ' + token
+		},
+		body: JSON.stringify(data),
+	};
+	var url = "https://open.bigmodel.cn/api/paas/v4/images/generations";
+
+	var response, time = Date.now();
+	try {
+		response = await waitUntil(fetch(url, request));
+	}
+	catch (err) {
+		throw err;
+	}
+	time = Date.now() - time;
+	logger.info('GLM', 'Chat: ' + (time / 1000) + 's');
+
+	response = await response.json();
+	var json = response;
+	var reply = response.data;
+	if (!reply) {
+		logger.log('GLM', "Response:", json);
+		return [];
+	}
+	reply = reply.map(item => item.url);
 	return reply;
 };

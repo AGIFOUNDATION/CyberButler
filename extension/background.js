@@ -1,3 +1,4 @@
+import "./components/jsrsasign.all.min.js";
 import "./script/i18n.js";
 import "./script/common.js";
 import "./script/cachedDB.js";

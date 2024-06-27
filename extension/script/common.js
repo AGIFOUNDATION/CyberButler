@@ -13,10 +13,12 @@ globalThis.Model2AI = {
 	"claude-3-haiku-20240307": "Claude",
 	"gpt-4o": "OpenAI",
 	"gpt-4-turbo": "OpenAI",
-	// "glm-4": "GLM",
 	"moonshot-v1-128k": "MoonShot",
 	"deepseek-chat": "DeepSeek",
 	"deepseek-coder": "DeepSeek",
+	"glm-4": "GLM",
+	"glm-4-airx": "GLM",
+	"glm-4-flash": "GLM",
 };
 globalThis.AI2Model = {
 	"gemini": [
@@ -32,22 +34,28 @@ globalThis.AI2Model = {
 		"gpt-4o",
 		"gpt-4-turbo",
 	],
-	// "glm": ["glm-4"],
 	"moonshot": ["moonshot-v1-128k"],
 	"deepseek": [
 		"deepseek-chat",
 		"deepseek-coder"
+	],
+	"glm": [
+		"glm-4",
+		"glm-4-airx",
+		"glm-4-flash",
 	],
 };
 globalThis.FastAI = {
 	"Gemini": "gemini-1.5-flash",
 	"Claude": "claude-3-5-sonnet-20240620",
 	"OpenAI": "gpt-4o",
+	"GLM": "glm-4-air",
 };
 globalThis.DeepAI = {
 	"Gemini": "gemini-1.5-pro",
 	"Claude": "claude-3-opus-20240229",
 	"Openai": "gpt-4-turbo",
+	"GLM": "glm-4",
 };
 
 globalThis.wait = delay => new Promise(res => setTimeout(res, delay));
