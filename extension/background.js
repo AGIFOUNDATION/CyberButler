@@ -1014,7 +1014,7 @@ AIHandler.askArticle = async (data, source, sid) => {
 	removeAIChatHistory();
 	return result;
 };
-AIHandler.translateContent = async (data, source, sid) => {
+AIHandler.translateContent = async (data) => {
 	var available = await checkAvailability();
 	if (!available) return;
 
@@ -1023,6 +1023,23 @@ AIHandler.translateContent = async (data, source, sid) => {
 	var translation;
 	try {
 		translation = await callAIandWait('translateContent', data);
+	}
+	catch (err) {
+		showSystemNotification(err);
+		return null;
+	}
+
+	return translation;
+};
+AIHandler.translateSentence = async (data) => {
+	var available = await checkAvailability();
+	if (!available) return;
+
+	data.myLang = myInfo.lang;
+
+	var translation;
+	try {
+		translation = await callAIandWait('translateSentence', data);
 	}
 	catch (err) {
 		showSystemNotification(err);

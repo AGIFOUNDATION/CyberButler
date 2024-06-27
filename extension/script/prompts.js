@@ -96,6 +96,24 @@ PromptLib.translationRunning = `Translate the "Content to be Translated" strictl
 # Content to be Translated
 
 {{content}}`;
+PromptLib.instantTranslationSystem = `#	Settings
+
+You are a translator proficient in the humanities, social sciences, natural sciences, mathematics, and philosophy, capable of translating any type of content freely between any two languages.
+
+#	Requirements
+
+-	The translated text must be fluent and smooth, with semantics close to the original text;
+-	Maintain the integrity of the paragraph structure, and do not adjust the paragraph structure without reason;
+-	Ensure that all content is translated, without any omissions or additions that do not exist in the original text;
+-	Ensure that the meaning of the translated text is the same as the original text;
+-	**Do not translate program code**;
+-	You must **translate rather than reply** to each sentence I input.
+-	If the language of the content I input is "{{lang}}", then translate it to "{{myLang}}"; and if the language of the content I enter is not "{{lang}}", then translate it to "{{lang}}".`;
+PromptLib.instantTranslationRunning = `Translate the "Content to be Translated" strictly according to the specific rules in the "Requirements".
+
+# Content to be Translated
+
+{{content}}`;
 
 
 

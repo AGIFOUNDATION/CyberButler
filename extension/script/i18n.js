@@ -21,6 +21,7 @@ globalThis.I18NMessages = {
 			noTranslatedYet: 'Not translated yet...',
 			selectionHint: "Content to be translated:",
 			articleHint: "Webpage content translation:",
+			instantTranslateHint: "I am your translation assistant, and I will automatically translate the text you input!",
 		},
 		buttons: {
 			sendMessageToCyprite: 'Send',
@@ -67,11 +68,12 @@ globalThis.I18NMessages = {
 			noTranslatedYet: '尚未翻译……',
 			selectionHint: "待翻译内容：",
 			articleHint: "网页正文翻译：",
+			instantTranslateHint: "我是你的翻译助理，会自动翻译您输入的文字哟！",
 		},
 		buttons: {
 			sendMessageToCyprite: '提问',
 			showSummaryPanel: '概述总结',
-			showTranslatePanel: '翻译全文',
+			showTranslatePanel: '翻译网页',
 			showComprehensivePanel: '综合问答',
 			showChatPanel: '提问机灵',
 			hideChatPanel: '隐藏机灵',

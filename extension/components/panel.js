@@ -10,6 +10,7 @@ const ModelOrder = [
 	"glm",
 ];
 
+var currentMode = '';
 var showChatter = false, runningAI = false, chatTrigger = null;
 var relativeArticles = [];
 var extraTranslationRequirement = '', inputerTranslationLanguage = null;
@@ -108,9 +109,9 @@ const generateTabPanel = (messages) => {
 
 	/* Summary Buttons */
 
-	// chatTrigger = newEle('div', 'cyprite', 'panel_button', "always_show");
-	chatTrigger = newEle('div', 'cyprite', 'panel_button', 'always');
-	chatTrigger.setAttribute('group', 'summary');
+	chatTrigger = newEle('div', 'cyprite', 'panel_button', "always_show");
+	// chatTrigger = newEle('div', 'cyprite', 'panel_button', 'always');
+	// chatTrigger.setAttribute('group', 'summary');
 	chatTrigger.innerText = messages.buttons.showChatPanel;
 	chatTrigger.addEventListener('click', onSummaryChatTrigger);
 	tabPanel.appendChild(chatTrigger);
@@ -259,6 +260,8 @@ const resizeHistoryArea = (immediately=false) => {
 /* Events */
 
 const showPageSummary = async (summary) => {
+	currentMode = 'summary';
+
 	var [relatives, conversation] = await Promise.all([
 		findSimilarArticle(pageVector),
 		restoreConversation(),
@@ -270,21 +273,22 @@ const showPageSummary = async (summary) => {
 	generateModelList();
 	addSummaryAndRelated(messages, AIContainer.querySelector('.content_container'), summary, relatives);
 	relativeArticles = relatives;
-	switchPanel('summary');
-
 	restoreHistory(conversation);
 	resizeHistoryArea(true);
+	switchPanel('summary');
+
 	AIContainer.style.display = 'block';
 };
 const showTranslationResult = async (isSelection, content, translation) => {
+	currentMode = 'translate';
+
 	var messages = I18NMessages[myLang] || I18NMessages.en;
 
 	if (!AIContainer) await generateAIPanel(messages);
 
 	inputerTranslationLanguage.value = translationInfo.lang || LangName[myLang] || myLang;
 
-	generateModelList();
-	var ctx;
+	var ctx, conversation = [];
 	if (isSelection) {
 		if (content.length > 200) {
 			ctx = '**' + messages.translation.selectionHint + '**\n\n' + content.substring(0, 200) + '\n\n......\n\n----\n\n' + translation;
@@ -296,7 +300,12 @@ const showTranslationResult = async (isSelection, content, translation) => {
 	else {
 		ctx = '**' + messages.translation.articleHint + '**\n\n----\n\n' + (translation || messages.translation.noTranslatedYet);
 	}
+	conversation.push(['cyprite', messages.translation.instantTranslateHint]);
+
+	generateModelList();
 	AIContainer.querySelector('.content_container').innerHTML = marked.parse(ctx, {breaks: true});
+	restoreHistory(conversation);
+	resizeHistoryArea(true);
 	switchPanel('translate');
 
 	AIContainer.style.display = 'block';
@@ -414,72 +423,82 @@ const onSendToCyprite = async () => {
 
 	var messages = I18NMessages[myLang] || I18NMessages.en;
 	var question = getPageContent(AIAsker, true);
+	if (!question) return;
 	addChatItem(question, 'human');
 	AIAsker.innerText = messages.conversation.waitForAI;
 	AIAsker.setAttribute('contentEditable', 'false');
 
-	// Get Embedding Vector for Request
-	var vector;
-	if (MatchRelevantArticlesBasedOnConversation) {
-		try {
-			vector = await askAIandWait('embeddingContent', {title: "Request", article: question});
-		}
-		catch {
-			vector = null;
-		}
-	}
+	var result;
 
-	// Match relevant articles
-	var related = null;
-	if (!!vector) {
-		if (!conversationVector && !!pageVector) {
-			conversationVector = [];
-			pageVector.forEach(item => {
-				conversationVector.push({
-					weight: item.weight,
-					vector: [...item.vector],
-				});
-			});
+	if (currentMode === 'summary') {
+		// Get Embedding Vector for Request
+		let vector;
+		if (MatchRelevantArticlesBasedOnConversation) {
+			try {
+				vector = await askAIandWait('embeddingContent', {title: "Request", article: question});
+			}
+			catch {
+				vector = null;
+			}
 		}
-		if (!!conversationVector) {
-			conversationVector.push(...vector);
-			if (conversationVector.length > ChatVectorLimit) conversationVector = conversationVector.splice(conversationVector.length - ChatVectorLimit, ChatVectorLimit);
-			related = await askSWandWait('FindSimilarArticle', {url: location.href, vector: conversationVector});
-			relativeArticles.forEach(item => {
-				var article;
-				related.some(art => {
-					if (!!art.hash && !!item.hash) {
-						if (art.hash === item.hash) {
+
+		// Match relevant articles
+		let related = null;
+		if (!!vector) {
+			if (!conversationVector && !!pageVector) {
+				conversationVector = [];
+				pageVector.forEach(item => {
+					conversationVector.push({
+						weight: item.weight,
+						vector: [...item.vector],
+					});
+				});
+			}
+			if (!!conversationVector) {
+				conversationVector.push(...vector);
+				if (conversationVector.length > ChatVectorLimit) conversationVector = conversationVector.splice(conversationVector.length - ChatVectorLimit, ChatVectorLimit);
+				related = await askSWandWait('FindSimilarArticle', {url: location.href, vector: conversationVector});
+				relativeArticles.forEach(item => {
+					var article;
+					related.some(art => {
+						if (!!art.hash && !!item.hash) {
+							if (art.hash === item.hash) {
+								article = art;
+								return true;
+							}
+						}
+						else if (art.url === item.url) {
 							article = art;
 							return true;
 						}
+					});
+					if (!!article) {
+						if (article.similar < item.similar) {
+							article.similar = item.similar
+						}
 					}
-					else if (art.url === item.url) {
-						article = art;
-						return true;
+					else {
+						related.push(item);
 					}
 				});
-				if (!!article) {
-					if (article.similar < item.similar) {
-						article.similar = item.similar
-					}
-				}
-				else {
-					related.push(item);
-				}
-			});
-			related.sort((a, b) => b.similar - a.similar);
+				related.sort((a, b) => b.similar - a.similar);
+			}
 		}
-	}
-	else {
-		related = [...relativeArticles];
-	}
-	related = filterSimilarArticle(related, 10);
+		else {
+			related = [...relativeArticles];
+		}
+		related = filterSimilarArticle(related, 10);
 
-	// Call Ai for reply
-	var {title, content} = pageInfo;
-	if (!content) content = getPageContent(document.body, true);
-	var result = await askAIandWait('askArticle', { url: location.href, title, content, question, related });
+		// Call Ai for reply
+		let {title, content} = pageInfo;
+		if (!content) content = getPageContent(document.body, true);
+		result = await askAIandWait('askArticle', { url: location.href, title, content, question, related });
+	}
+	else if (currentMode === 'translate') {
+		let lang = inputerTranslationLanguage.value || translationInfo.lang || myLang;
+		result = await askAIandWait('translateSentence', { lang, content: question });
+	}
+
 	if (!result) result = messages.conversation.AIFailed;
 	addChatItem(result, 'cyprite');
 

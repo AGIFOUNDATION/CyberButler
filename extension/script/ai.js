@@ -292,6 +292,30 @@ EdgedAI.translateContent = async (tid, data) => {
 	var prompt = [];
 	prompt.push(['system', PromptLib.assemble(PromptLib.translationSystem, data)]);
 	prompt.push(['human', PromptLib.assemble(PromptLib.translationRunning, data)]);
+
+	var aiName = Model2AI[myInfo.model];
+	var chatToAI = AI[aiName];
+	if (!!chatToAI) chatToAI = chatToAI.chat;
+	if (!chatToAI) {
+		replyRequest(tid, reply, 'No AI for Model ' + myInfo.model);
+		return;
+	}
+
+	var reply, errMsg;
+	try {
+		reply = await chatToAI(prompt, myInfo.model);
+	}
+	catch (err) {
+		console.error(err);
+		errMsg = err.message || err.msg || err.data || (!!err.toString ? err.toString() : err || aiName + ' Error');
+	}
+
+	replyRequest(tid, reply, errMsg);
+};
+EdgedAI.translateSentence = async (tid, data) => {
+	var prompt = [];
+	prompt.push(['system', PromptLib.assemble(PromptLib.instantTranslationSystem, data)]);
+	prompt.push(['human', PromptLib.assemble(PromptLib.instantTranslationRunning, data)]);
 	console.log(prompt);
 
 	var aiName = Model2AI[myInfo.model];

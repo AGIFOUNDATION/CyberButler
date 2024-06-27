@@ -214,12 +214,13 @@
 }
 .panel_container .panel_tabs_area .panel_input {
 	width: 100px;
-	padding: 1px 5px;
+	padding: 0px 5px;
 	border: none;
 	border-bottom: 1px solid var(--front-color);
 	background-color: transparent;
 	outline: none;
 	color: var(--front-color);
+	line-height: 1em;
 }
 .panel_container[name="translate"] .content_container  {
 	bottom: 170px;
@@ -388,7 +389,7 @@
 .panel_container .content_container > h3:first-child,
 .panel_container .content_container > h4:first-child,
 .panel_container .content_container > h5:first-child {
-	margin-top: 10px;
+	margin-top: 1.5em;
 }
 .panel_container h1 {
 	margin-top: 2.5em;
