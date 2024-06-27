@@ -115,7 +115,6 @@ AI.Claude.chat = async (conversation, model=DefaultChatModel, options={}) => {
 
 	response = await response.json();
 	var json = response;
-	console.log(json);
 	var usage = response.usage;
 	if (!!usage) {
 		logger.info('Claude', `Usage: Input ${usage.input_tokens}, Output: ${usage.output_tokens}`);
@@ -127,9 +126,7 @@ AI.Claude.chat = async (conversation, model=DefaultChatModel, options={}) => {
 		reply = "";
 	}
 	else {
-		console.log(reply.text);
 		reply = convertClaudeChinese(reply.text);
-		console.log(reply);
 	}
 
 	return reply;
