@@ -444,7 +444,7 @@ const getPageInfo = async () => {
 	}
 	else {
 		info.title = document.title.trim();
-		info.content = getPageContent(document.body, falses);
+		info.content = getPageContent(document.body, false);
 	}
 	info.hash = await askSWandWait("CalculateHash", info.content);
 	info.description = getPageDescription(info.isArticle, container);

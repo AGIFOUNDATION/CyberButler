@@ -794,6 +794,22 @@ EventHandler.SavePageSummary = async (data, source, sid) => {
 		setPageInfo(tabInfo.url, pageInfo),
 	]);
 };
+EventHandler.GotoConversationPage = async () => {
+	// var url = chrome.runtime.getURL('/pages/newtab.html?mode=conversation');
+	var url = chrome.runtime.getURL('/pages/newtab.html');
+	var tab = await chrome.tabs.query({url});
+	if (!!tab && tab.length > 0) {
+		tab = tab[0];
+		chrome.tabs.highlight({
+			windowId: tab.windowId,
+			tabs: tab.index
+		});
+	}
+	else {
+		chrome.tabs.create({url});
+	}
+
+};
 
 EventHandler.CalculateHash = async (data) => {
 	// This function is not safe in browser.

@@ -102,17 +102,17 @@ const generateTabPanel = (messages) => {
 	});
 	tabPanel.appendChild(btnTranslate);
 
-	var btnComprehensive = newEle('div', 'cyprite', 'panel_tab', 'invalid');
+	var btnComprehensive = newEle('div', 'cyprite', 'panel_tab');
 	btnComprehensive.setAttribute('action', 'showComprehensive');
 	btnComprehensive.innerText = messages.buttons.showComprehensivePanel;
-	btnComprehensive.addEventListener('click', showComprehensivePanel);
+	btnComprehensive.addEventListener('click', () => {
+		sendMessage('GotoConversationPage', null, 'BackEnd');
+	});
 	tabPanel.appendChild(btnComprehensive);
 
 	/* Summary Buttons */
 
 	chatTrigger = newEle('div', 'cyprite', 'panel_button', "always_show");
-	// chatTrigger = newEle('div', 'cyprite', 'panel_button', 'always');
-	// chatTrigger.setAttribute('group', 'summary');
 	chatTrigger.innerText = messages.buttons.showChatPanel;
 	chatTrigger.addEventListener('click', onSummaryChatTrigger);
 	tabPanel.appendChild(chatTrigger);
@@ -323,15 +323,6 @@ const switchPanel = group => {
 
 	for (let tab of AIPanel.querySelectorAll('.panel_container .panel_button')) tab.classList.remove('active');
 	for (let tab of AIPanel.querySelectorAll(`.panel_container .panel_button[group="${group}"]`)) tab.classList.add('active');
-};
-const showComprehensivePanel = () => {
-	for (let tab of AIPanel.querySelectorAll('.panel_tabs_area .panel_tab')) tab.classList.remove('active');
-	AIPanel.querySelector('.panel_tabs_area .panel_tab[action="showComprehensive"]').classList.add('active');
-
-	for (let tab of AIPanel.querySelectorAll('.panel_tabs_area .panel_button')) tab.classList.remove('active');
-	for (let tab of AIPanel.querySelectorAll('.panel_tabs_area .panel_button[group="comprehensive"]')) tab.classList.add('active');
-
-	console.log('Show Comprehensive');
 };
 const updateModelList = async (model) => {
 	if (!model || !isString(model)) {
