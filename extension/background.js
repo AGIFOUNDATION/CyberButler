@@ -837,10 +837,15 @@ EventHandler.FindSimilarArticle = async (data) => {
 	var list = [];
 	for (let url in all) {
 		if (url === tabURL) continue;
-		let info = all[url];
-		if (!info || !info.embedding) continue;
+		let item = all[url];
+		if (!item || !item.embedding) continue;
 
-		var similar = calculateSimilarityRate(info.embedding, vector) * calculateNearestScore(info.embedding, vector);
+		let info = {};
+		for (let key in item) {
+			info[key] = item[key];
+		}
+
+		let similar = calculateSimilarityRate(info.embedding, vector) * calculateNearestScore(info.embedding, vector);
 		if (similar <= 0) continue;
 		info.similar = similar;
 		list.push(info);
@@ -855,6 +860,21 @@ EventHandler.FindSimilarArticle = async (data) => {
 	}));
 
 	return list;
+};
+EventHandler.FindRelativeArticles = async (data, source, sid) => {
+	data.url = parseURL(data.url || '');
+	if (!data.url) return;
+
+	var url = RelativeHandler[sid];
+	if (url === data.url) {
+		delete RelativeHandler[sid];
+		return;
+	}
+
+	RelativeHandler[sid] = data.url;
+
+	data.tid = sid;
+	findRelativeArticles(data);
 };
 EventHandler.GetConversation = async (url) => {
 	url = parseURL(url);
@@ -876,7 +896,7 @@ EventHandler.ClearSummaryConversation = async (url) => {
 /* AI */
 
 const AIHandler = {};
-const CacheLimit = 1000 * 60 * 60 * 24;
+const CacheLimit = 1000 * 60 * 60 * 12;
 
 const removeAIChatHistory = async (tid) => {
 	var list, tasks = [];
@@ -1035,7 +1055,7 @@ AIHandler.translateSentence = async (data) => {
 	var available = await checkAvailability();
 	if (!available) return;
 
-	data.myLang = myInfo.lang;
+	data.myLang = LangName[myInfo.lang] || myInfo.lang;
 
 	var translation;
 	try {
@@ -1045,13 +1065,16 @@ AIHandler.translateSentence = async (data) => {
 		showSystemNotification(err);
 		return null;
 	}
+	console.log(translation);
 
 	return translation;
 };
 
 /* Utils */
 
-const Tab2Article = {};
+const Tab2Article = {}, RelativeHandler = {};
+const ColdDownDuration = 60 * 1000;
+const RelativeArticleRange = 40;
 const getPageNeedAIInfo = async data => {
 	var info = await Promise.all([
 		DBs.pageInfo.get('notifyChecker', data.page),
@@ -1168,6 +1191,77 @@ const initInjectScript = async () => {
 		js: [{file: 'inject.js'}],
 		world: "MAIN",
 	}]);
+};
+const findRelativeArticles = async (data) => {
+	var available = await checkAvailability();
+	if (!available) {
+		delete RelativeHandler[data.tid];
+		return;
+	}
+
+	logger.log('SW', data.articles.length + ' Similar Articles for ' + data.url);
+	if (data.articles.length > RelativeArticleRange) {
+		data.articles.splice(RelativeArticleRange);
+	}
+
+	var info = {
+		list: [],
+	};
+	info.content = data.requests.join('\n\n');
+	info.articles = data.content.map(ctx => {
+		return '<article>\n' + ctx.trim() + '\n</article>';
+	}).join('\n\n');
+	info.list = data.articles.map(item => {
+		return '<candidate>\n<title>' + item.title + '</title>\n<url>' + item.url + '</url>\n<content>\n' + item.description.trim() + '\n</content>\n</candidate>';
+	}).join('\n\n');
+
+	// AI find the relative articles
+	var relatives;
+	try {
+		relatives = await callAIandWait('findRelativeArticles', info);
+	}
+	catch (err) {
+		showSystemNotification(err);
+		return null;
+	}
+
+	// Parse AI's reply
+	relatives = relatives.split(/(\r*\n\r*)+/);
+	relatives = relatives.filter(item => {
+		return item.match(/(\*\*)?url(\s*:\s*\1|\1\s*:\s*)/i);
+	}).map(item => {
+		item = item.replace(/[\w\W]*(\*\*)?url(\s*:\s*\1|\1\s*:\s*)/i, '');
+		item = item.trim();
+		return item;
+	}).filter(item => !!item).map(item => parseURL(item));
+
+	// Get Info
+	relatives = await Promise.all(relatives.map(async (url) => {
+		var item = await getPageInfo(url);
+		if (!item || !item.hash || item.hash === data.hash) return null;
+
+		var info = {};
+		for (let key in item) {
+			info[key] = item[key];
+		}
+		info.similar = 100;
+
+		return info;
+	}));
+	relatives = relatives.filter(item => !!item);
+	logger.log('SW', relatives.length + ' Relative Articles for ' + data.url);
+
+	// Send to page
+	dispatchEvent({
+		event: "foundRelativeArticles",
+		data: relatives,
+		target: "FrontEnd",
+		tid: data.tid,
+	});
+
+	// Cold Down
+	await wait(ColdDownDuration);
+	delete RelativeHandler[data.tid];
 };
 
 /* Init */

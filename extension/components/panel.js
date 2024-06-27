@@ -13,9 +13,9 @@ const ModelOrder = [
 
 var currentMode = '';
 var showChatter = false, runningAI = false, chatTrigger = null;
-var relativeArticles = [];
+var similarArticles = [], relativeArticles = [];
 var extraTranslationRequirement = '', inputerTranslationLanguage = null;
-var AIContainer = null, AIPanel = null, AIAsker = null, AIHistory = null, AIRelated = null, AIModelList = null;
+var AIContainer = null, AIPanel = null, AIAsker = null, AIHistory = null, AIModelList = null;
 
 /* UI */
 
@@ -245,9 +245,10 @@ const addChatItem = (content, type) => {
 		AIHistory.scrollTop = AIHistory.scrollHeight - AIHistory.clientHeight;
 	});
 };
-const resizeHistoryArea = (immediately=false) => {
+const resizeHistoryArea = (immediately) => {
 	if (!!resizeHistoryArea.timer) clearTimeout(resizeHistoryArea.timer);
 
+	var duration = isBoolean(immediately) ? (immediately ? 0 : 250) : (isNumber(immediately) ? immediately : 250);
 	resizeHistoryArea.timer = setTimeout(() => {
 		resizeHistoryArea.timer = null;
 
@@ -255,7 +256,7 @@ const resizeHistoryArea = (immediately=false) => {
 		var containerBox = AIHistory.parentNode.getBoundingClientRect();
 		var height = containerBox.height - 20 - inputerBox.height - 25;
 		AIHistory.style.height = height + 'px';
-	}, immediately ? 0 : 250);
+	}, duration);
 };
 
 /* Events */
@@ -273,12 +274,13 @@ const showPageSummary = async (summary) => {
 
 	generateModelList();
 	addSummaryAndRelated(messages, AIContainer.querySelector('.content_container'), summary, relatives);
-	relativeArticles = relatives;
 	restoreHistory(conversation);
 	resizeHistoryArea(true);
 	switchPanel('summary');
 
 	AIContainer.style.display = 'block';
+
+	findRelativeArticles();
 };
 const showTranslationResult = async (isSelection, content, translation) => {
 	currentMode = 'translate';
@@ -412,6 +414,7 @@ const onCopyContent = async target => {
 	await navigator.clipboard.writeText(content);
 	var messages = I18NMessages[myLang] || I18NMessages.en;
 	Notification.show(messages.cypriteName, messages.mentions.contentCopied, 'middleTop', 'success', 2 * 1000);
+	AIAsker.focus();
 };
 const onAfterInput = evt => {
 	resizeHistoryArea();
@@ -428,6 +431,7 @@ const onSendToCyprite = async () => {
 	addChatItem(question, 'human');
 	AIAsker.innerText = messages.conversation.waitForAI;
 	AIAsker.setAttribute('contentEditable', 'false');
+	resizeHistoryArea(60);
 
 	var result;
 
@@ -459,6 +463,7 @@ const onSendToCyprite = async () => {
 				conversationVector.push(...vector);
 				if (conversationVector.length > ChatVectorLimit) conversationVector = conversationVector.splice(conversationVector.length - ChatVectorLimit, ChatVectorLimit);
 				related = await askSWandWait('FindSimilarArticle', {url: location.href, vector: conversationVector});
+				findRelativeArticles();
 				relativeArticles.forEach(item => {
 					var article;
 					related.some(art => {
@@ -490,6 +495,7 @@ const onSendToCyprite = async () => {
 			related = [...relativeArticles];
 		}
 		related = filterSimilarArticle(related, 10);
+		findRelativeArticles();
 
 		// Call Ai for reply
 		let {title, content} = pageInfo;
@@ -506,6 +512,8 @@ const onSendToCyprite = async () => {
 
 	AIAsker.innerText = '';
 	AIAsker.setAttribute('contentEditable', 'true');
+	resizeHistoryArea(60);
+
 	await wait();
 	AIAsker.focus();
 
@@ -535,7 +543,6 @@ const onClickChatItem = ({target}) => {
 	}
 
 	var action = target.getAttribute('action');
-	if (!action) return;
 	if (action === 'copyContent') {
 		onCopyContent(target);
 	}
@@ -588,6 +595,8 @@ const findSimilarArticle = async (vector) => {
 	if (!!pageHash) {
 		result = result.filter(item => item.hash !== pageHash);
 	}
+	relativeArticles = [...result];
+	similarArticles = [...result];
 
 	// Filter
 	result = filterSimilarArticle(result, 10);
@@ -612,4 +621,20 @@ const filterSimilarArticle = (articles, count) => {
 	logger.info('Content', 'Similar Articles:');
 	console.table(log);
 	return articles;
+};
+const findRelativeArticles = () => {
+	if (!pageInfo) return;
+
+	var requests = [];
+	[...AIHistory.__inner.querySelectorAll('.chat_item.human .chat_content')].forEach(item => {
+		requests.push(item._data);
+	});
+
+	sendMessage('FindRelativeArticles', {
+		url: location.href,
+		hash: pageHash,
+		content: [pageInfo.content],
+		articles: similarArticles,
+		requests
+	}, 'BackEnd');
 };

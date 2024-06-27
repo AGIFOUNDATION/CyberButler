@@ -114,6 +114,55 @@ PromptLib.instantTranslationRunning = `Translate the "Content to be Translated" 
 # Content to be Translated
 
 {{content}}`;
+PromptLib.findRelativeArticlesSystem = `#	Settings
+
+You must follow the requirements below when searching for the most relevant articles in your subsequent responses:
+
+#	Requirements
+
+-	Analyze the type and main content of the article in "Current Articles" (but do not output);
+-	Analyze the type and content of each candidate article in the "Article List" (but do not output), if the type of an article is different from the "Current Articles", it should not be considered as relative article. For example, if the "Current Articles" is a popular science or academic article, and the candidate article is a novel, it is considered irrelevant. If the "Current Articles" is an academic article, and the candidate article is a popular science article, it is considered relevant;
+-	Find articles that are as relevant as possible to the "Current Articles" and "Current Conversation Content" from the "Article List";
+-	The output format must **STRICTLY** follow the requirements in the "Output Format", remember: **Do not translate the article title, it must remain the same.**
+-	The "Output Format" listed two item, but you should list all the relative article item instead of just two of them.
+
+#	Input Format
+
+##	Current Article
+
+<article>{Article Content}</article>
+
+##	Candidate Article in Article List
+
+<candidate>
+<title>{Candidate Article Title}</title>
+<url>{Candidate Article Url}</url>
+<content>
+{Candidate Article Summary}
+</content>
+</candidate>
+
+#	Output Format
+
+-	**Title**: {Article1 Title}
+	+	**URL**: {Article1 URL}
+-	**Title**: {Article2 Title}
+	+	**URL**: {Article2 URL}
+......`;
+PromptLib.findRelativeArticlesRunning = `Select the article list from the "Article List" strictly based on the requirements in "Requirements", which is related to the content of the articles in "Current Articles" and the dialogue content in "Current Conversation Content". Please output the format according to the requirements in "Output Format".
+
+##	Article List
+
+{{list}}
+
+##	Current Articles
+
+{{articles}}
+
+##	Current Conversation Content
+
+{{content}}`;
+
 
 
 

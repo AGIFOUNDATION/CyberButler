@@ -441,13 +441,12 @@ const getPageInfo = async () => {
 	if (info.isArticle) {
 		info.title = getPageTitle(container);
 		info.content = getPageContent(container, true);
-		info.hash = await askSWandWait("CalculateHash", info.content);
 	}
 	else {
 		info.title = document.title.trim();
-		info.content = '';
-		info.hash = '';
+		info.content = getPageContent(document.body, falses);
 	}
+	info.hash = await askSWandWait("CalculateHash", info.content);
 	info.description = getPageDescription(info.isArticle, container);
 	logger.em('DOC', info);
 
@@ -479,10 +478,6 @@ const summarizePage = async (isRefresh=false) => {
 
 	pageInfo = await getPageInfo();
 	var article = pageInfo.content, hash = pageInfo.hash;
-	if (!article) {
-		article = getPageContent(document.body, true);
-		hash = await askSWandWait("CalculateHash", article);
-	}
 	article = 'TITLE: ' + pageInfo.title + '\n\n' + article;
 
 	if (!isRefresh && !!pageSummary && !!pageHash && hash === pageHash) {
@@ -540,7 +535,6 @@ const translatePage = async (isRefresh=false, lang, content, requirement) => {
 		isSelection = false;
 		if (!pageInfo) pageInfo = await getPageInfo();
 		content = pageInfo.content;
-		if (!content) content = getPageContent(document.body, false);
 	}
 
 	var messages = I18NMessages[myLang] || I18NMessages.en;
@@ -712,6 +706,22 @@ EventHandler.onContextMenuAction = async (data) => {
 
 		await translatePage();
 	}
+};
+EventHandler.foundRelativeArticles = (data) => {
+	if (!data || !data.length) return;
+
+	relativeArticles = [...data];
+	var list = AIPanel.querySelector('.related_articles_list');
+	list.innerHTML = '';
+	data.forEach(item => {
+		var frame = newEle('li', 'cyprite', 'related_articles_item');
+		var link = newEle('a', 'cyprite', 'related_articles_link');
+		link.innerText = item.title;
+		link.href = item.url;
+		link.target = '_blank';
+		frame.appendChild(link);
+		list.appendChild(frame);
+	});
 };
 
 /* Tab */

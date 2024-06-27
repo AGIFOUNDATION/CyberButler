@@ -187,6 +187,26 @@ const batchize = content => {
 	content = content.filter(block => !!block);
 	return content;
 };
+const callAI = async (tid, model, prompt) => {
+	var aiName = Model2AI[model];
+	var chatToAI = AI[aiName];
+	if (!!chatToAI) chatToAI = chatToAI.chat;
+	if (!chatToAI) {
+		replyRequest(tid, '', 'No AI for Model ' + model);
+		return;
+	}
+
+	var reply, errMsg;
+	try {
+		reply = await chatToAI(prompt, model);
+	}
+	catch (err) {
+		console.error(err);
+		errMsg = err.message || err.msg || err.data || (!!err.toString ? err.toString() : err || aiName + ' Error');
+	}
+
+	replyRequest(tid, reply, errMsg);
+};
 
 const EdgedAI = {};
 EdgedAI.sayHello = async (tid) => {
@@ -197,46 +217,12 @@ EdgedAI.sayHello = async (tid) => {
 		time: timestmp2str(Date.now(), "YY年MM月DD日 :WDE: hh:mm"),
 	});
 
-	var aiName = Model2AI[myInfo.model];
-	var chatToAI = AI[aiName];
-	if (!!chatToAI) chatToAI = chatToAI.chat;
-	if (!chatToAI) {
-		replyRequest(tid, reply, 'No AI for Model ' + myInfo.model);
-		return;
-	}
-
-	var reply, errMsg;
-	try {
-		reply = await chatToAI([['human', prompt]], myInfo.model);
-	}
-	catch (err) {
-		console.error(err);
-		errMsg = err.message || err.msg || err.data || (!!err.toString ? err.toString() : err || aiName + ' Error');
-	}
-
-	replyRequest(tid, reply, errMsg);
+	callAI(tid, myInfo.model, [['human', prompt]]);
 };
 EdgedAI.summarizeArticle = async (tid, article) => {
 	var prompt = PromptLib.assemble(PromptLib.summarizeArticle, { article, lang: LangName[myInfo.lang] });
 
-	var aiName = Model2AI[myInfo.model];
-	var chatToAI = AI[aiName];
-	if (!!chatToAI) chatToAI = chatToAI.chat;
-	if (!chatToAI) {
-		replyRequest(tid, reply, 'No AI for Model ' + myInfo.model);
-		return;
-	}
-
-	var reply, errMsg;
-	try {
-		reply = await chatToAI([['human', prompt]], myInfo.model);
-	}
-	catch (err) {
-		console.error(err);
-		errMsg = err.message || err.msg || err.data || (!!err.toString ? err.toString() : err || aiName + ' Error');
-	}
-
-	replyRequest(tid, reply, errMsg);
+	callAI(tid, myInfo.model, [['human', prompt]]);
 };
 EdgedAI.embeddingArticle = async (tid, data) => {
 	var batch = [];
@@ -268,71 +254,34 @@ EdgedAI.embeddingArticle = async (tid, data) => {
 
 	replyRequest(tid, reply, errMsg);
 };
-EdgedAI.askArticle = async (tid, conversation) => {
-	var aiName = Model2AI[myInfo.model];
-	var chatToAI = AI[aiName];
-	if (!!chatToAI) chatToAI = chatToAI.chat;
-	if (!chatToAI) {
-		replyRequest(tid, reply, 'No AI for Model ' + myInfo.model);
+EdgedAI.findRelativeArticles = async (tid, data) => {
+	var prompt = [];
+	prompt.push(['system', PromptLib.assemble(PromptLib.findRelativeArticlesSystem, data)]);
+	prompt.push(['human', PromptLib.assemble(PromptLib.findRelativeArticlesRunning, data)]);
+
+	var model = Model2AI[myInfo.model];
+	if (!!model) model = FastAI[model];
+	if (!model) {
+		replyRequest(tid, '', 'No Such AI Model: ' + myInfo.model);
 		return;
 	}
 
-	var reply, errMsg;
-	try {
-		reply = await chatToAI(conversation, myInfo.model);
-	}
-	catch (err) {
-		console.error(err);
-		errMsg = err.message || err.msg || err.data || (!!err.toString ? err.toString() : err || aiName + ' Error');
-	}
-
-	replyRequest(tid, reply, errMsg);
+	callAI(tid, model, prompt);
+};
+EdgedAI.askArticle = async (tid, conversation) => {
+	callAI(tid, myInfo.model, conversation);
 };
 EdgedAI.translateContent = async (tid, data) => {
 	var prompt = [];
 	prompt.push(['system', PromptLib.assemble(PromptLib.translationSystem, data)]);
 	prompt.push(['human', PromptLib.assemble(PromptLib.translationRunning, data)]);
 
-	var aiName = Model2AI[myInfo.model];
-	var chatToAI = AI[aiName];
-	if (!!chatToAI) chatToAI = chatToAI.chat;
-	if (!chatToAI) {
-		replyRequest(tid, reply, 'No AI for Model ' + myInfo.model);
-		return;
-	}
-
-	var reply, errMsg;
-	try {
-		reply = await chatToAI(prompt, myInfo.model);
-	}
-	catch (err) {
-		console.error(err);
-		errMsg = err.message || err.msg || err.data || (!!err.toString ? err.toString() : err || aiName + ' Error');
-	}
-
-	replyRequest(tid, reply, errMsg);
+	callAI(tid, myInfo.model, prompt);
 };
 EdgedAI.translateSentence = async (tid, data) => {
 	var prompt = [];
 	prompt.push(['system', PromptLib.assemble(PromptLib.instantTranslationSystem, data)]);
 	prompt.push(['human', PromptLib.assemble(PromptLib.instantTranslationRunning, data)]);
 
-	var aiName = Model2AI[myInfo.model];
-	var chatToAI = AI[aiName];
-	if (!!chatToAI) chatToAI = chatToAI.chat;
-	if (!chatToAI) {
-		replyRequest(tid, reply, 'No AI for Model ' + myInfo.model);
-		return;
-	}
-
-	var reply, errMsg;
-	try {
-		reply = await chatToAI(prompt, myInfo.model);
-	}
-	catch (err) {
-		console.error(err);
-		errMsg = err.message || err.msg || err.data || (!!err.toString ? err.toString() : err || aiName + ' Error');
-	}
-
-	replyRequest(tid, reply, errMsg);
+	callAI(tid, myInfo.model, prompt);
 };

@@ -39,6 +39,16 @@ globalThis.AI2Model = {
 		"deepseek-coder"
 	],
 };
+globalThis.FastAI = {
+	"Gemini": "gemini-1.5-flash",
+	"Claude": "claude-3-5-sonnet-20240620",
+	"Openai": "gpt-4o",
+};
+globalThis.DeepAI = {
+	"Gemini": "gemini-1.5-pro",
+	"Claude": "claude-3-opus-20240229",
+	"Openai": "gpt-4-turbo",
+};
 
 globalThis.wait = delay => new Promise(res => setTimeout(res, delay));
 globalThis.waitUntil = fun => new Promise((res, rej) => {
