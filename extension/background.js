@@ -162,20 +162,6 @@ chrome.storage.sync.onChanged.addListener(evt => {
 
 	}
 });
-chrome.contextMenus.onClicked.addListener((evt, tab) => {
-	// No action in Extension page.
-	if (evt.pageUrl.indexOf('chrome') === 0 || evt.frameUrl.indexOf('chrome') === 0) {
-		return;
-	}
-	dispatchEvent({
-		event: "onContextMenuAction",
-		data: {
-			action: evt.menuItemId
-		},
-		target: "FrontEnd",
-		tid: tab.id,
-	});
-});
 
 /* Page Manager */
 
@@ -461,14 +447,29 @@ chrome.action.onClicked.addListener(async () => {
 	else {
 		let info = await getTabInfo(tab.id);
 		info.requested = true;
+		await setTabInfo(tab.id, info);
 		dispatchEvent({
 			event: "requestCypriteNotify",
 			data: {forceShow: true},
 			target: "FrontEnd",
 			tid: tab.id
 		});
-		await setTabInfo(tab.id, info);
 	}
+});
+chrome.contextMenus.onClicked.addListener((evt, tab) => {
+	// No action in Extension page.
+	if (evt.pageUrl.indexOf('chrome') === 0 || evt.frameUrl.indexOf('chrome') === 0) {
+		return;
+	}
+	dispatchEvent({
+		event: "onContextMenuAction",
+		data: {
+			action: evt.menuItemId,
+			text: evt.selectionText,
+		},
+		target: "FrontEnd",
+		tid: tab.id,
+	});
 });
 
 /* WebSocket */
@@ -1001,12 +1002,13 @@ AIHandler.askArticle = async (data, source, sid) => {
 	}
 
 	// Update system prompt for relative articles
-	var config = { content: data.content, lang: LangName[myInfo.lang] }
+	var config = { content: data.content, lang: LangName[myInfo.lang] };
+	config.content = '<currentArticle title="' + data.title + '" url="' + data.url + '">\n' + data.content.trim() + '\n</currentArticle>';
 	if (!!data.related) {
 		let articles = await Promise.all(data.related.map(async item => {
 			var info = await getPageInfo(parseURL(item.url));
 			if (!info) return null;
-			return '<article title="' + (item.title || info.title) + '" url="' + info.url + '">\n' + info.description.trim() + '\n</article>';
+			return '<referenceMaterial title="' + (item.title || info.title) + '" url="' + info.url + '">\n' + info.description.trim() + '\n</referenceMaterial>';
 		}))
 		articles = articles.filter(info => !!info);
 		config.related = articles.join('\n');
@@ -1018,6 +1020,7 @@ AIHandler.askArticle = async (data, source, sid) => {
 	list = list.filter(item => item[0] !== 'system');
 	list.unshift(['system', systemPrompt]);
 	list.push(['human', data.question]);
+	console.log(list);
 
 	var result;
 	try {

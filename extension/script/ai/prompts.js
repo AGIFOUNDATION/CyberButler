@@ -68,7 +68,7 @@ PromptLib.askPageSystem = `#	Requirements
 -	Where possible, provide quotes from the Current Article or Reference Materials, including the original text of the sentence and which paragraph and article it is in;
 -	Please consider how to best reply to my question, clarify your response workflow but **NOT** write them down, and then follow the workflow you have set, thinking step by step, replying step by step.
 
-#	Current Article (Format: Markdown)
+#	Current Article (Format: XML + Markdown)
 
 {{content}}
 

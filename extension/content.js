@@ -305,7 +305,7 @@ const getPageTitle = (container) => {
 				}
 			});
 		});
-		delta = delta.filter(d => d > 0);
+		delta = delta.filter(d => d >= 0);
 		if (delta.length === 0) return;
 
 		// The final distance
@@ -688,9 +688,8 @@ EventHandler.replyAskAndWait = (data) => {
 	res(data.result);
 };
 EventHandler.onContextMenuAction = async (data) => {
+	await waitForMountUtil('notification');
 	if (data.action === 'launchCyprite') {
-		await waitForMountUtil('notification');
-
 		if (!pageSummary) {
 			pageSummary = await askSWandWait('LoadPageSummary');
 			if (!!pageSummary) {
@@ -702,9 +701,7 @@ EventHandler.onContextMenuAction = async (data) => {
 		await summarizePage();
 	}
 	else if (data.action === 'translateSelection') {
-		await waitForMountUtil('notification');
-
-		await translatePage();
+		await translatePage(false, undefined, data.text);
 	}
 };
 EventHandler.foundRelativeArticles = (data) => {
