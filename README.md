@@ -1,7 +1,7 @@
 #	CyberButler
 
 > -	Author: LostAbaddon
-> -	Version: 0.3.3
+> -	Version: 0.3.4
 
 Your Personal cyber knowledge vault butler.
 
