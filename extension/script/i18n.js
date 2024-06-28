@@ -20,7 +20,6 @@ globalThis.I18NMessages = {
 			failed: 'Translation failed, you may try again later!',
 			noTranslatedYet: 'Not translated yet...',
 			selectionHint: "Content to be translated:",
-			articleHint: "Webpage content translation:",
 			instantTranslateHint: "I am your translation assistant, and I will automatically translate the text you input!",
 		},
 		buttons: {
@@ -67,7 +66,6 @@ globalThis.I18NMessages = {
 			failed: '翻译失败了，您可以稍后再试一次哦！',
 			noTranslatedYet: '尚未翻译……',
 			selectionHint: "待翻译内容：",
-			articleHint: "网页正文翻译：",
 			instantTranslateHint: "我是你的翻译助理，会自动翻译您输入的文字哟！",
 		},
 		buttons: {

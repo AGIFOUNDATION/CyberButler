@@ -98,7 +98,7 @@ const generateTabPanel = (messages) => {
 	btnTranslate.setAttribute('action', 'showTranslate');
 	btnTranslate.innerText = messages.buttons.showTranslatePanel;
 	btnTranslate.addEventListener('click', () => {
-		showTranslationResult(translationInfo.isSelection, translationInfo.content, translationInfo.translation);
+		showTranslationResult(translationInfo.translation);
 	});
 	tabPanel.appendChild(btnTranslate);
 
@@ -114,7 +114,7 @@ const generateTabPanel = (messages) => {
 
 	chatTrigger = newEle('div', 'cyprite', 'panel_button', "always_show");
 	chatTrigger.innerText = messages.buttons.showChatPanel;
-	chatTrigger.addEventListener('click', onSummaryChatTrigger);
+	chatTrigger.addEventListener('click', onChatTrigger);
 	tabPanel.appendChild(chatTrigger);
 
 	var btnClearHistory = newEle('div', 'cyprite', 'panel_button');
@@ -177,7 +177,7 @@ const generateTranslationExtraRequirementPanel = (messages) => {
 	submitter.addEventListener('click', () => {
 		extraTranslationRequirement = inputter.value;
 		var lang = inputerTranslationLanguage.value || translationInfo.lang || myLang;
-		translatePage(true, lang, translationInfo.isSelection ? translationInfo.content : '', extraTranslationRequirement);
+		translatePage(true, lang, translationInfo.content || '', extraTranslationRequirement);
 	});
 	inputFrame.appendChild(submitter);
 
@@ -282,7 +282,7 @@ const showPageSummary = async (summary) => {
 
 	findRelativeArticles();
 };
-const showTranslationResult = async (isSelection, content, translation) => {
+const showTranslationResult = async (translation, list) => {
 	currentMode = 'translate';
 
 	var messages = I18NMessages[myLang] || I18NMessages.en;
@@ -291,22 +291,12 @@ const showTranslationResult = async (isSelection, content, translation) => {
 
 	inputerTranslationLanguage.value = translationInfo.lang || LangName[myLang] || myLang;
 
-	var ctx, conversation = [];
-	if (isSelection) {
-		if (content.length > 200) {
-			ctx = '**' + messages.translation.selectionHint + '**\n\n' + content.substring(0, 200) + '\n\n......\n\n----\n\n' + translation;
-		}
-		else {
-			ctx = '**' + messages.translation.selectionHint + '**\n\n' + content + '\n\n----\n\n' + translation;
-		}
-	}
-	else {
-		ctx = '**' + messages.translation.articleHint + '**\n\n----\n\n' + (translation || messages.translation.noTranslatedYet);
-	}
+	var conversation = [];
 	conversation.push(['ai', messages.translation.instantTranslateHint]);
+	if (!!list && !!list.length) conversation.push(...list);
 
 	generateModelList();
-	AIContainer.querySelector('.content_container').innerHTML = marked.parse(ctx, {breaks: true}) || messages.conversation.AIFailed;
+	AIContainer.querySelector('.content_container').innerHTML = marked.parse(translation || messages.translation.noTranslatedYet, {breaks: true}) || messages.conversation.AIFailed;
 	restoreHistory(conversation);
 	resizeHistoryArea(true);
 	switchPanel('translate');
@@ -356,13 +346,13 @@ const onChooseModel = async ({target}) => {
 	var messages = I18NMessages[myLang] || I18NMessages.en;
 	Notification.show(messages.cypriteName, messages.mentions.changeModelSuccess, 'middleTop', 'success', 2 * 1000);
 };
-const onSummaryChatTrigger = async () => {
+const onChatTrigger = async () => {
 	if (!chatTrigger) return;
 
 	var messages = I18NMessages[myLang] || I18NMessages.en;
 	showChatter = !showChatter;
 	if (showChatter) {
-		for (let tab of AIPanel.querySelectorAll('.panel_tabs_area .panel_button[group="summary"]')) tab.classList.add('show');
+		for (let tab of AIPanel.querySelectorAll('.panel_tabs_area .panel_button[group="' + currentMode + '"]')) tab.classList.add('show');
 		chatTrigger.innerText = messages.buttons.hideChatPanel;
 		AIPanel.setAttribute('chat', 'true');
 		await wait(100);
@@ -372,7 +362,7 @@ const onSummaryChatTrigger = async () => {
 		AIHistory.scrollTop = AIHistory.scrollHeight - AIHistory.clientHeight;
 	}
 	else {
-		for (let tab of AIPanel.querySelectorAll('.panel_tabs_area .panel_button[group="summary"]')) tab.classList.remove('show');
+		for (let tab of AIPanel.querySelectorAll('.panel_tabs_area .panel_button[group="' + currentMode + '"]')) tab.classList.remove('show');
 		chatTrigger.innerText = messages.buttons.showChatPanel;
 		AIPanel.setAttribute('chat', 'false');
 	}

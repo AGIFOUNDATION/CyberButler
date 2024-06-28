@@ -513,7 +513,6 @@ const summarizePage = async (isRefresh=false) => {
 
 var translationInfo = {
 	lang: '',
-	isSelection: false,
 	content: '',
 	translation: '',
 };
@@ -522,36 +521,57 @@ const translatePage = async (isRefresh=false, lang, content, requirement) => {
 
 	if (!!AIContainer) AIContainer.querySelector('.content_container').innerHTML = '';
 
-	var isSelection = false;
 	if (!content) {
-		let sel = document.getSelection();
-		content = (sel.toString() || '').trim();
-		isSelection = true;
-	}
-	else {
-		isSelection = true;
-	}
-	if (!content) {
-		isSelection = false;
 		if (!pageInfo) pageInfo = await getPageInfo();
 		content = pageInfo.content;
 	}
 
 	var messages = I18NMessages[myLang] || I18NMessages.en;
-	var notify = Notification.show(messages.cypriteName, isSelection ? messages.translation.translatingSelection : messages.translation.translatingArticle, isRefresh ? "middleTop" : 'rightTop', 'message', 24 * 3600 * 1000);
+	var notify = Notification.show(messages.cypriteName, messages.translation.translatingArticle, isRefresh ? "middleTop" : 'rightTop', 'message', 24 * 3600 * 1000);
 
 	if (!lang) lang = myLang;
 	lang = LangName[lang] || lang;
 
 	var translation = await askAIandWait('translateContent', {lang, content, requirement});
 	translationInfo.lang = lang;
-	translationInfo.isSelection = isSelection;
 	translationInfo.content = content;
 	translationInfo.translation = translation;
 
+	await showTranslationResult(translation);
 	notify._hide();
 
-	showTranslationResult(isSelection, content, translation);
+	runningAI = false;
+};
+const translateSelection = async (selection) => {
+	runningAI = true;
+
+	if (!!AIContainer) AIContainer.querySelector('.content_container').innerHTML = '';
+
+	var messages = I18NMessages[myLang] || I18NMessages.en;
+	var notify = Notification.show(messages.cypriteName, messages.translation.translatingSelection, 'rightTop', 'message', 24 * 3600 * 1000);
+
+	var lang = myLang;
+	lang = LangName[lang] || lang;
+
+	// Get Selection Content
+	var sel = document.getSelection(), content;
+	if (sel.isCollapsed) {
+		content = selection;
+	}
+	else {
+		let range = sel.getRangeAt(0);
+		content = range.cloneContents();
+		let container = newEle('div'), nodes = [...content.childNodes];
+		nodes.forEach(node => container.appendChild(node));
+		content = getPageContent(container, false);
+	}
+
+	var translation = await askAIandWait('translateSentence', { lang, content });
+
+	// Show UI
+	await showTranslationResult('', [['human', content], ['ai', translation]]);
+	if (!showChatter) await onChatTrigger();
+	notify._hide();
 
 	runningAI = false;
 };
@@ -701,7 +721,7 @@ EventHandler.onContextMenuAction = async (data) => {
 		await summarizePage();
 	}
 	else if (data.action === 'translateSelection') {
-		await translatePage(false, undefined, data.text);
+		await translateSelection(data.text);
 	}
 };
 EventHandler.foundRelativeArticles = (data) => {
@@ -715,6 +735,7 @@ EventHandler.foundRelativeArticles = (data) => {
 	});
 
 	var list = AIPanel.querySelector('.related_articles_list');
+	if (!list) return;
 	list.innerHTML = '';
 	relativeArticles.forEach(item => {
 		var frame = newEle('li', 'cyprite', 'related_articles_item');
