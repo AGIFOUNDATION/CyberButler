@@ -452,6 +452,17 @@ const getPageInfo = async () => {
 
 	return info;
 };
+const chooseTargetLanguage = (lang) => {
+	if (!lang || lang.toLowerCase() === myLang || LangName[myLang].toLowerCase() === lang.toLowerCase()) {
+		for (let key in LangName) {
+			if (key === myLang) continue;
+			lang = LangName[key];
+			break;
+		}
+		return lang;
+	}
+	return LangName[lang] || lang;
+};
 
 var notificationMounted = false, notificationMountingRes = [];
 const UtilsState = {};
@@ -550,8 +561,11 @@ const translateSelection = async (selection) => {
 	var messages = I18NMessages[myLang] || I18NMessages.en;
 	var notify = Notification.show(messages.cypriteName, messages.translation.translatingSelection, 'rightTop', 'message', 24 * 3600 * 1000);
 
-	var lang = myLang;
-	lang = LangName[lang] || lang;
+	var lang;
+	if (!!inputerTranslationLanguage) {
+		lang = inputerTranslationLanguage.value;
+	}
+	lang = chooseTargetLanguage(lang);
 
 	// Get Selection Content
 	var sel = document.getSelection(), content;

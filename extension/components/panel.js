@@ -177,6 +177,7 @@ const generateTranslationExtraRequirementPanel = (messages) => {
 	submitter.addEventListener('click', () => {
 		extraTranslationRequirement = inputter.value;
 		var lang = inputerTranslationLanguage.value || translationInfo.lang || myLang;
+		lang = chooseTargetLanguage(lang);
 		translatePage(true, lang, translationInfo.content || '', extraTranslationRequirement);
 	});
 	inputFrame.appendChild(submitter);
@@ -484,6 +485,7 @@ const onSendToCyprite = async () => {
 	}
 	else if (currentMode === 'translate') {
 		let lang = inputerTranslationLanguage.value || translationInfo.lang || myLang;
+		lang = chooseTargetLanguage(lang);
 		result = await askAIandWait('translateSentence', { lang, content: question });
 	}
 

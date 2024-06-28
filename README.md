@@ -34,6 +34,7 @@ Currently, the front end can connect to the following AI platforms:
 -	Anthropic (Claude 3 Opus, 3.5 Sonnet, 3 Haiku)
 -	MoonShot (MoonShot-v1-128k)
 -	DeepSeek (DeepSeek Chat, DeepSeek Coder)
+-	GLM (GLM-4, GLM-4-airx, GLM-4-flash)
 
 ###	Feature Introduction
 
