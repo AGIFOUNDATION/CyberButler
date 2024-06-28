@@ -63,11 +63,12 @@ const gotoUniquePage = async (url) => {
 	var tab = await chrome.tabs.query({url});
 	if (!!tab) tab = tab[0];
 	if (!tab) {
-		chrome.tabs.create({url});
+		tab = await chrome.tabs.create({url});
 	}
 	else {
-		chrome.tabs.update(tab.id, {active: true, highlighted: true});
+		await chrome.tabs.update(tab.id, {active: true, highlighted: true});
 	}
+	return tab;
 };
 const configureCyberButler = () => {
 	gotoUniquePage(chrome.runtime.getURL(`pages/${myInfo.lang}/config.html`));
@@ -396,6 +397,7 @@ chrome.tabs.onRemoved.addListener(tabId => {
 	if (LastActiveTab === tabId) LastActiveTab = null;
 	onPageActivityChanged(tabId, "close");
 	removeAIChatHistory(tabId);
+	chrome.storage.session.remove(tabId + '-mode');
 });
 chrome.idle.onStateChanged.addListener((state) => {
 	logger.info('Ext', 'Idle State Changed: ' + state);
@@ -441,7 +443,7 @@ chrome.action.onClicked.addListener(async () => {
 	var [tab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
 	// Call Popup Cyprite
 	if (isPageForbidden(tab?.url)) {
-		configureCyberButler();
+		await gotoUniquePage(chrome.runtime.getURL('/pages/newtab.html'));
 	}
 	// Call Page Cyprite
 	else {
@@ -507,7 +509,7 @@ const getWSConfig = async () => {
 		myInfo.lang = myInfo.lang.toLowerCase();
 		if (!i18nList.includes(myInfo.lang)) myInfo.lang = DefaultLang;
 	}
-	if (myInfo.lang !== remoteInfo) {
+	if (myInfo.lang !== remoteInfo.lang) {
 		tasks.push(chrome.storage.sync.set({lang: myInfo.lang}));
 	}
 
@@ -794,9 +796,13 @@ EventHandler.SavePageSummary = async (data, source, sid) => {
 		setPageInfo(tabInfo.url, pageInfo),
 	]);
 };
-EventHandler.GotoConversationPage = () => {
-	gotoUniquePage(chrome.runtime.getURL('/pages/newtab.html?mode=conversation'));
+EventHandler.GotoConversationPage = async () => {
+	var tab = await gotoUniquePage(chrome.runtime.getURL('/pages/newtab.html'));
+	var info = {};
+	info[tab.id + '-mode'] = 'crossPageConversation';
+	await chrome.storage.session.set(info);
 };
+EventHandler.GotoConversationPage(); // tests
 
 EventHandler.CalculateHash = async (data) => {
 	// This function is not safe in browser.
@@ -1077,7 +1083,7 @@ AIHandler.translateSentence = async (data) => {
 /* Utils */
 
 const Tab2Article = {}, RelativeHandler = {};
-const ColdDownDuration = 60 * 1000;
+const ColdDownDuration = 5 * 60 * 1000;
 const RelativeArticleRange = 40;
 const getPageNeedAIInfo = async data => {
 	var info = await Promise.all([

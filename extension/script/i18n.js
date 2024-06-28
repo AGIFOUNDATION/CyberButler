@@ -24,6 +24,8 @@ globalThis.I18NMessages = {
 		},
 		buttons: {
 			sendMessageToCyprite: 'Send',
+			talkToCyprite: 'Submit',
+			startInstantTranslation: 'Translate',
 			showSummaryPanel: 'Summary',
 			showTranslatePanel: 'Translation',
 			showComprehensivePanel: 'Comprehensive QA',
@@ -44,6 +46,13 @@ globalThis.I18NMessages = {
 			waitForAI: 'Thinking, please wait...',
 			AIFailed: "*(I'm busy now, please try again later...)*",
 		},
+		newTab: {
+			crossPageConversation: "Cross-Page Chat",
+			intelligentSearch: "AI Search",
+			freelyConversation: "Cyber Butler",
+			instantTranslation: "Instantly Translation",
+			chooseArticles: "Choose WebPage / Article",
+		}
 	},
 	zh: {
 		cypriteName: "机灵",
@@ -70,6 +79,8 @@ globalThis.I18NMessages = {
 		},
 		buttons: {
 			sendMessageToCyprite: '提问',
+			talkToCyprite: '发送',
+			startInstantTranslation: '翻译',
 			showSummaryPanel: '概述总结',
 			showTranslatePanel: '翻译网页',
 			showComprehensivePanel: '综合问答',
@@ -90,5 +101,12 @@ globalThis.I18NMessages = {
 			waitForAI: '思考中，请稍等……',
 			AIFailed: "*（忙碌中，请稍后再试……）*",
 		},
+		newTab: {
+			crossPageConversation: "跨页问答",
+			intelligentSearch: "智能搜索",
+			freelyConversation: "智慧助手",
+			instantTranslation: "即时翻译",
+			chooseArticles: "选择网页/文件",
+		}
 	},
 };

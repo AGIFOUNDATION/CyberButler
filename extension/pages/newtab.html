@@ -5,16 +5,59 @@
 <meta http-equiv="x-ua-compatible" content="ie=edge">
 <title>Cyprite the CyberButler</title>
 <link rel="stylesheet" href="../../style/main.css">
-<link rel="stylesheet" href="../../style/newtab.css">
 <link rel="stylesheet" href="../../components/panel.css">
+<link rel="stylesheet" href="../../components/notification.css">
+<link rel="stylesheet" href="../../style/newtab.css">
+<script src="../../components/marked.min.js"></script>
+<script src="../../script/i18n.js"></script>
 <script src="../../script/common.js"></script>
 <script src="../../components/notification.js"></script>
+<script src="../../script/newtab.js"></script>
 </head>
 <body page="newtab" class="scrollable">
-<div class="panel_mask">
-	<div class="panel_frame">
-		<div class="panel_container">
-			Aloha Kosmos!
+<div class="panel_frame">
+	<div class="panel_container">
+		<div class="panel_logo">
+			<img src="/images/cyprite.png">
+			<div class="panel_model_chooser"></div>
+		</div>
+		<div class="panel_tabs_area">
+			<div class="panel_tab" action="gotoConfig"><img src="../images/gears.svg"></div>
+			<div class="panel_tab" title="intelligentSearch"></div>
+			<div class="panel_tab" title="crossPageConversation"></div>
+			<div class="panel_tab" title="freelyConversation"></div>
+			<div class="panel_tab" title="instantTranslation"></div>
+
+			<div class="panel_button" title="btnClearHistory" group="crossPageConversation|freelyConversation|instantTranslation" action="clearConversation"></div>
+			<div class="panel_button" group="instantTranslation">
+				<span title="hintTranslateInto"></span>
+				<input name="translation_language" type="text" class="panel_input">
+			</div>
+			<div class="panel_button" title="chooseArticles" group="crossPageConversation" action="chooseArticles"></div>
+		</div>
+		<div class="panel_operation_area scrollable" group="intelligentSearch">
+			Intelligent Search!
+		</div>
+		<div class="panel_operation_area" group="crossPageConversation" type="conversationArea">
+			<div class="content_container scrollable"></div>
+			<div class="input_container" contenteditable="true"></div>
+			<div class="input_sender" action="sendMessage" target="crossPageConversation">
+				<span title="sendMessageToCyprite"></span>
+			</div>
+		</div>
+		<div class="panel_operation_area" group="freelyConversation" type="conversationArea">
+			<div class="content_container scrollable"></div>
+			<div class="input_container" contenteditable="true"></div>
+			<div class="input_sender" action="sendMessage" target="freelyConversation">
+				<span title="talkToCyprite"></span>
+			</div>
+		</div>
+		<div class="panel_operation_area" group="instantTranslation" type="conversationArea">
+			<div class="content_container scrollable"></div>
+			<div class="input_container" contenteditable="true"></div>
+			<div class="input_sender" action="sendMessage" target="instantTranslation">
+				<span title="startInstantTranslation"></span>
+			</div>
 		</div>
 	</div>
 </div>

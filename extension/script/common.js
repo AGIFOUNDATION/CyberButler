@@ -1,6 +1,6 @@
 globalThis.DefaultLang = 'en';
 globalThis.LangName = {
-	'zh': "Chinese",
+	'zh': "中文",
 	'en': "English",
 };
 
@@ -57,6 +57,14 @@ globalThis.DeepAI = {
 	"Openai": "gpt-4-turbo",
 	"GLM": "glm-4",
 };
+globalThis.ModelOrder = [
+	"gemini",
+	"claude",
+	"openai",
+	"moonshot",
+	"deepseek",
+	"glm",
+];
 
 globalThis.wait = delay => new Promise(res => setTimeout(res, delay));
 globalThis.waitUntil = fun => new Promise((res, rej) => {

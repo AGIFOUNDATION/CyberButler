@@ -2,14 +2,6 @@ const ChatHistory = [];
 const ChatVectorLimit = 20;
 const ArticleSimilarRate = 1.0;
 const MatchRelevantArticlesBasedOnConversation = true;
-const ModelOrder = [
-	"gemini",
-	"claude",
-	"openai",
-	"moonshot",
-	"deepseek",
-	"glm",
-];
 
 var currentMode = '';
 var showChatter = false, runningAI = false, chatTrigger = null;
