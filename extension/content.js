@@ -710,10 +710,16 @@ EventHandler.onContextMenuAction = async (data) => {
 EventHandler.foundRelativeArticles = (data) => {
 	if (!data || !data.length) return;
 
-	relativeArticles = [...data];
+	var hashes = [];
+	relativeArticles = [...data].filter(item => {
+		if (hashes.includes(item.hash)) return false;
+		hashes.push(item.hash);
+		return true;
+	});
+
 	var list = AIPanel.querySelector('.related_articles_list');
 	list.innerHTML = '';
-	data.forEach(item => {
+	relativeArticles.forEach(item => {
 		var frame = newEle('li', 'cyprite', 'related_articles_item');
 		var link = newEle('a', 'cyprite', 'related_articles_link');
 		link.innerText = item.title;

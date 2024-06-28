@@ -102,7 +102,7 @@ const generateTabPanel = (messages) => {
 	});
 	tabPanel.appendChild(btnTranslate);
 
-	var btnComprehensive = newEle('div', 'cyprite', 'panel_tab');
+	var btnComprehensive = newEle('div', 'cyprite', 'panel_tab', 'invalid');
 	btnComprehensive.setAttribute('action', 'showComprehensive');
 	btnComprehensive.innerText = messages.buttons.showComprehensivePanel;
 	btnComprehensive.addEventListener('click', () => {
@@ -486,7 +486,6 @@ const onSendToCyprite = async () => {
 			related = [...relativeArticles];
 		}
 		related = filterSimilarArticle(related, 10);
-		findRelativeArticles();
 
 		// Call Ai for reply
 		let {title, content} = pageInfo;
@@ -594,6 +593,12 @@ const findSimilarArticle = async (vector) => {
 	return result;
 };
 const filterSimilarArticle = (articles, count) => {
+	var hashes = [];
+	articles = articles.filter(item => {
+		if (hashes.includes(item.hash)) return false;
+		hashes.push(item.hash);
+		return true;
+	});
 	if (articles.length > count) articles.splice(count);
 
 	var log = [];
