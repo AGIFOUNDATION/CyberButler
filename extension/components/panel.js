@@ -102,7 +102,7 @@ const generateTabPanel = (messages) => {
 	});
 	tabPanel.appendChild(btnTranslate);
 
-	var btnComprehensive = newEle('div', 'cyprite', 'panel_tab', 'invalid');
+	var btnComprehensive = newEle('div', 'cyprite', 'panel_tab');
 	btnComprehensive.setAttribute('action', 'showComprehensive');
 	btnComprehensive.innerText = messages.buttons.showComprehensivePanel;
 	btnComprehensive.addEventListener('click', () => {
