@@ -64,9 +64,6 @@
 			]
 		}
 	],
-	"chrome_url_overrides": {
-		"newtab": "/pages/newtab.html"
-	},
 	"action": {
 		"default_title": "Your butler's here.",
 		"default_icon": {
