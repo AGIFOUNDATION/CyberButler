@@ -49,7 +49,7 @@ globalThis.FastAI = {
 	"Gemini": "gemini-1.5-flash",
 	"Claude": "claude-3-5-sonnet-20240620",
 	"OpenAI": "gpt-4o",
-	"GLM": "glm-4-air",
+	"GLM": "glm-4-airx",
 };
 globalThis.DeepAI = {
 	"Gemini": "gemini-1.5-pro",
@@ -124,10 +124,10 @@ logger.info = (tag, ...logs) => {
 	console.info(`%c[${tag}]`, "color: green; font-weight: bolder; padding: 2px 5px; border-radius: 5px; background-color: rgb(250, 250, 250);", ...logs);
 };
 logger.warn = (tag, ...logs) => {
-	console.log(`%c[${tag}]`, "color: magenta; font-weight: bolder; padding: 2px 5px; border-radius: 5px; background-color: rgb(250, 250, 250);", ...logs);
+	console.warn(`%c[${tag}]`, "color: magenta; font-weight: bolder; padding: 2px 5px; border-radius: 5px; background-color: rgb(250, 250, 250);", ...logs);
 };
 logger.error = (tag, ...logs) => {
-	console.log(`%c[${tag}]`, "color: red; font-weight: bolder; padding: 2px 5px; border-radius: 5px; background-color: rgb(250, 250, 250);", ...logs);
+	console.error(`%c[${tag}]`, "color: red; font-weight: bolder; padding: 2px 5px; border-radius: 5px; background-color: rgb(250, 250, 250);", ...logs);
 };
 logger.em = (tag, ...logs) => {
 	console.log(`%c[${tag}]`, "background-color: blue; color: white; font-weight: bolder; padding: 2px 5px; border-radius: 5px; border: 1px solid white;", ...logs);

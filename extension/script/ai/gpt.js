@@ -27,16 +27,18 @@ const assembleMessages = (conversation, full=true) => {
 	});
 	return messages;
 };
-const assembleDataPack = (model, messages, options) => {
+const assembleDataPack = (model, messages, maxToken, options) => {
 	var data = {
 		model,
-		temperature: options.temperature || 1.0,
-		max_tokens: options.max_tokens || 4095,
-		top_p: options.top_p || 1,
-		frequency_penalty: options.frequency_penalty || 0,
-		presence_penalty: options.presence_penalty || 0,
+		temperature: options.temperature || 0.95,
+		max_tokens: options.max_tokens || maxToken,
+		// top_p: options.top_p || 0.7,
 		messages
 	};
+	if (!options) return data;
+	for (let key in options) {
+		data[key] = options[key];
+	}
 	return data;
 };
 const scoreContent = content => {
@@ -82,7 +84,7 @@ AI.OpenAI.list = async () => {
 };
 AI.OpenAI.chat = async (conversation, model=DefaultOpenAIChatModel, options={}) => {
 	var messages = assembleMessages(conversation);
-	var data = assembleDataPack(model, messages, options);
+	var data = assembleDataPack(model, messages, 4095, options);
 
 	var request = {
 		method: "POST",
@@ -116,6 +118,8 @@ AI.OpenAI.chat = async (conversation, model=DefaultOpenAIChatModel, options={}) 
 	if (!reply) {
 		logger.log('OpenAI', "Response:", json);
 		reply = "";
+		let errMsg = json.error?.message || 'Error Occur!';
+		throw new Error(errMsg);
 	}
 	else {
 		reply = reply.trim();
@@ -157,7 +161,8 @@ AI.OpenAI.draw = async (prompt, model=DefaultOpenAIDrawModel, options={}) => {
 	var reply = response.data;
 	if (!reply) {
 		logger.log('OpenAI', "Response:", json);
-		return [];
+		let errMsg = json.error?.message || 'Error Occur!';
+		throw new Error(errMsg);
 	}
 	reply = reply.map(item => item.url);
 	return reply;
@@ -189,7 +194,7 @@ AI.MoonShot.list = async () => {
 };
 AI.MoonShot.chat = async (conversation, model=DefaultMoonShotChatModel, options={}) => {
 	var messages = assembleMessages(conversation, false);
-	var data = assembleDataPack(model, messages, options);
+	var data = assembleDataPack(model, messages, 4095, options);
 
 	var request = {
 		method: "POST",
@@ -223,6 +228,8 @@ AI.MoonShot.chat = async (conversation, model=DefaultMoonShotChatModel, options=
 	if (!reply) {
 		logger.log('MoonShot', "Response:", json);
 		reply = "";
+		let errMsg = json.error?.message || 'Error Occur!';
+		throw new Error(errMsg);
 	}
 	else {
 		reply = reply.trim();
@@ -258,7 +265,7 @@ AI.DeepSeek.list = async () => {
 };
 AI.DeepSeek.chat = async (conversation, model=DefaultDeepSeekChatModel, options={}) => {
 	var messages = assembleMessages(conversation, false);
-	var data = assembleDataPack(model, messages, options);
+	var data = assembleDataPack(model, messages, 4095, options);
 
 	var request = {
 		method: "POST",
@@ -293,6 +300,8 @@ AI.DeepSeek.chat = async (conversation, model=DefaultDeepSeekChatModel, options=
 	if (!reply) {
 		logger.log('DeepSeek', "Response:", json);
 		reply = "";
+		let errMsg = json.error?.message || 'Error Occur!';
+		throw new Error(errMsg);
 	}
 	else {
 		reply = reply.trim();
@@ -303,9 +312,7 @@ AI.DeepSeek.chat = async (conversation, model=DefaultDeepSeekChatModel, options=
 
 AI.GLM.chat = async (conversation, model=DefaultGLMChatModel, options={}) => {
 	var messages = assembleMessages(conversation, false);
-	console.log(messages);
-	var data = assembleDataPack(model, messages, options);
-	console.log(data);
+	var data = assembleDataPack(model, messages, 4095, options);
 	var token = JWSgenerate(myInfo.apiKey.glm, 60 * 60 * 24 * 365);
 
 	var request = {
@@ -316,7 +323,6 @@ AI.GLM.chat = async (conversation, model=DefaultGLMChatModel, options={}) => {
 		},
 		body: JSON.stringify(data),
 	};
-	console.log(request);
 	var url = 'https://open.bigmodel.cn/api/paas/v4/chat/completions';
 
 	var response, time = Date.now();
@@ -341,6 +347,8 @@ AI.GLM.chat = async (conversation, model=DefaultGLMChatModel, options={}) => {
 	if (!reply) {
 		logger.log('GLM', "Response:", json);
 		reply = "";
+		let errMsg = json.error?.message || 'Error Occur!';
+		throw new Error(errMsg);
 	}
 	else {
 		reply = reply.trim();

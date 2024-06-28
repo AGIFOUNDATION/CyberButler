@@ -149,6 +149,8 @@ AI.Gemini.chat = async (conversation, model=DefaultChatModel, options={}) => {
 		if (!reply) {
 			logger.log('Gemini', "Response:", json);
 			reply = "";
+			let errMsg = json.error?.message || 'Error Occur!';
+			throw new Error(errMsg);
 		}
 		else {
 			reply = reply.text || "";

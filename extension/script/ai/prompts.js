@@ -61,12 +61,14 @@ PromptLib.askPageSystem = `#	Requirements
 
 -	All responses must be in "{{lang}}";
 -	Reply in Markdown format;
--	Base all responses on the provided Text Content and Reference Materials;
--	All replies must be in accordance with the provided Text Content and Reference Materials. If you encounter questions that cannot be answered based on the Text Content or Reference Materials, *clearly* inform me that **the subsequent response is based on your own understanding rather than the Text Content and Reference Materials**;
--	Where possible, provide quotes from the Text Content or Reference Materials, including the original text of the sentence and which paragraph and article it is in;
+-	Base all responses on the provided Current Article and Reference Materials;
+	+	When I say "current page" or "this article" or "this page", I am referring to the content in "Current Article", therefore you must base your replies on the content in the "Current Article";
+	+	If I do not specify that the reply should be based on the current page or article, then you can use the content in the "Reference Materials";
+-	All replies must be in accordance with the provided Current Article and Reference Materials. If you encounter questions that cannot be answered based on the Current Article or Reference Materials, *clearly* inform me that **the subsequent response is based on your own understanding rather than the Current Article and Reference Materials**;
+-	Where possible, provide quotes from the Current Article or Reference Materials, including the original text of the sentence and which paragraph and article it is in;
 -	Please consider how to best reply to my question, clarify your response workflow but **NOT** write them down, and then follow the workflow you have set, thinking step by step, replying step by step.
 
-#	Text Content (Format: Markdown)
+#	Current Article (Format: Markdown)
 
 {{content}}
 

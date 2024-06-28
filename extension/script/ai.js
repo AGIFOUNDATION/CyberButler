@@ -198,7 +198,7 @@ const callAI = async (tid, prompt, model) => {
 	var chatToAI = AI[aiName];
 	if (!!chatToAI) chatToAI = chatToAI.chat;
 	if (!chatToAI) {
-		replyRequest(tid, '', 'No AI for Model ' + model);
+		replyRequest(tid, null, 'No AI for Model ' + model);
 		return;
 	}
 
@@ -207,8 +207,9 @@ const callAI = async (tid, prompt, model) => {
 		reply = await chatToAI(prompt, model);
 	}
 	catch (err) {
-		console.error(err);
+		logger.error('AI(' + model + ')', err);
 		errMsg = err.message || err.msg || err.data || (!!err.toString ? err.toString() : err || aiName + ' Error');
+		reply = null;
 	}
 
 	replyRequest(tid, reply, errMsg);
@@ -268,7 +269,7 @@ EdgedAI.findRelativeArticles = async (tid, data) => {
 	var model = Model2AI[myInfo.model];
 	if (!!model) model = FastAI[model];
 	if (!model) {
-		replyRequest(tid, '', 'No Such AI Model: ' + myInfo.model);
+		replyRequest(tid, null);
 		return;
 	}
 

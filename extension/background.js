@@ -87,7 +87,6 @@ const checkAvailability = async () => {
 	return available;
 };
 const showSystemNotification = (message) => {
-	logger.info('MSG', message);
 	chrome.notifications.create({
 		title: Hints[myInfo.lang].talkHint,
 		message,
@@ -1000,7 +999,6 @@ AIHandler.askArticle = async (data, source, sid) => {
 	else {
 		list = list.conversation;
 	}
-	list.push(['human', data.question]);
 
 	// Update system prompt for relative articles
 	var config = { content: data.content, lang: LangName[myInfo.lang] }
@@ -1019,6 +1017,7 @@ AIHandler.askArticle = async (data, source, sid) => {
 	var systemPrompt = PromptLib.assemble(PromptLib.askPageSystem, config);
 	list = list.filter(item => item[0] !== 'system');
 	list.unshift(['system', systemPrompt]);
+	list.push(['human', data.question]);
 
 	var result;
 	try {
@@ -1030,7 +1029,6 @@ AIHandler.askArticle = async (data, source, sid) => {
 		});
 	}
 	catch (err) {
-		console.error(err);
 		result = '';
 	}
 
@@ -1228,31 +1226,36 @@ const findRelativeArticles = async (data) => {
 		return null;
 	}
 
-	// Parse AI's reply
-	relatives = relatives.split(/(\r*\n\r*)+/);
-	relatives = relatives.filter(item => {
-		return item.match(/(\*\*)?url(\s*:\s*\1|\1\s*:\s*)/i);
-	}).map(item => {
-		item = item.replace(/[\w\W]*(\*\*)?url(\s*:\s*\1|\1\s*:\s*)/i, '');
-		item = item.trim();
-		return item;
-	}).filter(item => !!item).map(item => parseURL(item));
+	if (!!relatives) {
+		// Parse AI's reply
+		relatives = relatives.split(/(\r*\n\r*)+/);
+		relatives = relatives.filter(item => {
+			return item.match(/(\*\*)?url(\s*:\s*\1|\1\s*:\s*)/i);
+		}).map(item => {
+			item = item.replace(/[\w\W]*(\*\*)?url(\s*:\s*\1|\1\s*:\s*)/i, '');
+			item = item.trim();
+			return item;
+		}).filter(item => !!item).map(item => parseURL(item));
 
-	// Get Info
-	relatives = await Promise.all(relatives.map(async (url) => {
-		var item = await getPageInfo(url);
-		if (!item || !item.hash || item.hash === data.hash) return null;
+		// Get Info
+		relatives = await Promise.all(relatives.map(async (url) => {
+			var item = await getPageInfo(url);
+			if (!item || !item.hash || item.hash === data.hash) return null;
 
-		var info = {};
-		for (let key in item) {
-			info[key] = item[key];
-		}
-		info.similar = 100;
+			var info = {};
+			for (let key in item) {
+				info[key] = item[key];
+			}
+			info.similar = 100;
 
-		return info;
-	}));
-	relatives = relatives.filter(item => !!item);
-	logger.log('SW', relatives.length + ' Relative Articles for ' + data.url);
+			return info;
+		}));
+		relatives = relatives.filter(item => !!item);
+		logger.log('SW', relatives.length + ' Relative Articles for ' + data.url);
+	}
+	else {
+		relatives = [];
+	}
 
 	// Send to page
 	dispatchEvent({
