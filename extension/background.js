@@ -640,6 +640,14 @@ const dispatchEvent = async (msg) => {
 			await port.postMessage(msg);
 		} catch {}
 	}
+	// To HomeScreen
+	else if (msg.target === "HomeScreen") {
+		let tid = msg.tid;
+		if (!tid) return;
+		try {
+			await chrome.tabs.sendMessage(tid, msg);
+		} catch {}
+	}
 	// To ServiceWorker itself
 	else {
 		let handler = EventHandler[msg.event];

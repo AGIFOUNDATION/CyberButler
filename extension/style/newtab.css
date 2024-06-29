@@ -25,6 +25,9 @@ body {
 	height: 18px;
 	filter: invert(0.6) sepia(1.0) hue-rotate(60deg) brightness(1.5);
 }
+.panel_container .panel_tabs_area .panel_input {
+	font-size: 13px;
+}
 .panel_button.active {
 	display: inline-block;
 }
@@ -132,4 +135,10 @@ body {
 	padding: 5px;
 	filter: invert(0.6) sepia(1.0) hue-rotate(160deg) brightness(1.9) drop-shadow(1px 1px 2px black);
 	cursor: pointer;
+}
+.panel_operation_area .content_container pre {
+	margin-left: -8px;
+	margin-right: -8px;
+	padding: 8px;
+	overflow-x: scroll;
 }

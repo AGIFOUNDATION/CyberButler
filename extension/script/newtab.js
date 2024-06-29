@@ -1,8 +1,52 @@
+const PageName = 'HomeScreen';
 const i18nList = ['en', 'zh'];
 const TabList = [];
 const myInfo = {};
+const EventHandler = {};
+const CallbackHandlers = {};
 var AIModelList = null;
 var currentMode = '';
+var currentTabId = 0;
+
+/* Communication */
+
+const sendMessage = (event, data, target='BackEnd', tid) => {
+	chrome.runtime.sendMessage({
+		event,
+		data,
+		target,
+		tid,
+		sender: PageName,
+		sid: currentTabId
+	});
+};
+chrome.runtime.onMessage.addListener(msg => {
+	if (!msg || msg.target !== PageName) return;
+
+	var handler = EventHandler[msg.event];
+	if (!handler) return;
+
+	handler(msg.data, msg.sender, msg.sid);
+});
+// replyAskAndWait
+const askSWandWait = (action, data) => new Promise(res => {
+	var id = newID();
+	while (!!CallbackHandlers[id]) {
+		id = newID();
+	}
+	CallbackHandlers[id] = res;
+
+	sendMessage('AskSWAndWait', {id, action, data});
+});
+const askAIandWait = (action, data) => new Promise(res => {
+	var id = newID();
+	while (!!CallbackHandlers[id]) {
+		id = newID();
+	}
+	CallbackHandlers[id] = res;
+
+	sendMessage('AskAIAndWait', {id, action, data});
+});
 
 /* UI */
 
@@ -40,6 +84,20 @@ const onChooseModel = async ({target}) => {
 
 	var messages = I18NMessages[myInfo.lang] || I18NMessages.en;
 	Notification.show(messages.cypriteName, messages.mentions.changeModelSuccess, 'middleTop', 'success', 2 * 1000);
+};
+const onInputFinish = (inputter, sender, frame, container) => {
+	var box = inputter.getBoundingClientRect();
+	var height = box.height;
+	sender.style.height = height + 'px';
+	box = container.getBoundingClientRect();
+	frame.style.height = (box.height - height - 10) + 'px';
+	resizer = null;
+};
+EventHandler.replyAskAndWait = (data) => {
+	var res = CallbackHandlers[data.id];
+	if (!res) return;
+	delete CallbackHandlers[data.id];
+	res(data.result);
 };
 
 /* Utils */
@@ -284,14 +342,28 @@ ActionCenter.sendMessage = async (button) => {
 	var messages = I18NMessages[myInfo.lang] || I18NMessages.en;
 	var target = button.getAttribute('target');
 	var inputter = button.parentNode.querySelector('.input_container');
+	var sender = button.parentNode.querySelector('.input_sender');
+	var frame = button.parentNode.querySelector('.content_container');
 	var content = getContent(inputter, true);
 	addChatItem(target, content, 'human');
 
 	inputter.innerText = messages.conversation.waitForAI;
 	inputter.setAttribute('contenteditable', 'false');
+	wait(60).then(() => {
+		onInputFinish(inputter, sender, frame, button.parentNode);
+	});
 
-	await wait(3000);
-	addChatItem(target, '哇哈哈哈哈哈哈', 'cyprite');
+	var result;
+	if (target === 'instantTranslation') {
+		let lang = document.body.querySelector('[name="translation_language"]').value;
+		result = await askAIandWait('translateSentence', { lang, content });
+	}
+	else {
+		console.log(target);
+		await wait(3000);
+		result = '哇哈哈哈哈哈哈';
+	}
+	addChatItem(target, result, 'cyprite');
 
 	inputter.innerText = '';
 	inputter.setAttribute('contenteditable', 'true');
@@ -341,21 +413,15 @@ const init = async () => {
 		var sender = item.querySelector('.input_sender');
 		var resizer;
 
-		const onInputFinish = () => {
-			var box = inputter.getBoundingClientRect();
-			var height = box.height;
-			sender.style.height = height + 'px';
-			box = item.getBoundingClientRect();
-			frame.style.height = (box.height - height - 10) + 'px';
-			resizer = null;
-		};
-
 		inputter.addEventListener('keyup', evt => {
 			if (evt.ctrlKey && evt.key === 'Enter') {
 				ActionCenter.sendMessage(sender);
 			}
 			if (!!resizer) return;
-			resizer = setTimeout(onInputFinish, 300);
+			resizer = setTimeout(() => {
+				onInputFinish(inputter, sender, frame, item);
+				resizer = null;
+			}, 300);
 		});
 		inputter.addEventListener('paste', onContentPaste);
 		frame.addEventListener('click', async ({target}) => {
@@ -372,14 +438,15 @@ const init = async () => {
 
 	// Init
 	addChatItem('instantTranslation', messages.translation.instantTranslateHint, 'cyprite');
-	addChatItem('crossPageConversation', 'Page is under construction...', 'cyprite');
-	addChatItem('freelyConversation', 'Page is under construction...', 'cyprite');
-	addChatItem('instantTranslation', 'Page is under construction...', 'cyprite');
+	addChatItem('crossPageConversation', 'Page is under construction...', 'cyprite'); // test
+	addChatItem('freelyConversation', 'Page is under construction...', 'cyprite'); // test
 
 	var tab = await chrome.tabs.getCurrent();
-	var mode = await chrome.storage.session.get(tab.id + '-mode');
-	mode = mode[tab.id + '-mode'];
+	currentTabId = tab.id;
+	var mode = await chrome.storage.session.get(currentTabId + '-mode');
+	mode = mode[currentTabId + '-mode'];
 	if (!TabList.includes(mode)) mode = TabList[0];
+	mode = 'instantTranslation'; // test
 	changeTab(mode);
 };
 

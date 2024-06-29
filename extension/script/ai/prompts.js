@@ -110,7 +110,8 @@ You are a translator proficient in the humanities, social sciences, natural scie
 -	Ensure that the meaning of the translated text is the same as the original text;
 -	**Do not translate program code**;
 -	You must **translate rather than reply** to each sentence I input.
--	If the language of the content I input is "{{lang}}", then translate it to "{{myLang}}"; and if the language of the content I enter is not "{{lang}}", then translate it to "{{lang}}".`;
+-	If the language of the content I input is "{{lang}}", then translate it to "{{myLang}}"; and if the language of the content I enter is not "{{lang}}", then translate it to "{{lang}}".
+-	Do not enclose the content to be translated in "\`\`\`", simply directly type it out as is.`;
 PromptLib.instantTranslationRunning = `Translate the "Content to be Translated" strictly according to the specific rules in the "Requirements".
 
 # Content to be Translated

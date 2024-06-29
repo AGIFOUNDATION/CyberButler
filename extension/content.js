@@ -1,3 +1,4 @@
+const PageName = 'FrontEnd';
 const RegChar = /[\u4e00-\u9fa5]|[\w-]+|[\d\.]+/g;
 const CypriteNotify = {};
 const TagNameWeight = {
@@ -40,7 +41,7 @@ const isRuntimeAvailable = () => {
 /* Communiation */
 
 var port, runtimeID = chrome.runtime.id;
-var sendMessage = (event, data, target, tid, sender="FrontEnd") => {
+var sendMessage = (event, data, target, tid, sender=PageName) => {
 	if (!port) {
 		if (!isRuntimeAvailable()) {
 			logger.error('Runtime', 'Runtime cannot connect');
@@ -70,7 +71,7 @@ const onPortDisconnect = () => {
 	port = null;
 };
 const onPortMessage = msg => {
-	if (msg.target === 'FrontEnd') {
+	if (msg.target === PageName) {
 		let handler = EventHandler[msg.event];
 		if (!handler) return;
 		handler(msg.data, msg.sender || 'BackEnd', msg.sid);
@@ -629,14 +630,6 @@ const askAIandWait = (action, data) => new Promise(res => {
 
 const EventHandler = {};
 
-EventHandler.notify = (data, source) => {
-	var sourceName = 'Server';
-	if (source === "BackEnd") sourceName = 'Background';
-	else if (source === "FrontEnd") sourceName = 'Content';
-	else if (source === "PageEnd") sourceName = 'Injection';
-	if (!isString(data) && !isNumber(data) && !isBoolean(data)) data = JSON.stringify(data);
-	logger.log(`Notify | ${sourceName}`, data);
-};
 EventHandler.getPageInfo = async (data, source) => {
 	if (source !== 'BackEnd') return;
 
@@ -805,7 +798,7 @@ window.addEventListener('message', ({data}) => {
 
 	data = data.data;
 	// If the target is current page
-	if (data.target === 'FrontEnd' && (data.tid === null || data.tid === undefined)) {
+	if (data.target === PageName && (data.tid === null || data.tid === undefined)) {
 		onPortMessage(data);
 	}
 	// Send to backend
