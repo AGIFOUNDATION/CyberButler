@@ -47,10 +47,10 @@ globalThis.I18NMessages = {
 			AIFailed: "*(I'm busy now, please try again later...)*",
 		},
 		newTab: {
-			crossPageConversation: "Cross-Page Chat",
+			crossPageConversation: "Cross-Page Q&A",
 			intelligentSearch: "AI Search",
 			freelyConversation: "Cyber Butler",
-			instantTranslation: "Instantly Translation",
+			instantTranslation: "Instant Translation",
 			chooseArticles: "Choose WebPage / Article",
 		}
 	},

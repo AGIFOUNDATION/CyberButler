@@ -46,6 +46,15 @@ In addition, you can also use the right-click menu to summon the plugin. The rig
 2.	Translation mode: This mode menu is enabled when there is selected content on the page and you are not in the input box. You can directly translate the highlighted text;
 3.	Writing mode: This mode menu is enabled when you are in the input box. You can directly optimize your input (under development).
 
+####	New Tab Page
+
+On the new tab page, you can directly use the following features:
+
+-	Intelligent Search: You state your needs, and Cyprite searches for you (in development).
+-	Cross-Page Q&A: Select several pages and conduct intelligent Q&A based on these pages (in development).
+-	Cyber Butler: Chat freely with Cyprite and experience the unique autonomy of the AI (in development).
+-	Instant Translation: It can quickly translate the content you input into the language of your choice.
+
 ####	Overview and Summary
 
 This plugin can summarize the content of the current page. You can also interact with AI directly based on the content of the current page (click the button in the upper right corner to bring up the communication interface).
@@ -66,7 +75,7 @@ The plugin will remember all the web pages you have interacted with and load the
 
 When using the local knowledge base, the plugin will load local information through the server and use the local files and the web pages you have browsed as the current knowledge base for question and answer interaction during the interaction process.
 
-##	 Other Potential
+##	Potential
 
 1.	Automatic Writing and Polishing
 2.	Cross-Page Comprehensive Question Answering
