@@ -397,7 +397,7 @@ chrome.tabs.onRemoved.addListener(tabId => {
 	if (LastActiveTab === tabId) LastActiveTab = null;
 	onPageActivityChanged(tabId, "close");
 	removeAIChatHistory(tabId);
-	chrome.storage.session.remove(tabId + '-mode');
+	chrome.storage.session.remove(tabId + ':mode');
 });
 chrome.idle.onStateChanged.addListener((state) => {
 	logger.info('Ext', 'Idle State Changed: ' + state);
@@ -807,7 +807,7 @@ EventHandler.SavePageSummary = async (data, source, sid) => {
 EventHandler.GotoConversationPage = async () => {
 	var tab = await gotoUniquePage(chrome.runtime.getURL('/pages/newtab.html'));
 	var info = {};
-	info[tab.id + '-mode'] = 'crossPageConversation';
+	info[tab.id + ':mode'] = 'crossPageConversation';
 	await chrome.storage.session.set(info);
 };
 EventHandler.GotoConversationPage(); // tests

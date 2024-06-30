@@ -121,6 +121,7 @@
 .panel_container .panel_logo .panel_model_chooser .panel_model_item {
 	margin-top: 5px;
 	margin-bottom: 5px;
+	color: var(--front-color);
 	white-space: nowrap;
 	cursor: pointer;
 }

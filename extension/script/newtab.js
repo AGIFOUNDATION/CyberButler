@@ -7,6 +7,7 @@ const CallbackHandlers = {};
 var AIModelList = null;
 var currentMode = '';
 var currentTabId = 0;
+var running = false;
 
 /* Communication */
 
@@ -264,7 +265,8 @@ const clearHTML = (html, full=true, markList=false) => {
 	return html.trim();
 };
 const getContent = (container, keepLink=false) => {
-	var content = isString(container) ? container : container.innerHTML || container.toString();
+	var content = isString(container) ? container : container.textContent || '';
+	if (!content) return;
 
 	content = clearHTML(content, true, true);
 	content = content.replace(/<(h\d)(\s+[\w\W]*?)?>([\w\W]*?)<\/\1>/gi, (m, tag, prop, inner) => {
@@ -338,13 +340,34 @@ const ActionCenter = {};
 ActionCenter.gotoConfig = () => {
 	location.href = `./${myInfo.lang}/config.html`;
 };
+ActionCenter.clearConversation = () => {
+	var messages = I18NMessages[myInfo.lang] || I18NMessages.en;
+	if (running) {
+		Notification.show(messages.cypriteName, messages.mentions.clearConversationWhileRunning, 'middleTop', 'warn', 2 * 1000);
+		return;
+	}
+
+	var container = document.body.querySelector('.panel_operation_area[group="' + currentMode + '"]');
+	var content = container.querySelector('.content_container');
+	content.innerHTML = '';
+
+	if (currentMode === 'crossPageConversation') {
+		addChatItem('crossPageConversation', messages.newTab.crossPageConversationHint, 'cyprite');
+	}
+	else if (currentMode === 'instantTranslation') {
+		addChatItem('instantTranslation', messages.translation.instantTranslateHint, 'cyprite');
+	}
+};
 ActionCenter.sendMessage = async (button) => {
+	running = true;
+
 	var messages = I18NMessages[myInfo.lang] || I18NMessages.en;
 	var target = button.getAttribute('target');
 	var inputter = button.parentNode.querySelector('.input_container');
 	var sender = button.parentNode.querySelector('.input_sender');
 	var frame = button.parentNode.querySelector('.content_container');
 	var content = getContent(inputter, true);
+	if (!content) return;
 	addChatItem(target, content, 'human');
 
 	inputter.innerText = messages.conversation.waitForAI;
@@ -354,7 +377,16 @@ ActionCenter.sendMessage = async (button) => {
 	});
 
 	var result;
-	if (target === 'instantTranslation') {
+	if (target === 'crossPageConversation') {
+		let conversation = await chrome.storage.session.get(currentTabId + ':crosspageConv');
+		conversation = (conversation || {})[currentTabId + ':crosspageConv'];
+		// New conversation
+		if (!conversation || !conversation.length) {
+
+		}
+		result = await askAIandWait('translateSentence', { lang, content });
+	}
+	else if (target === 'instantTranslation') {
 		let lang = document.body.querySelector('[name="translation_language"]').value;
 		result = await askAIandWait('translateSentence', { lang, content });
 	}
@@ -369,6 +401,8 @@ ActionCenter.sendMessage = async (button) => {
 	inputter.setAttribute('contenteditable', 'true');
 
 	inputter.focus();
+
+	running = false;
 };
 
 const init = async () => {
@@ -437,16 +471,16 @@ const init = async () => {
 	});
 
 	// Init
+	addChatItem('crossPageConversation', messages.newTab.crossPageConversationHint, 'cyprite');
 	addChatItem('instantTranslation', messages.translation.instantTranslateHint, 'cyprite');
-	addChatItem('crossPageConversation', 'Page is under construction...', 'cyprite'); // test
 	addChatItem('freelyConversation', 'Page is under construction...', 'cyprite'); // test
 
 	var tab = await chrome.tabs.getCurrent();
 	currentTabId = tab.id;
-	var mode = await chrome.storage.session.get(currentTabId + '-mode');
-	mode = mode[currentTabId + '-mode'];
+	var mode = await chrome.storage.session.get(currentTabId + ':mode');
+	mode = mode[currentTabId + ':mode'];
 	if (!TabList.includes(mode)) mode = TabList[0];
-	mode = 'instantTranslation'; // test
+	mode = 'crossPageConversation'; // test
 	changeTab(mode);
 };
 

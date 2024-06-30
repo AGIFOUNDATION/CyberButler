@@ -578,6 +578,7 @@ const findSimilarArticle = async (vector) => {
 };
 const filterSimilarArticle = (articles, count) => {
 	var hashes = [];
+	if (!articles) return [];
 	articles = articles.filter(item => {
 		if (hashes.includes(item.hash)) return false;
 		hashes.push(item.hash);

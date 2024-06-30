@@ -48,6 +48,7 @@ globalThis.I18NMessages = {
 		},
 		newTab: {
 			crossPageConversation: "Cross-Page Q&A",
+			crossPageConversationHint: "You can select articles through the button in the upper right corner, or you can directly start a new topic and let me choose the article for you.",
 			intelligentSearch: "AI Search",
 			freelyConversation: "Cyber Butler",
 			instantTranslation: "Instant Translation",
@@ -103,6 +104,7 @@ globalThis.I18NMessages = {
 		},
 		newTab: {
 			crossPageConversation: "跨页问答",
+			crossPageConversationHint: "你可以通过右上角的按钮来选择文章，或者直接开启新话题，让我来帮你选择文章。",
 			intelligentSearch: "智能搜索",
 			freelyConversation: "智慧助手",
 			instantTranslation: "即时翻译",
