@@ -512,7 +512,7 @@ const summarizePage = async (isRefresh=false) => {
 		pageSummary = summary;
 		pageHash = hash;
 		pageVector = embedding;
-		sendMessage("SavePageSummary", {title: pageInfo.title, summary, hash, embedding}, 'BackEnd');
+		sendMessage("SavePageSummary", {title: pageInfo.title, summary, hash, embedding, content: pageInfo.content}, 'BackEnd');
 		showPageSummary(summary);
 	}
 	else {

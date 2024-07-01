@@ -171,11 +171,17 @@ const updateModelList = async (model) => {
 		}
 	});
 };
-const changeTab = (mode) => {
+const changeTab = async (mode) => {
 	[...document.body.querySelectorAll('[title], [group]')].forEach(item => item.classList.remove('active'));
 	[...document.body.querySelectorAll('[title*="' + mode + '"], [group*="' + mode + '"]')].forEach(item => item.classList.add('active'));
 
 	currentMode = mode;
+
+	if (mode === 'crossPageConversation') {
+		let list = await askSWandWait('GetAllPageInfo');
+		console.log(list);
+		ActionCenter.showArticleChooser();
+	}
 };
 const addChatItem = (target, content, type) => {
 	var container = document.body.querySelector('.panel_operation_area[group="' + target + '"] .content_container');
@@ -265,7 +271,7 @@ const clearHTML = (html, full=true, markList=false) => {
 	return html.trim();
 };
 const getContent = (container, keepLink=false) => {
-	var content = isString(container) ? container : container.textContent || '';
+	var content = isString(container) ? container : container.innerHTML || '';
 	if (!content) return;
 
 	content = clearHTML(content, true, true);
@@ -357,6 +363,20 @@ ActionCenter.clearConversation = () => {
 	else if (currentMode === 'instantTranslation') {
 		addChatItem('instantTranslation', messages.translation.instantTranslateHint, 'cyprite');
 	}
+};
+ActionCenter.showArticleChooser = () => {
+	var container = document.body.querySelector('.panel_container');
+	if (!container) return;
+	container.setAttribute('showMask', "showArticleList");
+	container.setAttribute('showArticleList', "true");
+};
+ActionCenter.hideFloatWindow = () => {
+	var container = document.body.querySelector('.panel_container');
+	if (!container) return;
+	var target = container.getAttribute('showMask');
+	if (!target) return;
+	container.removeAttribute('showMask');
+	container.removeAttribute(target);
 };
 ActionCenter.sendMessage = async (button) => {
 	running = true;

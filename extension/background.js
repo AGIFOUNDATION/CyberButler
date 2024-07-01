@@ -273,7 +273,7 @@ const savePageActivities = async (url, duration, title, closed) => {
 	info.timestamp = timestmp2str("YYYY/MM/DD hh:mm:ss :WDE:");
 	console.log(info);
 
-	// await setPageInfo(url, info);
+	await setPageInfo(url, info);
 };
 
 /* Infos */
@@ -795,6 +795,7 @@ EventHandler.SavePageSummary = async (data, source, sid) => {
 	var tabInfo = await getTabInfo(sid);
 	var pageInfo = await getPageInfo(tabInfo.url);
 	pageInfo.title = data.title || pageInfo.title;
+	if (!!data.content) pageInfo.content = data.content;
 	pageInfo.description = data.summary || pageInfo.description;
 	pageInfo.hash = data.hash || pageInfo.hash;
 	pageInfo.embedding = data.embedding || pageInfo.embedding;
@@ -908,6 +909,13 @@ EventHandler.ClearSummaryConversation = async (url) => {
 	catch {
 		return false;
 	}
+};
+EventHandler.GetAllPageInfo = async () => {
+	var list = await DBs.pageInfo.all('pageInfo');
+	list = Object.keys(list).map(id => list[id]);
+	list = list.filter(item => !!item.content && !!item.hash && !!item.embedding);
+	list.sort((pa, pb) => (pb.totalDuration + pb.viewed * 1000) - (pa.totalDuration + pa.viewed * 1000));
+	return list;
 };
 
 /* AI */

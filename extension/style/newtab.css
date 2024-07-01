@@ -28,6 +28,18 @@ body {
 .panel_container .panel_tabs_area .panel_input {
 	font-size: 13px;
 }
+.panel_container .panel_inner_mask {
+	display: none;
+	position: absolute;
+	z-index: 2;
+	top: -35px;
+	bottom: 0px;
+	left: -15px;
+	right: 0px;
+}
+.panel_container[showMask] .panel_inner_mask {
+	display: block;
+}
 .panel_button.active {
 	display: inline-block;
 }
@@ -141,4 +153,20 @@ body {
 	margin-right: -8px;
 	padding: 8px;
 	overflow-x: scroll;
+}
+.panel_article_list {
+	display: none;
+	position: absolute;
+	z-index: 3;
+	top: 40px;
+	right: 0px;
+	min-width: 350px;
+	min-height: 300px;
+	padding: 10px;
+	background-color: rgba(23, 23, 23, 0.2);
+	backdrop-filter: blur(3px);
+	box-shadow: 1px 1px 3px rgba(235, 235, 235, 0.3), 2px 2px 5px rgba(23, 23, 23, 0.9);
+}
+[showArticleList="true"] .panel_article_list {
+	display: block;
 }
